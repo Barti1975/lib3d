@@ -1771,24 +1771,43 @@ void CTree::Centers()
 	CNode *node;
 	GetNbEntries(root,&nb);
 
+	ReadKey(0);
+	MatrixPalette();
+
+	fmax=0;
+	for (n=0;n<nb;n++)
+	{
+		GetNodeById(root,&node,n);
+		u=node->Pivot*Palette[node->id];
+		f=VECTORNORM2(u);
+		if (f>fmax) fmax=f;
+	}
+
 	for (k=0;k<MAX_NUMBER_OF_KEYS_NODE;k++)
 	{
-		fmax=0;
 		tr.Init(0,0,0);
 
+		ReadKey(k);
+		MatrixPalette();
+
+		int nn=0;
 		for (n=0;n<nb;n++)
 		{
 			GetNodeById(root,&node,n);
-			u=node->Pivots[k];
+			u=node->Pivot*Palette[node->id];
+			if (n==0) NZs[k]=u;
 			f=VECTORNORM2(u);
-			if (f>fmax)
+			if (f<fmax*4)
 			{
-				fmax=f;
-				tr=u;
+				tr+=u;
+				nn++;
 			}
 		}
 
-		Gs[k]=tr;
+		tr.y*=0.25f;
+
+		if (nn>0) Gs[k]=tr/nn;
+		else Gs[k]=tr;
 	}
 }
 

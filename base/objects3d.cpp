@@ -1910,10 +1910,15 @@ CObject3D * CObject3D::PlanarOptimize()
 
 CObject3D CObject3D::ApplyBevel(float R)
 {
-    return (*ApplyBevel2(R));
+    return (*ApplyBevel2(R,0));
 }
 
 CObject3D * CObject3D::ApplyBevel2(float R)
+{
+	return ApplyBevel2(R,0);
+}
+
+CObject3D * CObject3D::ApplyBevel2(float R,int proc)
 {
     int n,k;
     EdgeListD ED;
@@ -1951,7 +1956,7 @@ CObject3D * CObject3D::ApplyBevel2(float R)
     for (n=0;n<nFaces;n++) Faces[n].tag=0;
     for (n=0;n<nVertices;n++) Vertices[n].tag2=-1;
     
-    //CalculateNormals2a(-1);
+    CalculateNormals2a(-1);
     
     int tag=0;
     bool end=false;
@@ -2047,6 +2052,10 @@ CObject3D * CObject3D::ApplyBevel2(float R)
 
             G/=nb;
             CVector u;
+
+			CMatrix M;
+			M.RotationAngleVecteur(N,-PI/32);
+
             for (n=0;n<nVertices;n++)
             if (Vertices[n].temp)
             {
@@ -2057,13 +2066,17 @@ CObject3D * CObject3D::ApplyBevel2(float R)
                     //u=Vertices[n].Stok0;
                     u.Normalise();
                     
-//                    float s=DOT(Vertices[n].Norm,N);
+                    float s=DOT(Vertices[n].Norm,u);
 //                    u=Vertices[n].Norm-s*N;
 //                    u.Normalise();
                     
                     if (donot==0)
                     {
-                        dup->Vertices[nv].Stok=Vertices[n].Stok-u*RR;
+                        if ((s>0)||(proc==0)) dup->Vertices[nv].Stok=Vertices[n].Stok-u*RR;
+						else
+						{
+							dup->Vertices[nv].Stok=Vertices[n].Stok*M+u*RR;
+						}
                         dup->Vertices[nv].Map=Vertices[n].Map;
                         dup->Vertices[nv].tag2=n;
                         nv++;
@@ -10950,6 +10963,103 @@ void CObject3D::Add(CObject3D *obj)
 }
 
 /* ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  function:
+
+	Usage:
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
+	
+void CObject3D::AddAsKey(CObject3D *obj)
+{
+	int n;
+    
+    if (obj)
+    {
+		if (nKeys==0)
+		{
+			nKeys=2;
+
+			VerticesKeys[0]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[0][n].Stok=Vertices[n].Stok;
+				VerticesKeys[0][n].Norm=Vertices[n].Norm;
+			}
+			VerticesKeys[1]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[1][n].Stok=obj->Vertices[n].Stok;
+				VerticesKeys[1][n].Norm=obj->Vertices[n].Norm;
+			}
+		}
+		else
+		{
+			VerticesKeys[nKeys]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[nKeys][n].Stok=obj->Vertices[n].Stok;
+				VerticesKeys[nKeys][n].Norm=obj->Vertices[n].Norm;
+			}
+			nKeys++;
+		}
+
+        SetFaces();
+        CalculateNormals(-1);
+
+        update=true;
+    }
+}
+
+/* ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  function:
+
+	Usage:
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
+	
+void CObject3D::AddCalcAsKey(CObject3D *obj)
+{
+	int n;
+    
+    if (obj)
+    {
+		if (nKeys==0)
+		{
+			nKeys=2;
+
+			VerticesKeys[0]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[0][n].Stok=Vertices[n].Stok;
+				VerticesKeys[0][n].Norm=Vertices[n].Norm;
+			}
+			VerticesKeys[1]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[1][n].Stok=obj->Vertices[n].Calc;
+				VerticesKeys[1][n].Norm=obj->Vertices[n].NormCalc;
+			}
+		}
+		else
+		{
+			VerticesKeys[nKeys]=new CShortVertex[nVertices];
+			for (n=0;n<nVertices;n++)
+			{
+				VerticesKeys[nKeys][n].Stok=obj->Vertices[n].Calc;
+				VerticesKeys[nKeys][n].Norm=obj->Vertices[n].NormCalc;
+			}
+			nKeys++;
+		}
+
+        SetFaces();
+        CalculateNormals(-1);
+
+        update=true;
+    }
+}
+/* ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
  function:
  
@@ -16255,8 +16365,6 @@ void CObject3D::CalculateNormalsSmoothingGroups()
 	CM.Free();
 }
 
-
-
 void CObject3D::CalculateNormalsSmoothingGroups2()
 {
 	CMap <unsigned int,int> CM;
@@ -16265,18 +16373,18 @@ void CObject3D::CalculateNormalsSmoothingGroups2()
 
 	if (Status==88) return;
     
-    nbrow=ReorderY();
+    //nbrow=ReorderY();
 
 	if (nKeys>0)
 	{
-		//CreateMCV();
+		CreateMCV();
 		for (int k=0;k<nKeys;k++)
 		{
 			for (n=0;n<nVertices;n++) Vertices[n].Stok=VerticesKeys[k][n].Stok;
-			CalculateNormalsBasic(-1);
+			CalculateNormalsBasic(-1);			
 			for (n=0;n<nVertices;n++) VerticesKeys[k][n].Norm=Vertices[n].Norm;
 		}
-		//FreeMCV();
+		FreeMCV();
 	}
 
 	for (n=0;n<nFaces;n++) CM[Faces[n].tag];
@@ -16463,10 +16571,14 @@ void CObject3D::CreateMCV()
 
 	for (n1=0;n1<nVertices;n1++)
 	{
-		for (n2=0;n2<nVertices;n2++)
+		for (n2=n1;n2<nVertices;n2++)
 		{
 			VECTORSUB(u,Vertices[n1].Stok,Vertices[n2].Stok);
-			if (VECTORNORM(u)<SMALLF2) MCVSet(n1,n2);
+			if (VECTORNORM2(u)<SMALLF)
+			{
+				MCVSet(n1,n2);
+				if (n1!=n2) MCVSet(n2,n1);
+			}
 		}
 	}
 }

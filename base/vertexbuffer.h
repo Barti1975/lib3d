@@ -180,24 +180,26 @@ public:
 
 enum
 {
-	UNASSIGNED				=	0,
-	TEXTURE_FROM_NT			=	1,
-	TEXTURE_FROM_NT2		=	2,
-	TEXTURE_FROM_NL			=	3,
-	TEXTURE_FROM_NLVECTORS	=	4,
-	TEXTURE_FROM_BUMP		=	5,
-	TEXTURE_FROM_RENDER_0	=	6,
-	TEXTURE_FROM_RENDER_1	=	7,
-	TEXTURE_FROM_RENDER_2	=	8,
-	TEXTURE_FROM_RENDER_3	=	9,
-	TEXTURE_FROM_RENDER_4	=	10,
-	TEXTURE_FROM_RENDER_5	=	11,
-	TEXTURE_FROM_RENDER_6	=	12,
-    TEXTURE_FROM_RENDER_7	=	13,
-    TEXTURE_FROM_NTPLUSONE  =   14,
-    TEXTURE_FROM_BUMPPLUSONE  =   15,
-	TEXTURE_FROM_DISPLACE	=	16,
-	TEXTURE_FROM_HORIZON	=	17
+	UNASSIGNED					=	0,
+	TEXTURE_FROM_NT				=	1,
+	TEXTURE_FROM_NT2			=	2,
+	TEXTURE_FROM_NL				=	3,
+	TEXTURE_FROM_NLVECTORS		=	4,
+	TEXTURE_FROM_BUMP			=	5,
+	TEXTURE_FROM_RENDER_0		=	6,
+	TEXTURE_FROM_RENDER_1		=	7,
+	TEXTURE_FROM_RENDER_2		=	8,
+	TEXTURE_FROM_RENDER_3		=	9,
+	TEXTURE_FROM_RENDER_4		=	10,
+	TEXTURE_FROM_RENDER_5		=	11,
+	TEXTURE_FROM_RENDER_6		=	12,
+    TEXTURE_FROM_RENDER_7		=	13,
+    TEXTURE_FROM_NTPLUSONE		=   14,
+    TEXTURE_FROM_BUMPPLUSONE	=   15,
+	TEXTURE_FROM_DISPLACE		=	16,
+	TEXTURE_FROM_HORIZON		=	17,
+	TEXTURE_FROM_NTPLUSTWO		=   18,
+	TEXTURE_FROM_BUMPPLUSTWO	=   19
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +264,7 @@ public:
 	int *CorresVerticesNorm;
 	CVertexProgram *vp;
 	void * capi;
-	char * AssignedTexture[18];
+	char * AssignedTexture[20];
 	int Lights[3];
 	int stream_locked;
 	float stream_interpolant;
@@ -362,7 +364,7 @@ public:
 
 		STREAMS=NULL;
 
-		for (int n=0;n<18;n++) AssignedTexture[n]=NULL;
+		for (int n=0;n<20;n++) AssignedTexture[n]=NULL;
 
 		Lights[0]=0;
 		Lights[1]=0;
@@ -452,7 +454,7 @@ public:
 		Vertices=NULL;
 		Indices=NULL;
 
-		for (int n=0;n<18;n++) AssignedTexture[n]=NULL;
+		for (int n=0;n<20;n++) AssignedTexture[n]=NULL;
 
 		Lights[0]=0;
 		Lights[1]=0;
@@ -490,7 +492,7 @@ public:
 	ID3D10Device* D3DDevice;
 #endif
 
-	ID3D10EffectShaderResourceVariable* res[18];
+	ID3D10EffectShaderResourceVariable* res[20];
 	ID3D10EffectVectorVariable* vectors[256];
 	ID3D10EffectMatrixVariable* matrices[256];
 
@@ -543,7 +545,7 @@ public:
 		Vertices=NULL;
 		Indices=NULL;
 
-		for (int n=0;n<18;n++)
+		for (int n=0;n<20;n++)
 		{
 			AssignedTexture[n]=NULL;
 			res[n]=NULL;
@@ -586,7 +588,7 @@ public:
 	ID3D11Device2* D3DDevice;
 	ID3D11DeviceContext2* D3DDeviceContext;
 #endif
-	ID3DX11EffectShaderResourceVariable* res[18];
+	ID3DX11EffectShaderResourceVariable* res[20];
 	ID3DX11EffectVectorVariable* vectors[256];
 	ID3DX11EffectMatrixVariable* matrices[256];
 	ID3DX11EffectMatrixVariable* palette;
@@ -642,7 +644,7 @@ public:
 		Vertices=NULL;
 		Indices=NULL;
 
-		for (int n=0;n<18;n++)
+		for (int n=0;n<20;n++)
 		{
 			res[n]=NULL;
 			AssignedTexture[n]=NULL;
@@ -698,7 +700,7 @@ public:
 
 	DescriptorHeapHandleContainer *dhhc;
 
-	ID3DFXEffectShaderResourceVariable* res[18];
+	ID3DFXEffectShaderResourceVariable* res[20];
 	ID3DFXEffectVectorVariable* vectors[256];
 	ID3DFXEffectMatrixVariable* matrices[256];
 	ID3DFXEffectMatrixVariable* palette;
@@ -760,7 +762,7 @@ public:
 		Vertices=NULL;
 		Indices=NULL;
 
-		for (int n=0;n<18;n++)
+		for (int n=0;n<20;n++)
 		{
 			//res[n]=NULL;
 			AssignedTexture[n]=NULL;
@@ -818,7 +820,7 @@ public:
 
 	unsigned int numTexture[16];
 	
-    Env * res[18];
+    Env * res[20];
 
 	CVertexBuffer() 
 	{
@@ -858,7 +860,7 @@ public:
 
 		reference=-666;
 
-		for (n=0;n<18;n++)
+		for (n=0;n<20;n++)
         {
             AssignedTexture[n]=NULL;
             res[n]=NULL;
@@ -984,7 +986,7 @@ public:
 	bool fp[16];
 	char * str_programs[16];
 	char * str_fprograms[16];
-    Env * res[18];
+    Env * res[20];
     
 	CVertexBuffer() 
 	{ 
@@ -1014,7 +1016,7 @@ public:
 
 		reference=-666;
 
-		for (int n=0;n<18;n++)
+		for (int n=0;n<20;n++)
         {
             AssignedTexture[n]=NULL;
             res[n]=NULL;

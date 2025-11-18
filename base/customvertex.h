@@ -228,7 +228,7 @@ __declspec( align( 1 ) ) struct BLENDXYZTEX
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	FLOAT xm,ym;
@@ -241,7 +241,7 @@ __declspec( align( 1 ) ) struct BLENDXYZCOLOR
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	DWORD color;
@@ -254,7 +254,7 @@ __declspec( align( 1 ) ) struct BLENDXYZCOLORTEX
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	DWORD color;
@@ -268,7 +268,7 @@ __declspec( align( 1 ) ) struct BLENDXYZCOLORTEX2
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	DWORD color;
@@ -283,7 +283,7 @@ __declspec( align( 1 ) ) struct BLENDXYZNORMALTEX
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	FLOAT Nx,Ny,Nz;
@@ -295,7 +295,7 @@ __declspec( align( 1 ) ) struct BLENDXYZCOLORTEX3
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	DWORD color;
@@ -311,7 +311,7 @@ __declspec( align( 1 ) ) struct BLENDXYZNORMALCOLORTEX4
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	FLOAT Nx,Ny,Nz;
@@ -329,7 +329,7 @@ __declspec( align( 1 ) ) struct BLENDXYZNORMALTEX2
 {
 	FLOAT x,y,z;
 	FLOAT blend1,blend2,blend3,blend4;
-#ifndef API3D_DIRECT3D10
+#if defined(API3D_DIRECT3D9)||defined(API3D_DIRECT3D)
 	DWORD indices;
 #endif
 	FLOAT Nx,Ny,Nz;

@@ -5882,9 +5882,19 @@ void C3DAPI::Quad_MappingStok(CVertex * v0,CVertex * v1,CVertex * v2,CVertex * v
 	CVertexBuffer * actual=ActualVertexBuffer;
 	CVertexBuffer * eff=ActualEffect;
 
-	effect_hll_diffuse_model.setTexture("Tex",aT);
-    effect_hll_diffuse_model.setMatrixWorldViewProj("MODEL");
-	SetEffect(&effect_hll_diffuse_model);
+	if (set_alphatest)
+	{
+		effect_hll_diffuse_alphatest_model.setFloat("ALPHA",val_alphatest);
+		effect_hll_diffuse_alphatest_model.setTexture("Tex",aT);
+		effect_hll_diffuse_alphatest_model.setMatrixWorldViewProj("MODEL");
+		SetEffect(&effect_hll_diffuse_alphatest_model);
+	}
+	else
+	{
+		effect_hll_diffuse_model.setTexture("Tex",aT);
+		effect_hll_diffuse_model.setMatrixWorldViewProj("MODEL");
+		SetEffect(&effect_hll_diffuse_model);
+	}
 
 	SetVertexBuffer(&vbquad_xyzcolortex);
 	DrawVertexBuffer();
@@ -6044,10 +6054,19 @@ void C3DAPI::Quad_MappingStok(CVertex * v0,CVertex * v1,CVertex * v2,CVertex * v
 	CVertexBuffer * actual=ActualVertexBuffer;
 	CVertexBuffer * eff=ActualEffect;
 
-	effect_hll_diffuse_model.setTexture("Tex",aT);
-    effect_hll_diffuse_model.setMatrixWorldViewProj("MODEL");
-	SetEffect(&effect_hll_diffuse_model);
-
+	if (set_alphatest)
+	{
+		effect_hll_diffuse_alphatest_model.setFloat("ALPHA",val_alphatest);
+		effect_hll_diffuse_alphatest_model.setTexture("Tex",aT);
+		effect_hll_diffuse_alphatest_model.setMatrixWorldViewProj("MODEL");
+		SetEffect(&effect_hll_diffuse_alphatest_model);
+	}
+	else
+	{
+		effect_hll_diffuse_model.setTexture("Tex",aT);
+		effect_hll_diffuse_model.setMatrixWorldViewProj("MODEL");
+		SetEffect(&effect_hll_diffuse_model);
+	}
 	SetVertexBuffer(&vbquad_xyzcolortex);
 	DrawVertexBuffer();
 

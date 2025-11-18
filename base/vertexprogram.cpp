@@ -49,6 +49,102 @@ extern void LIB3DLog(char *str);
 
 #include "fsr.hpp"
 
+#include <stdarg.h>
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int _sprintf(char *s, const char *format, ...)
+{
+	int done;
+	va_list arg;
+	char *sd;
+
+	va_start (arg, format);
+	char * first = (char*) va_arg( arg, char* );
+	if (first==s)
+	{
+		if ((format[0]=='%')&&(format[1]=='s'))
+		{
+			sd=&s[strlen(s)];
+			done = vsprintf (sd, &format[2], arg);
+			va_end (arg);
+		}
+		else
+		{
+			sd=(char*)malloc(65536*4);
+			va_start (arg, format);
+			done = vsprintf (sd, format, arg);
+			va_end (arg);
+			strcpy(s,sd);
+			free(sd);
+		}
+	}
+	else
+	{
+		va_start (arg, format);
+		done = vsprintf (s, format, arg);
+		va_end (arg);
+	}
+
+	return done;
+
+}
+
+int _sprintf2(char *s, const char *format, ...)
+{
+	int done;
+	va_list arg;
+	char *sd;
+
+	va_start (arg, format);
+	char * first = (char*) va_arg( arg, char* );
+	if (first==s)
+	{
+		if ((format[0]=='%')&&(format[1]=='s'))
+		{
+			sd=&s[strlen(s)];
+			done = vsprintf (sd, &format[2], arg);
+			va_end (arg);
+		}
+		else
+		{
+			sd=(char*)malloc(65536*4);
+			va_start (arg, format);
+			done = vsprintf (sd, format, arg);
+			va_end (arg);
+			strcpy(s,sd);
+			free(sd);
+		}
+	}
+	else
+	{
+		va_start (arg, format);
+		done = vsprintf (s, format, arg);
+		va_end (arg);
+	}
+
+	return done;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+char strings[8192][256];
+int nstrings=0;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+char * newString()
+{
+	return strings[nstrings++];
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+char strings2[8192][256];
+int nstrings2=0;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+char * newString2()
+{
+	return strings2[nstrings2++];
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 char valueFSRRCASSample[32]={ 0 };
 char value_bumpy_str[32]={ 0 };
 
@@ -56,11 +152,11 @@ char value_bumpy_str[32]={ 0 };
 void FSRCASSampleSharp(float x)
 {
 #ifdef API3D_OPENGL20
-	if (x>555) sprintf(valueFSRRCASSample,"0.0025");
-	else sprintf(valueFSRRCASSample,"%3.8f",x);
+	if (x>555) _sprintf(valueFSRRCASSample,"0.0025");
+	else _sprintf(valueFSRRCASSample,"%3.8f",x);
 #else
-	if (x>555) sprintf(valueFSRRCASSample,"0.0025f");
-	else sprintf(valueFSRRCASSample,"%3.8ff",x);
+	if (x>555) _sprintf(valueFSRRCASSample,"0.0025f");
+	else _sprintf(valueFSRRCASSample,"%3.8ff",x);
 #endif
 }
 
@@ -68,11 +164,11 @@ void FSRCASSampleSharp(float x)
 void SampleBumpy(float x)
 {
 #ifdef API3D_OPENGL20
-	if (x>555) sprintf(value_bumpy_str,"0.05");
-	else sprintf(value_bumpy_str,"%3.8f",x);
+	if (x>555) _sprintf(value_bumpy_str,"0.05");
+	else _sprintf(value_bumpy_str,"%3.8f",x);
 #else
-	if (x>555) sprintf(value_bumpy_str,"0.2");
-	else sprintf(value_bumpy_str,"%3.8f",x);
+	if (x>555) _sprintf(value_bumpy_str,"0.2");
+	else _sprintf(value_bumpy_str,"%3.8f",x);
 #endif
 }
 
@@ -376,7 +472,7 @@ bool str_match(char * str,char * m)		// teste si la chaine m est presente dans l
 bool str_match0(char * str,char * m)        // teste si la chaine m est presente dans la chaine str
 {
     char mm[1024];
-    sprintf(mm,"%s(",m);
+    _sprintf(mm,"%s(",m);
     if (str_fixed_match(&str[0],mm)) return true;
     return false;
 }
@@ -440,10 +536,10 @@ bool str_mm(char *str,char *m)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char str_TemporaryString[1024];
-char str_TemporaryStringprt[1024];
-char str_TemporaryString2[1024];
-char str_TemporaryStringb[1024];
+char str_TemporaryString[32768];
+char str_TemporaryStringprt[32768];
+char str_TemporaryString2[32768];
+char str_TemporaryStringb[32768];
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int VPLINEINSCRIPT=0;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -850,7 +946,7 @@ bool str_parentheses(char * str)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char str_sname[4096];
+char str_sname[65536];
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 char * str_return_parentheses(char * str)  // pour test conditionnel (gere appel de fonction)
 {
@@ -959,44 +1055,26 @@ void str_translate_format(char * instr,char * post,int *value)
 
 	if (str_char(instr,'[')==-1)
 	{
-		sprintf(post,"%s[",instr);
+		_sprintf(post,"%s[",instr);
 		*value=0;
 	}
 	else
 	{
-		sprintf(temp,"%s",str_return_crochets(instr));
-		sprintf(temp2,"%s",instr);
+		_sprintf(temp,"%s",str_return_crochets(instr));
+		_sprintf(temp2,"%s",instr);
 		temp2[str_char(temp2,'[')]='\0';
 
 		if (str_int(temp))
 		{
 			sscanf(temp,"%d",value);
-			sprintf(post,"%s[",temp2);
+			_sprintf(post,"%s[",temp2);
 		}
 		else
 		{
 			*value=0;
-			sprintf(post,"%s[A0.x+",temp2);
+			_sprintf(post,"%s[A0.x+",temp2);
 		}
 	}
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char strings[1024][64];
-int nstrings=0;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char * newString()
-{
-	return strings[nstrings++];
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char strings2[1024][64];
-int nstrings2=0;
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-char * newString2()
-{
-	return strings2[nstrings2++];
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1832,281 +1910,281 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
     if (_RS.COp[0]!=_UNDEFINED)
     {
         res=true;
-        if (_RS.CArg1[0]==_TEXTURE) { sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t0.xy))", _RS.Texture[0]); AddInst(vp,c); }
-        if (_RS.CArg2[0]==_TEXTURE) { sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t0.xy))", _RS.Texture[0]); AddInst(vp,c); }
+        if (_RS.CArg1[0]==_TEXTURE) { _sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t0.xy))", _RS.Texture[0]); AddInst(vp,c); }
+        if (_RS.CArg2[0]==_TEXTURE) { _sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t0.xy))", _RS.Texture[0]); AddInst(vp,c); }
         
-        if (_RS.CArg1[0]==_DIFFUSE) { sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg2[0]==_DIFFUSE) { sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg1[0]==_SPECULAR) { sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg2[0]==_SPECULAR) { sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg1[0]==_DIFFUSE) { _sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg2[0]==_DIFFUSE) { _sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg1[0]==_SPECULAR) { _sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg2[0]==_SPECULAR) { _sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
 
         switch (_RS.COp[0])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _MODULATE2X:
-            sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _DOT3:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED2X:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
             break;
         };
 
         switch (_RS.AOp[0])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
             break;
         case _DISABLE:
-            sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
             break;
         };
     }
 
     if ((_RS.COp[1]!=_UNDEFINED)&&(res))
     {
-        if (_RS.CArg1[1]==_TEXTURE) { sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t1.xy))", _RS.Texture[1]); AddInst(vp,c); }
-        if (_RS.CArg2[1]==_TEXTURE) { sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t1.xy))", _RS.Texture[1]); AddInst(vp,c); }
+        if (_RS.CArg1[1]==_TEXTURE) { _sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t1.xy))", _RS.Texture[1]); AddInst(vp,c); }
+        if (_RS.CArg2[1]==_TEXTURE) { _sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t1.xy))", _RS.Texture[1]); AddInst(vp,c); }
 
-        if (_RS.CArg1[1]==_DIFFUSE) { sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg2[1]==_DIFFUSE) { sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg1[1]==_SPECULAR) { sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg2[1]==_SPECULAR) { sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg1[1]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-        if (_RS.CArg2[1]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+        if (_RS.CArg1[1]==_DIFFUSE) { _sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg2[1]==_DIFFUSE) { _sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg1[1]==_SPECULAR) { _sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg2[1]==_SPECULAR) { _sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg1[1]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+        if (_RS.CArg2[1]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
         switch (_RS.COp[1])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _MODULATE2X:
-            sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _DOT3:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED2X:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
             break;
         };
 
         switch (_RS.AOp[1])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
             break;
         };
     }
 
     if ((_RS.COp[2]!=_UNDEFINED)&&(res))
     {
-        if (_RS.CArg1[2]==_TEXTURE) { sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t2.xy))", _RS.Texture[2]); AddInst(vp,c); }
-        if (_RS.CArg2[2]==_TEXTURE) { sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t2.xy))", _RS.Texture[2]); AddInst(vp,c); }
+        if (_RS.CArg1[2]==_TEXTURE) { _sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t2.xy))", _RS.Texture[2]); AddInst(vp,c); }
+        if (_RS.CArg2[2]==_TEXTURE) { _sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t2.xy))", _RS.Texture[2]); AddInst(vp,c); }
 
-        if (_RS.CArg1[2]==_DIFFUSE) { sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg2[2]==_DIFFUSE) { sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg1[2]==_SPECULAR) { sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg2[2]==_SPECULAR) { sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg1[2]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-        if (_RS.CArg2[2]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+        if (_RS.CArg1[2]==_DIFFUSE) { _sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg2[2]==_DIFFUSE) { _sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg1[2]==_SPECULAR) { _sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg2[2]==_SPECULAR) { _sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg1[2]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+        if (_RS.CArg2[2]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
         switch (_RS.COp[2])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _MODULATE2X:
-            sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _DOT3:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED2X:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
             break;
         };
 
         switch (_RS.AOp[2])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
             break;
         };
     }
 
     if ((_RS.COp[3]!=_UNDEFINED)&&(res))
     {
-        if (_RS.CArg1[3]==_TEXTURE) { sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t3.xy))", _RS.Texture[3]); AddInst(vp,c); }
-        if (_RS.CArg2[3]==_TEXTURE) { sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t3.xy))", _RS.Texture[3]); AddInst(vp,c); }
+        if (_RS.CArg1[3]==_TEXTURE) { _sprintf(c.str, "r1 = float4(%s.sample(texsampler0, pixel.t3.xy))", _RS.Texture[3]); AddInst(vp,c); }
+        if (_RS.CArg2[3]==_TEXTURE) { _sprintf(c.str, "r2 = float4(%s.sample(texsampler0, pixel.t3.xy))", _RS.Texture[3]); AddInst(vp,c); }
 
-        if (_RS.CArg1[3]==_DIFFUSE) { sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg2[3]==_DIFFUSE) { sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
-        if (_RS.CArg1[3]==_SPECULAR) { sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg2[3]==_SPECULAR) { sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
-        if (_RS.CArg1[3]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-        if (_RS.CArg2[3]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+        if (_RS.CArg1[3]==_DIFFUSE) { _sprintf(c.str, "r1 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg2[3]==_DIFFUSE) { _sprintf(c.str, "r2 = pixel.v0"); AddInst(vp,c); }
+        if (_RS.CArg1[3]==_SPECULAR) { _sprintf(c.str, "r1 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg2[3]==_SPECULAR) { _sprintf(c.str, "r2 = pixel.v1"); AddInst(vp,c); }
+        if (_RS.CArg1[3]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+        if (_RS.CArg2[3]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
         switch (_RS.COp[3])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _MODULATE2X:
-            sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
             break;
         case _DOT3:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
             break;
         case _ADDSIGNED2X:
-            sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-            sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+            _sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+            _sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
             break;
         };
 
         switch (RS.AOp[3])
         {
         case _MODULATE:
-            sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
             break;
         case _ADD:
-            sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
             break;
         case _SUBTRACT:
-            sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
             break;
         case _SELECTARG1:
-            sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
             break;
         case _SELECTARG2:
-            sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+            _sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
             break;
         };
     }
@@ -2114,7 +2192,7 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
     if (!res)
     {
         res=true;
-        sprintf(c.str, "r0 = float4(1.0f,1.0f,1.0f,1.0f)"); AddInst(vp,c);
+        _sprintf(c.str, "r0 = float4(1.0f,1.0f,1.0f,1.0f)"); AddInst(vp,c);
     }
 
     return res;
@@ -2132,277 +2210,277 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	{
 		res=true;
 
-        if (_RS.CArg1[0]==_TEXTURE) { sprintf(c.str, "r1 = %s.Sample(smp, i.t0.xy)", _RS.Texture[0]); AddInst(vp,c); }
-        if (_RS.CArg2[0]==_TEXTURE) { sprintf(c.str, "r2 = %s.Sample(smp, i.t0.xy)", _RS.Texture[0]); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_DIFFUSE) { sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_DIFFUSE) { sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_SPECULAR) { sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_SPECULAR) { sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
+        if (_RS.CArg1[0]==_TEXTURE) { _sprintf(c.str, "r1 = %s.Sample(smp, i.t0.xy)", _RS.Texture[0]); AddInst(vp,c); }
+        if (_RS.CArg2[0]==_TEXTURE) { _sprintf(c.str, "r2 = %s.Sample(smp, i.t0.xy)", _RS.Texture[0]); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_DIFFUSE) { _sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_DIFFUSE) { _sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_SPECULAR) { _sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_SPECULAR) { _sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
 
 		switch (_RS.COp[0])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[0])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _DISABLE:
-			sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
 
 	if ((_RS.COp[1]!=_UNDEFINED)&&(res))
 	{
-		if (_RS.CArg1[1]==_TEXTURE) { sprintf(c.str, "r1 = %s.Sample(smp, i.t1.xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_TEXTURE) { sprintf(c.str, "r2 = %s.Sample(smp, i.t1.xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_DIFFUSE) { sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_DIFFUSE) { sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_SPECULAR) { sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_SPECULAR) { sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_TEXTURE) { _sprintf(c.str, "r1 = %s.Sample(smp, i.t1.xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_TEXTURE) { _sprintf(c.str, "r2 = %s.Sample(smp, i.t1.xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_DIFFUSE) { _sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_DIFFUSE) { _sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_SPECULAR) { _sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_SPECULAR) { _sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
 		switch (_RS.COp[1])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[1])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
 
 	if ((_RS.COp[2]!=_UNDEFINED)&&(res))
 	{
-		if (_RS.CArg1[2]==_TEXTURE) { sprintf(c.str, "r1 = %s.Sample(smp, i.t2.xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_TEXTURE) { sprintf(c.str, "r2 = %s.Sample(smp, i.t2.xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_DIFFUSE) { sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_DIFFUSE) { sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_SPECULAR) { sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_SPECULAR) { sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_TEXTURE) { _sprintf(c.str, "r1 = %s.Sample(smp, i.t2.xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_TEXTURE) { _sprintf(c.str, "r2 = %s.Sample(smp, i.t2.xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_DIFFUSE) { _sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_DIFFUSE) { _sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_SPECULAR) { _sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_SPECULAR) { _sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
 		switch (_RS.COp[2])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[2])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
 
 	if ((_RS.COp[3]!=_UNDEFINED)&&(res))
 	{
-		if (_RS.CArg1[3]==_TEXTURE) { sprintf(c.str, "r1 = %s.Sample(smp, i.t3.xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_TEXTURE) { sprintf(c.str, "r2 = %s.Sample(smp, i.t3.xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_DIFFUSE) { sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_DIFFUSE) { sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_SPECULAR) { sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_SPECULAR) { sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_TEXTURE) { _sprintf(c.str, "r1 = %s.Sample(smp, i.t3.xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_TEXTURE) { _sprintf(c.str, "r2 = %s.Sample(smp, i.t3.xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_DIFFUSE) { _sprintf(c.str, "r1 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_DIFFUSE) { _sprintf(c.str, "r2 = i.v0"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_SPECULAR) { _sprintf(c.str, "r1 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_SPECULAR) { _sprintf(c.str, "r2 = i.v1"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 
 		switch (_RS.COp[3])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - float4(0.5f,0.5f,0.5f,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (RS.AOp[3])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
@@ -2410,7 +2488,7 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	if (!res)
 	{
 		res=true;
-		sprintf(c.str, "r0 = float4(1.0f,1.0f,1.0f,1.0f)"); AddInst(vp,c);
+		_sprintf(c.str, "r0 = float4(1.0f,1.0f,1.0f,1.0f)"); AddInst(vp,c);
 	}
 
 	return res;
@@ -2428,77 +2506,77 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 		res=true;
 
 #ifdef GLES20
-		if (_RS.CArg1[0]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, myTexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, myTexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_DIFFUSE) { sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_DIFFUSE) { sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_SPECULAR) { sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_SPECULAR) { sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, myTexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, myTexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_DIFFUSE) { _sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_DIFFUSE) { _sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_SPECULAR) { _sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_SPECULAR) { _sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
 #else
-		if (_RS.CArg1[0]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_DIFFUSE) { sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_DIFFUSE) { sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg1[0]==_SPECULAR) { sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[0]==_SPECULAR) { sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[0].xy)", _RS.Texture[0]); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_DIFFUSE) { _sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_DIFFUSE) { _sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg1[0]==_SPECULAR) { _sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[0]==_SPECULAR) { _sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
 #endif
 		switch (_RS.COp[0])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[0])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _DISABLE:
-			sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = 1.0"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
@@ -2506,78 +2584,78 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	if ((_RS.COp[1]!=_UNDEFINED)&&(res))
 	{
 #ifdef GLES20
-		if (_RS.CArg1[1]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, myTexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, myTexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_DIFFUSE) { sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_DIFFUSE) { sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_SPECULAR) { sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_SPECULAR) { sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, myTexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, myTexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_DIFFUSE) { _sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_DIFFUSE) { _sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_SPECULAR) { _sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_SPECULAR) { _sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #else
-		if (_RS.CArg1[1]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_DIFFUSE) { sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_DIFFUSE) { sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_SPECULAR) { sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_SPECULAR) { sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[1]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[1]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[1].xy)", _RS.Texture[1]); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_DIFFUSE) { _sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_DIFFUSE) { _sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_SPECULAR) { _sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_SPECULAR) { _sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[1]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[1]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #endif
 		switch (_RS.COp[1])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[1])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
@@ -2585,78 +2663,78 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	if ((_RS.COp[2]!=_UNDEFINED)&&(res))
 	{
 #ifdef GLES20
-		if (_RS.CArg1[2]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, myTexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, myTexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_DIFFUSE) { sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_DIFFUSE) { sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_SPECULAR) { sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_SPECULAR) { sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, myTexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, myTexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_DIFFUSE) { _sprintf(c.str, "r1 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_DIFFUSE) { _sprintf(c.str, "r2 = myColor"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_SPECULAR) { _sprintf(c.str, "r1 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_SPECULAR) { _sprintf(c.str, "r2 = mySecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #else
-		if (_RS.CArg1[2]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_DIFFUSE) { sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_DIFFUSE) { sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_SPECULAR) { sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_SPECULAR) { sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[2]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[2]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[2].xy)", _RS.Texture[2]); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_DIFFUSE) { _sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_DIFFUSE) { _sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_SPECULAR) { _sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_SPECULAR) { _sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[2]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[2]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #endif
 		switch (_RS.COp[2])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (_RS.AOp[2])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
@@ -2664,79 +2742,79 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	if ((_RS.COp[3]!=_UNDEFINED)&&(res))
 	{
 #ifdef GLES20
-		if (_RS.CArg1[3]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_DIFFUSE) { sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_DIFFUSE) { sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_SPECULAR) { sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_SPECULAR) { sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_DIFFUSE) { _sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_DIFFUSE) { _sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_SPECULAR) { _sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_SPECULAR) { _sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #else
-		if (_RS.CArg1[3]==_TEXTURE) { sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_TEXTURE) { sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_DIFFUSE) { sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_DIFFUSE) { sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_SPECULAR) { sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_SPECULAR) { sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
-		if (_RS.CArg1[3]==_CURRENT) { sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
-		if (_RS.CArg2[3]==_CURRENT) { sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_TEXTURE) { _sprintf(c.str, "r1 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_TEXTURE) { _sprintf(c.str, "r2 = texture2D(%s, gl_TexCoord[3].xy)", _RS.Texture[3]); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_DIFFUSE) { _sprintf(c.str, "r1 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_DIFFUSE) { _sprintf(c.str, "r2 = gl_Color"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_SPECULAR) { _sprintf(c.str, "r1 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_SPECULAR) { _sprintf(c.str, "r2 = gl_SecondaryColor"); AddInst(vp,c); }
+		if (_RS.CArg1[3]==_CURRENT) { _sprintf(c.str, "r1 = r0"); AddInst(vp,c); }
+		if (_RS.CArg2[3]==_CURRENT) { _sprintf(c.str, "r2 = r0"); AddInst(vp,c); }
 #endif
 
 		switch (_RS.COp[3])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _MODULATE2X:
-			sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * r1.xyz * r2.xyz"); AddInst(vp,c);
 			break;
 		case _DOT3:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.x = 2.0 * dot(r3.xyz,r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r0.xxx"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz + r2.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r3.xyz + r4.xyz"); AddInst(vp,c);
 			break;
 		case _ADDSIGNED2X:
-			sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
-			sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
+			_sprintf(c.str, "r3 = r1 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r4 = r2 - vec4(0.5,0.5,0.5,0.0)"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = 2.0 * (r3.xyz + r4.xyz)"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz - r2.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r1.xyz"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
+			_sprintf(c.str, "r0.xyz = r2.xyz"); AddInst(vp,c);
 			break;
 		};
 
 		switch (RS.AOp[3])
 		{
 		case _MODULATE:
-			sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w * r2.w"); AddInst(vp,c);
 			break;
 		case _ADD:
-			sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w + r2.w"); AddInst(vp,c);
 			break;
 		case _SUBTRACT:
-			sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w - r2.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG1:
-			sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r1.w"); AddInst(vp,c);
 			break;
 		case _SELECTARG2:
-			sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
+			_sprintf(c.str, "r0.w = r2.w"); AddInst(vp,c);
 			break;
 		};
 	}
@@ -2744,7 +2822,7 @@ bool CVertexProgram::compile_render_state_pixelshader(int tech,int pass,CList <C
 	if (!res)
 	{
 		res=true;
-		sprintf(c.str, "r0 = vec4(1.0,1.0,1.0,1.0)"); AddInst(vp,c);
+		_sprintf(c.str, "r0 = vec4(1.0,1.0,1.0,1.0)"); AddInst(vp,c);
 	}
 
 	return res;
@@ -2769,7 +2847,7 @@ void CVertexProgram::compile_render_state(int tech,int pass,CList <Code> *vp)
 	{
 		if (RS.Texture[n])
 		{
-			sprintf(c.str,"Texture[%d] = <%s>;",n,RS.Texture[n]);
+			_sprintf(c.str,"Texture[%d] = <%s>;",n,RS.Texture[n]);
 			vp->Add(c);
 		}
 	}
@@ -2789,7 +2867,7 @@ void CVertexProgram::compile_render_state(int tech,int pass,CList <Code> *vp)
 
 			if (op)
 			{
-				sprintf(c.str,"%s = %s;",op,value);
+				_sprintf(c.str,"%s = %s;",op,value);
 				vp->Add(c);
 			}
 		}
@@ -2802,100 +2880,100 @@ void CVertexProgram::compile_render_state(int tech,int pass,CList <Code> *vp)
 		switch (RS.Stencil)
 		{
 		case _INCREMENT:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilMask = 0xffffffff;");
+			_sprintf(c.str,"StencilMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilWriteMask = 0xffffffff;");
+			_sprintf(c.str,"StencilWriteMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Incr;");
+			_sprintf(c.str,"StencilPass = Incr;");
 			vp->Add(c);
 
 			break;
 		case _DECREMENT:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilMask = 0xffffffff;");
+			_sprintf(c.str,"StencilMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilWriteMask = 0xffffffff;");
+			_sprintf(c.str,"StencilWriteMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Decr;");
+			_sprintf(c.str,"StencilPass = Decr;");
 			vp->Add(c);
 
 			break;
 		case _SET_ONE:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilMask = 0xffffffff;");
+			_sprintf(c.str,"StencilMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilWriteMask = 0xffffffff;");
+			_sprintf(c.str,"StencilWriteMask = 0xffffffff;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _EQUAL_ZERO:
-			sprintf(c.str,"StencilRef = 0x0;");
+			_sprintf(c.str,"StencilRef = 0x0;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = Equal;");
+			_sprintf(c.str,"StencilFunc = Equal;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _EQUAL_ONE:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = Equal;");
+			_sprintf(c.str,"StencilFunc = Equal;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _ALWAYS:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = Always;");
+			_sprintf(c.str,"StencilFunc = Always;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _NOT_ONE:
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = NotEqual;");
+			_sprintf(c.str,"StencilFunc = NotEqual;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _NOT_ZERO:
-			sprintf(c.str,"StencilRef = 0x0;");
+			_sprintf(c.str,"StencilRef = 0x0;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = NotEqual;");
+			_sprintf(c.str,"StencilFunc = NotEqual;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _LESSEQUAL_ONE:
 
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = LessEqual;");
+			_sprintf(c.str,"StencilFunc = LessEqual;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
 		case _GREATEREQUAL_ONE:
 
-			sprintf(c.str,"StencilRef = 0x1;");
+			_sprintf(c.str,"StencilRef = 0x1;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = GreaterEqual;");
+			_sprintf(c.str,"StencilFunc = GreaterEqual;");
 			vp->Add(c);
-			sprintf(c.str,"StencilPass = Replace;");
+			_sprintf(c.str,"StencilPass = Replace;");
 			vp->Add(c);
 
 			break;
@@ -2908,112 +2986,112 @@ void CVertexProgram::compile_render_state(int tech,int pass,CList <Code> *vp)
 		switch(RS.RenderTarget)
 		{
 		case _STENCIL:
-			sprintf(c.str,"AlphaBlendEnable = True;");
+			_sprintf(c.str,"AlphaBlendEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"SrcBlend = Zero;");
+			_sprintf(c.str,"SrcBlend = Zero;");
 			vp->Add(c);
-			sprintf(c.str,"DestBlend = One;");
+			_sprintf(c.str,"DestBlend = One;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = Always;");
+			_sprintf(c.str,"StencilFunc = Always;");
 			vp->Add(c);
-			sprintf(c.str,"StencilZFail = Keep;");
+			_sprintf(c.str,"StencilZFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFail = Keep;");
+			_sprintf(c.str,"StencilFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"StencilEnable = True;");
+			_sprintf(c.str,"StencilEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Flat;");
+			_sprintf(c.str,"ShadeMode = Flat;");
 			vp->Add(c);
 			break;
 
 		case _TWOSIDED:
-			sprintf(c.str,"AlphaBlendEnable = True;");
+			_sprintf(c.str,"AlphaBlendEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"SrcBlend = Zero;");
+			_sprintf(c.str,"SrcBlend = Zero;");
 			vp->Add(c);
-			sprintf(c.str,"DestBlend = One;");
+			_sprintf(c.str,"DestBlend = One;");
 			vp->Add(c);
-			sprintf(c.str,"StencilEnable = True;");
+			_sprintf(c.str,"StencilEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Flat;");
+			_sprintf(c.str,"ShadeMode = Flat;");
 			vp->Add(c);
 
-			sprintf(c.str,"StencilRef = 0x1;"); vp->Add(c);
-			sprintf(c.str,"StencilMask = 0xffffffff;"); vp->Add(c);
-			sprintf(c.str,"StencilWriteMask = 0xffffffff;"); vp->Add(c);
+			_sprintf(c.str,"StencilRef = 0x1;"); vp->Add(c);
+			_sprintf(c.str,"StencilMask = 0xffffffff;"); vp->Add(c);
+			_sprintf(c.str,"StencilWriteMask = 0xffffffff;"); vp->Add(c);
 			
-			sprintf(c.str,"TwoSidedStencilMode = True;"); vp->Add(c);
+			_sprintf(c.str,"TwoSidedStencilMode = True;"); vp->Add(c);
 			
-			sprintf(c.str,"StencilPass = Incr;"); vp->Add(c);
-			sprintf(c.str,"StencilZFail = Keep;"); vp->Add(c);
-			sprintf(c.str,"StencilFunc = Always;"); vp->Add(c);
-			sprintf(c.str,"StencilFail = Keep;"); vp->Add(c);
+			_sprintf(c.str,"StencilPass = Incr;"); vp->Add(c);
+			_sprintf(c.str,"StencilZFail = Keep;"); vp->Add(c);
+			_sprintf(c.str,"StencilFunc = Always;"); vp->Add(c);
+			_sprintf(c.str,"StencilFail = Keep;"); vp->Add(c);
 
-			sprintf(c.str,"Ccw_StencilPass = Decr;"); vp->Add(c);
-			sprintf(c.str,"Ccw_StencilZFail = Keep;"); vp->Add(c);
-			sprintf(c.str,"Ccw_StencilFunc = Always;"); vp->Add(c);
-			sprintf(c.str,"Ccw_StencilFail = Keep;"); vp->Add(c);
+			_sprintf(c.str,"Ccw_StencilPass = Decr;"); vp->Add(c);
+			_sprintf(c.str,"Ccw_StencilZFail = Keep;"); vp->Add(c);
+			_sprintf(c.str,"Ccw_StencilFunc = Always;"); vp->Add(c);
+			_sprintf(c.str,"Ccw_StencilFail = Keep;"); vp->Add(c);
 
-			sprintf(c.str,"CullMode = None;\n"); vp->Add(c);
+			_sprintf(c.str,"CullMode = None;\n"); vp->Add(c);
 			break;
 
 		case _RENDER:
-			sprintf(c.str,"StencilEnable = False;");
+			_sprintf(c.str,"StencilEnable = False;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Gouraud;");
+			_sprintf(c.str,"ShadeMode = Gouraud;");
 			vp->Add(c);
 			break;
 
 		case _BOTH:
-			sprintf(c.str,"StencilEnable = True;");
+			_sprintf(c.str,"StencilEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"StencilZFail = Keep;");
+			_sprintf(c.str,"StencilZFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFail = Keep;");
+			_sprintf(c.str,"StencilFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Gouraud;");
+			_sprintf(c.str,"ShadeMode = Gouraud;");
 			vp->Add(c);
 			break;
 
 		case _BOTHZ:
-			sprintf(c.str,"StencilEnable = True;");
+			_sprintf(c.str,"StencilEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"StencilZFail = Keep;");
+			_sprintf(c.str,"StencilZFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFail = Keep;");
+			_sprintf(c.str,"StencilFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Gouraud;");
+			_sprintf(c.str,"ShadeMode = Gouraud;");
 			vp->Add(c);
 			break;
 
 		case _STENCIL_NO_ZTEST:
-			sprintf(c.str,"AlphaBlendEnable = True;");
+			_sprintf(c.str,"AlphaBlendEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"SrcBlend = Zero;");
+			_sprintf(c.str,"SrcBlend = Zero;");
 			vp->Add(c);
-			sprintf(c.str,"DestBlend = One;");
+			_sprintf(c.str,"DestBlend = One;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFunc = Always;");
+			_sprintf(c.str,"StencilFunc = Always;");
 			vp->Add(c);
 
-			sprintf(c.str,"StencilZFail = Replace;");
+			_sprintf(c.str,"StencilZFail = Replace;");
 			vp->Add(c);
-			sprintf(c.str,"StencilFail = Keep;");
+			_sprintf(c.str,"StencilFail = Keep;");
 			vp->Add(c);
-			sprintf(c.str,"StencilEnable = True;");
+			_sprintf(c.str,"StencilEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"ShadeMode = Flat;");
+			_sprintf(c.str,"ShadeMode = Flat;");
 			vp->Add(c);
 			break;
 
 		case _ZBUFFER:
-			sprintf(c.str,"AlphaBlendEnable = True;");
+			_sprintf(c.str,"AlphaBlendEnable = True;");
 			vp->Add(c);
-			sprintf(c.str,"SrcBlend = Zero;");
+			_sprintf(c.str,"SrcBlend = Zero;");
 			vp->Add(c);
-			sprintf(c.str,"DestBlend = One;");
+			_sprintf(c.str,"DestBlend = One;");
 			vp->Add(c);
-			sprintf(c.str,"ZWriteEnable = True;");
+			_sprintf(c.str,"ZWriteEnable = True;");
 			vp->Add(c);
 			break;
 
@@ -3223,10 +3301,10 @@ void CVertexProgram::AddInst(CList <Code> *vp,Code &c)
 	{
 		if (api==1)
 		{
-			if (((str_match(c.str,"for"))||(str_match(c.str,"while"))||(str_match(c.str,"if"))||(str_match(c.str,"else"))||(str_match(c.str,"{"))||(str_match(c.str,"}")))) sprintf(cc.str,"%s",c.str);
-			else sprintf(cc.str,"%s;",c.str);
+			if (((str_match(c.str,"for"))||(str_match(c.str,"while"))||(str_match(c.str,"if"))||(str_match(c.str,"else"))||(str_match(c.str,"{"))||(str_match(c.str,"}")))) _sprintf(cc.str,"%s",c.str);
+			else _sprintf(cc.str,"%s;",c.str);
 		}
-		else sprintf(cc.str,"%s;",c.str);
+		else _sprintf(cc.str,"%s;",c.str);
 
 		if (pixelshader)
 		{
@@ -3259,7 +3337,7 @@ void CVertexProgram::AddInst2(CList <Code> *vp,Code &c)
     
     if (addsemi)
     {
-        sprintf(cc.str,"%s",c.str);
+        _sprintf(cc.str,"%s",c.str);
         
         if (pixelshader)
         {
@@ -3292,7 +3370,7 @@ void CVertexProgram::AddInst00(CList <Code> *vp,Code &c)
 
 	if (addsemi)
 	{
-		sprintf(cc.str,"%s",c.str);	
+		_sprintf(cc.str,"%s",c.str);	
 
 		if (pixelshader)
 		{
@@ -3324,8 +3402,8 @@ char * signedvar(char *ss,int neg)
 	char *res=newString();
 
 	if (neg==0) strcpy(res,ss);
-	if (neg==1) sprintf(res,"-%s",ss);
-	if (neg==2) sprintf(res,"1-%s",ss);
+	if (neg==1) _sprintf(res,"-%s",ss);
+	if (neg==2) _sprintf(res,"1-%s",ss);
 
 	return res;
 }
@@ -3335,9 +3413,9 @@ char * signedvarf(char *ss,int neg)
 {
 	char *res=newString();
 
-	if (neg==0) sprintf(res,"float(%s)",ss);
-	if (neg==1) sprintf(res,"-float(%s)",ss);
-	if (neg==2) sprintf(res,"1-float(%s)",ss);
+	if (neg==0) _sprintf(res,"float(%s)",ss);
+	if (neg==1) _sprintf(res,"-float(%s)",ss);
+	if (neg==2) _sprintf(res,"1-float(%s)",ss);
 
 	return res;
 }
@@ -3483,7 +3561,7 @@ char * CVertexProgram::var(char * str00,int tag)
 
 	if (str_char(str00,'[')>=0)
 	{
-		sprintf(ss,str00);
+		_sprintf(ss,str00);
 		p=str_char(ss,'[');
 		ss[p]='\0';
 
@@ -3516,20 +3594,20 @@ char * CVertexProgram::var(char * str00,int tag)
 					{
 						if (nbmodifiersprocessing==4)
 						{
-							if (api==0) sprintf(temp,"float4( %s, %s, %s, %s )",str00,str00,str00,str00);
-							else sprintf(temp,"vec4( %s, %s, %s, %s )",str00,str00,str00,str00);
+							if (api==0) _sprintf(temp,"float4( %s, %s, %s, %s )",str00,str00,str00,str00);
+							else _sprintf(temp,"vec4( %s, %s, %s, %s )",str00,str00,str00,str00);
 						}
 
 						if (nbmodifiersprocessing==3)
 						{
-							if (api==0) sprintf(temp,"float3( %s, %s, %s )",str00,str00,str00);
-							else sprintf(temp,"vec3( %s, %s, %s )",str00,str00,str00);
+							if (api==0) _sprintf(temp,"float3( %s, %s, %s )",str00,str00,str00);
+							else _sprintf(temp,"vec3( %s, %s, %s )",str00,str00,str00);
 						}
 
 						if (nbmodifiersprocessing==2)
 						{
-							if (api==0) sprintf(temp,"float2( %s, %s )",str00,str00);
-							else sprintf(temp,"vec2( %s, %s )",str00,str00);
+							if (api==0) _sprintf(temp,"float2( %s, %s )",str00,str00);
+							else _sprintf(temp,"vec2( %s, %s )",str00,str00);
 						}
 
 						return temp;
@@ -3550,15 +3628,15 @@ char * CVertexProgram::var(char * str00,int tag)
 			{
 				if (strlen(str)>0)
 				{
-					if (str_char(str00,'.')!=-1) sprintf(ss,"%sf",str00);
-					else sprintf(ss,"%s.0f",str00);
+					if (str_char(str00,'.')!=-1) _sprintf(ss,"%sf",str00);
+					else _sprintf(ss,"%s.0f",str00);
 				}
 				else strcpy(ss,str00);
 			}
 			else
 			{
 				if (str_char(str00,'.')!=-1) strcpy(ss,str00);
-				else sprintf(ss,"%s.0",str00);
+				else _sprintf(ss,"%s.0",str00);
 			}
 			return ss;
 		}
@@ -3577,28 +3655,28 @@ char * CVertexProgram::var(char * str00,int tag)
 		{
 			if (strlen(str00)>0)
 			{
-				if (str_char(str00,'.')!=-1) sprintf(ss,"%sf",str00);
-				else sprintf(ss,"%s.0f",str00);
+				if (str_char(str00,'.')!=-1) _sprintf(ss,"%sf",str00);
+				else _sprintf(ss,"%s.0f",str00);
 			}
 			else strcpy(ss,str00);
 		}
 		else
 		{
 			if (str_char(str00,'.')!=-1) strcpy(ss,str00);
-			else sprintf(ss,"%s.0",str00);
+			else _sprintf(ss,"%s.0",str00);
 		}
 		return ss;
 	}
 
-	if (strcmp(str,"SCALAR_1DIV3")==0) { sprintf(str,"trigo_cst3.x"); trigocst[actual_pass_trigocst][3]=1; }
-	if (strcmp(str,"SCALAR_1DIV5")==0) { sprintf(str,"trigo_cst4.y"); trigocst[actual_pass_trigocst][4]=1; }
-	if (strcmp(str,"SCALAR_1DIV10")==0) { sprintf(str,"trigo_cst3.w"); trigocst[actual_pass_trigocst][3]=1; }
-	if (strcmp(str,"SCALAR_1DIV4")==0) { sprintf(str,"trigo_cst4.w"); trigocst[actual_pass_trigocst][4]=1; }
+	if (strcmp(str,"SCALAR_1DIV3")==0) { _sprintf(str,"trigo_cst3.x"); trigocst[actual_pass_trigocst][3]=1; }
+	if (strcmp(str,"SCALAR_1DIV5")==0) { _sprintf(str,"trigo_cst4.y"); trigocst[actual_pass_trigocst][4]=1; }
+	if (strcmp(str,"SCALAR_1DIV10")==0) { _sprintf(str,"trigo_cst3.w"); trigocst[actual_pass_trigocst][3]=1; }
+	if (strcmp(str,"SCALAR_1DIV4")==0) { _sprintf(str,"trigo_cst4.w"); trigocst[actual_pass_trigocst][4]=1; }
 
-	if (strcmp(str,"SCALAR_HALF")==0) { sprintf(str,"trigo_cst2.w"); trigocst[actual_pass_trigocst][2]=1; }
-	if (strcmp(str,"SCALAR_ZERO")==0) { sprintf(str,"trigo_cst.x"); trigocst[actual_pass_trigocst][1]=1; }
-	if (strcmp(str,"SCALAR_ONE")==0) { sprintf(str,"trigo_cst.z"); trigocst[actual_pass_trigocst][1]=1; }
-	if (strcmp(str,"SCALAR_PI")==0) { sprintf(str,"trigo_cst.w"); trigocst[actual_pass_trigocst][1]=1; }
+	if (strcmp(str,"SCALAR_HALF")==0) { _sprintf(str,"trigo_cst2.w"); trigocst[actual_pass_trigocst][2]=1; }
+	if (strcmp(str,"SCALAR_ZERO")==0) { _sprintf(str,"trigo_cst.x"); trigocst[actual_pass_trigocst][1]=1; }
+	if (strcmp(str,"SCALAR_ONE")==0) { _sprintf(str,"trigo_cst.z"); trigocst[actual_pass_trigocst][1]=1; }
+	if (strcmp(str,"SCALAR_PI")==0) { _sprintf(str,"trigo_cst.w"); trigocst[actual_pass_trigocst][1]=1; }
 
 	if (strcmp(str,"SPRITEZVALUE")==0)
 	{
@@ -3618,7 +3696,7 @@ char * CVertexProgram::var(char * str00,int tag)
 		{
 			strcpy(s.str,str);
 			s.str[str_char(str,'.')]='\0';
-			sprintf(modifier,"%s",&str[str_char(str,'.')]);
+			_sprintf(modifier,"%s",&str[str_char(str,'.')]);
 		}
 		else
 		{
@@ -3677,10 +3755,10 @@ char * CVertexProgram::var(char * str00,int tag)
 		}
 		else tagregsave[reg] = tagreg[reg] = 1;
 
-		if (neg==1) sprintf(temp,"-%s%s",ss,modifier);
+		if (neg==1) _sprintf(temp,"-%s%s",ss,modifier);
 		else
-		if (neg==2) sprintf(temp,"1 - %s%s",ss,modifier);
-		else sprintf(temp,"%s%s",ss,modifier);
+		if (neg==2) _sprintf(temp,"1 - %s%s",ss,modifier);
+		else _sprintf(temp,"%s%s",ss,modifier);
 
 		return temp;
 	}
@@ -3691,7 +3769,7 @@ char * CVertexProgram::var(char * str00,int tag)
 	{
 		strcpy(s.str,str);
 		s.str[str_char(str,'.')]='\0';
-		sprintf(modifier,"%s",&str[str_char(str,'.')]);
+		_sprintf(modifier,"%s",&str[str_char(str,'.')]);
 	}
 	else
 	{
@@ -3712,11 +3790,11 @@ char * CVertexProgram::var(char * str00,int tag)
 		{
 			if ((api==1)&&(!shadermodel))
 			{
-				sprintf(temp,"r%d",new_temp_register());
+				_sprintf(temp,"r%d",new_temp_register());
 				ss2=compile(ss,temp,actual_vp);
 				close_temp_register();
 
-				sprintf(cc.str,"ARL A0.x,%s",ss2);
+				_sprintf(cc.str,"ARL A0.x,%s",ss2);
 				AddInst(actual_vp,cc);
 				adr_reg=1;
 				strcpy(ss,s.str);
@@ -3727,31 +3805,31 @@ char * CVertexProgram::var(char * str00,int tag)
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				adr_reg=1;
-				sprintf(temp,"r%d.x",new_temp_register());
+				_sprintf(temp,"r%d.x",new_temp_register());
 				ss2=compile(ss,temp,actual_vp);
 				close_temp_register();
                 strcpy(ss,s.str);
 				ss[str_char(ss,'[')]='\0';
-				sprintf(s.str,"%s[%s]",ss,ss2);
+				_sprintf(s.str,"%s[%s]",ss,ss2);
 			}
 
 			if ((api==0)&&(!shadermodel3))
 			{
-				sprintf(temp,"r%d",new_temp_register());
+				_sprintf(temp,"r%d",new_temp_register());
 				ss2=compile(ss,temp,actual_vp);
 				close_temp_register();
-				if (shadermodel) sprintf(cc.str,"mova a0.x,%s",ss2);
-				else sprintf(cc.str,"mov a0.x,%s",ss2);
+				if (shadermodel) _sprintf(cc.str,"mova a0.x,%s",ss2);
+				else _sprintf(cc.str,"mov a0.x,%s",ss2);
 				AddInst(actual_vp,cc);
 				adr_reg=1;
                 strcpy(ss,s.str);
 				ss[str_char(ss,'[')]='\0';
-				sprintf(s.str,"%s0",ss);
+				_sprintf(s.str,"%s0",ss);
 			}
 
 			if (api==2)	// gl - my interpreter
 			{
-				sprintf(temp,"r%d",new_temp_register());
+				_sprintf(temp,"r%d",new_temp_register());
 				ss2=compile(ss,temp,actual_vp);
 				close_temp_register();
 
@@ -3759,7 +3837,7 @@ char * CVertexProgram::var(char * str00,int tag)
 				adr_reg=1;
                 strcpy(ss,s.str);
 				ss[str_char(ss,'[')]='\0';
-				sprintf(s.str,"%s0",ss);
+				_sprintf(s.str,"%s0",ss);
 			}
 		}
 		else
@@ -3771,7 +3849,7 @@ char * CVertexProgram::var(char * str00,int tag)
 			if (!shadermodel3)
 			{
 				if ((api==0)||(api==2))
-					sprintf(s.str,"%s%d",ss,index);
+					_sprintf(s.str,"%s%d",ss,index);
 				else
 				{
                     strcpy(s.str,ss);
@@ -3780,7 +3858,7 @@ char * CVertexProgram::var(char * str00,int tag)
 			}
 			else
 			{
-				sprintf(s.str,"%s[%d]",ss,index);
+				_sprintf(s.str,"%s[%d]",ss,index);
 			}
 		}
 
@@ -3808,24 +3886,24 @@ char * CVertexProgram::var(char * str00,int tag)
 						c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 						Vars.Add(s.str,*c);
 						delete c;
-						if (adr_reg) sprintf(ss,"%s%s",s.str,modifier);
-						//if (adr_reg) sprintf(ss,"%s[A0.x]%s",ss,modifier);
+						if (adr_reg) _sprintf(ss,"%s%s",s.str,modifier);
+						//if (adr_reg) _sprintf(ss,"%s[A0.x]%s",ss,modifier);
 						else
 						{
-							if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-							else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+							if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+							else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 						}
 						return signedvar(ss,neg);
 					}
 					else
 					{
 						index=new_ps_constant_register();
-						sprintf(ss,"c%d",index);
+						_sprintf(ss,"c%d",index);
 						c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 						Vars.Add(s.str,*c);
 						delete c;
-						if (adr_reg) sprintf(ss,"c[%d+a0.x]%s",index,modifier);
-						else sprintf(ss,"%s%s",ss,modifier);
+						if (adr_reg) _sprintf(ss,"c[%d+a0.x]%s",index,modifier);
+						else _sprintf(ss,"%s%s",ss,modifier);
 
 						return signedvar(ss,neg);
 					}
@@ -3848,11 +3926,11 @@ char * CVertexProgram::var(char * str00,int tag)
 						c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 						Vars.Add(s.str,*c);
 						delete c;
-						if (adr_reg) sprintf(ss,"%s%s",s.str,modifier);
+						if (adr_reg) _sprintf(ss,"%s%s",s.str,modifier);
 						else
 						{
-							if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-							else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+							if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+							else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 						}
 						return signedvar(ss,neg);
 					}
@@ -3863,11 +3941,11 @@ char * CVertexProgram::var(char * str00,int tag)
 						c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 						Vars.Add(s.str,*c);
 						delete c;
-						if (adr_reg) sprintf(ss,"%s[A0.x]%s",ss,modifier);
+						if (adr_reg) _sprintf(ss,"%s[A0.x]%s",ss,modifier);
 						else
 						{
-							if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-							else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+							if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+							else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 						}
 						return signedvar(ss,neg);
 					}
@@ -3875,12 +3953,12 @@ char * CVertexProgram::var(char * str00,int tag)
 					if ((api==0)&&(!shadermodel3))
 					{
 						index=new_constant_register();
-						sprintf(ss,"c%d",index);
+						_sprintf(ss,"c%d",index);
 						c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 						Vars.Add(s.str,*c);
 						delete c;
-						if (adr_reg) sprintf(ss,"c[%d+a0.x]%s",index,modifier);
-						else sprintf(ss,"%s%s",ss,modifier);
+						if (adr_reg) _sprintf(ss,"c[%d+a0.x]%s",index,modifier);
+						else _sprintf(ss,"%s%s",ss,modifier);
 
 						return signedvar(ss,neg);
 					}
@@ -3894,8 +3972,8 @@ char * CVertexProgram::var(char * str00,int tag)
 						Vars.Add(s.str,*c);
 						delete c;
 
-						if (adr_reg) sprintf(ss,"%s%s",s.str,modifier);
-						else sprintf(ss,"%s%s",ss,modifier);
+						if (adr_reg) _sprintf(ss,"%s%s",s.str,modifier);
+						else _sprintf(ss,"%s%s",ss,modifier);
 					
 						return signedvar(ss,neg);
 					}
@@ -3910,7 +3988,7 @@ char * CVertexProgram::var(char * str00,int tag)
 				c->tobeused=true;
 				Vars.Add(s.str,*c);
 				delete c;
-				sprintf(ss,"%s%s",ss,modifier);
+				_sprintf(ss,"%s%s",ss,modifier);
 				return signedvar(ss,neg);
 			}
 			else
@@ -3923,7 +4001,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					c->tobeused=true;
 					Vars.Add(s.str,*c);
 					delete c;
-					sprintf(ss,"%s%s",ss,modifier);
+					_sprintf(ss,"%s%s",ss,modifier);
 
 					return signedvarf(ss,neg);
 				}
@@ -3934,7 +4012,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					c->tobeused=true;
 					Vars.Add(s.str,*c);
 					delete c;
-					sprintf(ss,"%s%s",ss,modifier);
+					_sprintf(ss,"%s%s",ss,modifier);
 
 					return signedvar(ss,neg);
 				}
@@ -3966,7 +4044,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					else
 					{
 						if (tag==0) SYNTAXERROR=true;
-						sprintf(ss, "r%d", new_register());
+						_sprintf(ss, "r%d", new_register());
 						last_register++;
 					}
 				}
@@ -3994,7 +4072,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					}
 					else
 					{
-						sprintf(ss, "r%d", new_register());
+						_sprintf(ss, "r%d", new_register());
 						last_register++;
 					}
 				}
@@ -4002,7 +4080,7 @@ char * CVertexProgram::var(char * str00,int tag)
 				c->tobeused=true;
 				Vars.Add(s.str,*c);
 				delete c;
-				sprintf(ss,"%s%s",ss,modifier);
+				_sprintf(ss,"%s%s",ss,modifier);
 
 				return signedvar(ss,neg);
 			}
@@ -4019,8 +4097,8 @@ char * CVertexProgram::var(char * str00,int tag)
 				}
 				else
 				{
-					if (api==1) sprintf(ss,"%s[A0.x]%s",c->name,modifier);
-					else sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
+					if (api==1) _sprintf(ss,"%s[A0.x]%s",c->name,modifier);
+					else _sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
 				}
 			}
 			else
@@ -4028,11 +4106,11 @@ char * CVertexProgram::var(char * str00,int tag)
 				if (adr)
 				{
 					is_constant(s.str);
-					sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
+					_sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
 				}
 				else
 				{
-					sprintf(ss,"%s%s",c->name,modifier);
+					_sprintf(ss,"%s%s",c->name,modifier);
 					if ((recursvar==0)&&(strcmp(c->name,"WIndices")==0)&&(api==1)) return signedvarf(ss,neg);
 				}
 			}
@@ -4059,11 +4137,11 @@ char * CVertexProgram::var(char * str00,int tag)
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"%s%s",s.str,modifier);
+							if (adr_reg) _sprintf(ss,"%s%s",s.str,modifier);
 							else
 							{
-								if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-								else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+								if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+								else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 							}
 							return signedvar(ss,neg);
 						}
@@ -4074,23 +4152,23 @@ char * CVertexProgram::var(char * str00,int tag)
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"%s[A0.x]%s",ss,modifier);
+							if (adr_reg) _sprintf(ss,"%s[A0.x]%s",ss,modifier);
 							else
 							{
-								if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-								else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+								if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+								else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 							}
 							return signedvar(ss,neg);
 						}
 						else
 						{
 							index=new_ps_constant_register();
-							sprintf(ss,"c%d",index);
+							_sprintf(ss,"c%d",index);
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"c[%d+a0.x]%s",index,modifier);
-							else sprintf(ss,"%s%s",ss,modifier);
+							if (adr_reg) _sprintf(ss,"c[%d+a0.x]%s",index,modifier);
+							else _sprintf(ss,"%s%s",ss,modifier);
 
 							return signedvar(ss,neg);
 						}
@@ -4107,11 +4185,11 @@ char * CVertexProgram::var(char * str00,int tag)
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"%s[A0.x]%s",ss,modifier);
+							if (adr_reg) _sprintf(ss,"%s[A0.x]%s",ss,modifier);
 							else
 							{
-								if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-								else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+								if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+								else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 							}
 
 							return signedvar(ss,neg);
@@ -4123,11 +4201,11 @@ char * CVertexProgram::var(char * str00,int tag)
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"%s[a0.x]%s",ss,modifier);
+							if (adr_reg) _sprintf(ss,"%s[a0.x]%s",ss,modifier);
 							else
 							{
-								if (adr==0) sprintf(ss,"%s%s",ss,modifier);
-								else sprintf(ss,"%s[%d]%s",ss,index,modifier);
+								if (adr==0) _sprintf(ss,"%s%s",ss,modifier);
+								else _sprintf(ss,"%s[%d]%s",ss,index,modifier);
 							}
 
 							return signedvar(ss,neg);
@@ -4135,12 +4213,12 @@ char * CVertexProgram::var(char * str00,int tag)
 						else
 						{
 							index=new_constant_register();
-							sprintf(ss,"c%d",index);
+							_sprintf(ss,"c%d",index);
 							c=new CVPVariable(CONSTANT,ss,LASTLINESTR);
 							Vars.Add(s.str,*c);
 							delete c;
-							if (adr_reg) sprintf(ss,"c[%d+a0.x]%s",index,modifier);
-							else sprintf(ss,"%s%s",ss,modifier);
+							if (adr_reg) _sprintf(ss,"c[%d+a0.x]%s",index,modifier);
+							else _sprintf(ss,"%s%s",ss,modifier);
 
 							return signedvar(ss,neg);
 						}
@@ -4155,7 +4233,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					c->tobeused=true;
 					Vars.Add(s.str,*c);
 					delete c;
-					sprintf(ss,"%s%s",ss,modifier);
+					_sprintf(ss,"%s%s",ss,modifier);
 					return signedvar(ss,neg);
 
 				}
@@ -4167,7 +4245,7 @@ char * CVertexProgram::var(char * str00,int tag)
 					c->tobeused=true;
 					Vars.Add(s.str,*c);
 					delete c;
-					sprintf(ss,"%s%s",ss,modifier);
+					_sprintf(ss,"%s%s",ss,modifier);
 					return signedvar(ss,neg);
 				}
 				else
@@ -4194,7 +4272,7 @@ char * CVertexProgram::var(char * str00,int tag)
 							tagregsave[29] = 1;
 							max_temporary_register = 32;
 						}
-						else sprintf(ss, "r%d", new_temp_register());
+						else _sprintf(ss, "r%d", new_temp_register());
 					}
 					else
 					{
@@ -4218,14 +4296,14 @@ char * CVertexProgram::var(char * str00,int tag)
 							tagregsave[9] = 1;
 							max_temporary_register = 12;
 						}
-						else sprintf(ss, "r%d", new_temp_register());
+						else _sprintf(ss, "r%d", new_temp_register());
 
 					}
 					c = new CVPVariable(REGISTER, ss,LASTLINESTR);
 					c->tobeused=true;
 					TempVars.Add(s.str,*c);
 					delete c;
-					sprintf(ss,"%s%s",ss,modifier);
+					_sprintf(ss,"%s%s",ss,modifier);
 					return signedvar(ss,neg);
 				}
 			}
@@ -4239,11 +4317,11 @@ char * CVertexProgram::var(char * str00,int tag)
 					}
 					else
 					{
-						if (api==1) sprintf(ss,"%s[A0.x]%s",c->name,modifier);
+						if (api==1) _sprintf(ss,"%s[A0.x]%s",c->name,modifier);
 						else
 						{
-							if (shadermodel3) sprintf(ss,"%s[a0.x]%s",c->name,modifier);
-							else sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
+							if (shadermodel3) _sprintf(ss,"%s[a0.x]%s",c->name,modifier);
+							else _sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
 						}
 					}
 				}
@@ -4252,11 +4330,11 @@ char * CVertexProgram::var(char * str00,int tag)
 					if (adr)
 					{
 						is_constant(s.str);
-						sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
+						_sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
 					}
 					else
 					{
-						sprintf(ss,"%s%s",c->name,modifier);
+						_sprintf(ss,"%s%s",c->name,modifier);
 						if ((recursvar==0)&&(strcmp(c->name,"WIndices")==0)&&(api==1)) return signedvarf(ss,neg);
 					}
 				}
@@ -4274,8 +4352,8 @@ char * CVertexProgram::var(char * str00,int tag)
 				}
 				else
 				{
-					if (api==1) sprintf(ss,"%s[A0.x]%s",c->name,modifier);
-					else sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
+					if (api==1) _sprintf(ss,"%s[A0.x]%s",c->name,modifier);
+					else _sprintf(ss,"c[%s+a0.x]%s",&c->name[1],modifier);
 				}
 			}
 			else
@@ -4283,11 +4361,11 @@ char * CVertexProgram::var(char * str00,int tag)
 				if (adr)
 				{
 					is_constant(s.str);
-					sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
+					_sprintf(ss,"%s[%d]%s",c->name,index*actual_cst_size,modifier);
 				}
 				else
 				{
-					sprintf(ss,"%s%s",c->name,modifier);
+					_sprintf(ss,"%s%s",c->name,modifier);
 					if ((recursvar==0)&&(strcmp(c->name,"WIndices")==0)&&(api==1)) return signedvarf(ss,neg);
 				}
 			}
@@ -4324,7 +4402,7 @@ void CVertexProgram::header_end()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::header_open_pass(int npass)
 {
-	sprintf(c.str,"PASS P%d",npass);
+	_sprintf(c.str,"PASS P%d",npass);
 	vp.Add(c);
     strcpy(c.str,"{");
 	vp.Add(c);
@@ -4611,11 +4689,11 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 			{
 				if (translate_constants[n])
 				{
-					sprintf(c.str,"VertexShaderConstant%d[%d] = { %s };",LENGTH_VAR[l_constants[n]&0xffff],n,translate_constants[n]);
+					_sprintf(c.str,"VertexShaderConstant%d[%d] = { %s };",LENGTH_VAR[l_constants[n]&0xffff],n,translate_constants[n]);
 				}
 				else
 				{
-					sprintf(c.str,"VertexShaderConstant%d[%d] = <%s>;",LENGTH_VAR[l_constants[n]&0xffff],n,constants[n]);
+					_sprintf(c.str,"VertexShaderConstant%d[%d] = <%s>;",LENGTH_VAR[l_constants[n]&0xffff],n,constants[n]);
 				}
 				vp.Add(c);
 			}
@@ -4678,22 +4756,48 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 
 				if (flags&VPMORPH)
 				{
-                    strcpy(c.str,"dcl_position0 v0");vp.Add(c);
-                    strcpy(c.str,"dcl_position1 v1");vp.Add(c);
-                    strcpy(c.str,"dcl_normal0 v2");vp.Add(c);
-                    strcpy(c.str,"dcl_normal1 v3");vp.Add(c);
-                    strcpy(c.str,"dcl_texcoord v4");vp.Add(c);
+					if (flags&BLEND)
+					{
+						strcpy(c.str,"dcl_position0 v0");vp.Add(c);
+                        strcpy(c.str,"dcl_blendweight0 v1");vp.Add(c);
+                        strcpy(c.str,"dcl_blendindices0 v2");vp.Add(c);
+						strcpy(c.str,"dcl_normal0 v4");vp.Add(c);
+						strcpy(c.str,"dcl_texcoord0 v7");vp.Add(c);
 
-					new_input_register("iPos","v0");
-					new_input_register("iPos2","v1");
-					new_input_register("iNorm","v2");
-					new_input_register("iNorm2","v3");
-					new_input_register("iTexture0","v4");
+						strcpy(c.str,"dcl_position1 v3");vp.Add(c);
+                        strcpy(c.str,"dcl_blendweight1 v6");vp.Add(c);
+                        strcpy(c.str,"dcl_blendindices1 v8");vp.Add(c);
+						strcpy(c.str,"dcl_normal1 v5");vp.Add(c);
+						strcpy(c.str,"dcl_texcoord1 v9");vp.Add(c);
+
+
+						new_input_register("iWeights","v1");
+						new_input_register("iWIndices","v2");
+						new_input_register("iPos","v0");
+						new_input_register("iPos2","v3");
+						new_input_register("iNorm","v4");
+						new_input_register("iNorm2","v5");
+						new_input_register("iTexture0","v7");
+					}
+					else
+					{
+						strcpy(c.str,"dcl_position0 v0");vp.Add(c);
+						strcpy(c.str,"dcl_position1 v1");vp.Add(c);
+						strcpy(c.str,"dcl_normal0 v2");vp.Add(c);
+						strcpy(c.str,"dcl_normal1 v3");vp.Add(c);
+						strcpy(c.str,"dcl_texcoord v4");vp.Add(c);
+
+						new_input_register("iPos","v0");
+						new_input_register("iPos2","v1");
+						new_input_register("iNorm","v2");
+						new_input_register("iNorm2","v3");
+						new_input_register("iTexture0","v4");
+					}
 				}
 				else
 				{
 					new_input_register("iPos","v0");
-					if (flags&XYZ) { sprintf(c.str,"dcl_position v0");vp.Add(c); }
+					if (flags&XYZ) { _sprintf(c.str,"dcl_position v0");vp.Add(c); }
 
 					int v=1;
 
@@ -4790,19 +4894,19 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 
         strcpy(c.str,"// VERTEXBUFFER FORMAT : ");
 
-		if (flags&VPMORPH) sprintf(c.str,"%s MORPH",c.str);
+		if (flags&VPMORPH) _sprintf(c.str,"%s MORPH",c.str);
 		else
 		{
-			if (flags&XYZ) sprintf(c.str,"%s XYZ",c.str);
-			if (flags&BLEND) sprintf(c.str,"%s BLEND",c.str);
-			if (flags&NORMAL) sprintf(c.str,"%s NORMAL",c.str);
-			if (flags&DIFFUSE) sprintf(c.str,"%s DIFFUSE",c.str);
-			if (flags&SPECULAR) sprintf(c.str,"%s SPECULAR",c.str);
+			if (flags&XYZ) _sprintf(c.str,"%s XYZ",c.str);
+			if (flags&BLEND) _sprintf(c.str,"%s BLEND",c.str);
+			if (flags&NORMAL) _sprintf(c.str,"%s NORMAL",c.str);
+			if (flags&DIFFUSE) _sprintf(c.str,"%s DIFFUSE",c.str);
+			if (flags&SPECULAR) _sprintf(c.str,"%s SPECULAR",c.str);
 
-			if (flags&_TEX0) sprintf(c.str,"%s TEX0",c.str);
-			if (flags&_TEX1) sprintf(c.str,"%s TEX1",c.str);
-			if (flags&_TEX2) sprintf(c.str,"%s TEX2",c.str);
-			if (flags&_TEX3) sprintf(c.str,"%s TEX3",c.str);
+			if (flags&_TEX0) _sprintf(c.str,"%s TEX0",c.str);
+			if (flags&_TEX1) _sprintf(c.str,"%s TEX1",c.str);
+			if (flags&_TEX2) _sprintf(c.str,"%s TEX2",c.str);
+			if (flags&_TEX3) _sprintf(c.str,"%s TEX3",c.str);
 		}
 		vpcst.Add(c);
 
@@ -4823,15 +4927,15 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 					if (LENGTH_VAR[l_constants[n]&0xffff]==1)
 					{
 						int nb=l_constants[n]>>16;
-						if (nb==0) sprintf(c.str,"simd::float4 %s;",constants[n]);
-						else sprintf(c.str,"simd::float4 %s[%d];",constants[n],nb);
+						if (nb==0) _sprintf(c.str,"simd::float4 %s;",constants[n]);
+						else _sprintf(c.str,"simd::float4 %s[%d];",constants[n],nb);
 					}
 
 					if (LENGTH_VAR[l_constants[n]&0xffff]==4)
 					{
 						int nb=l_constants[n]>>16;
-						if (nb==0) sprintf(c.str,"simd::float4x4 %s;",constants[n]);
-						else sprintf(c.str,"simd::float4x4 %s[%d];",constants[n],nb);
+						if (nb==0) _sprintf(c.str,"simd::float4x4 %s;",constants[n]);
+						else _sprintf(c.str,"simd::float4x4 %s[%d];",constants[n],nb);
 					}
 					vpcst.Add(c);
 				}
@@ -4849,12 +4953,12 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 
 			for (n=0;n<npsvectors;n++)
 			{
-				sprintf(c.str,"simd::float4 %s;",psvectors[n]);vpcst.Add(c);
+				_sprintf(c.str,"simd::float4 %s;",psvectors[n]);vpcst.Add(c);
 			}
 
 			for (n=0;n<npsmatrices;n++)
 			{
-				sprintf(c.str,"simd::float4x4 %s;",psmatrices[n]);vpcst.Add(c);
+				_sprintf(c.str,"simd::float4x4 %s;",psmatrices[n]);vpcst.Add(c);
 			}
 
             strcpy(c.str,"};");vpcst.Add(c);
@@ -4866,7 +4970,7 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 		{
 			if (texture[n])
 			{
-				//sprintf(c.str,"texture2d<uchar> %s [[texture(%d)]];",texture[n],n);
+				//_sprintf(c.str,"texture2d<uchar> %s [[texture(%d)]];",texture[n],n);
 				//vpcst.Add(c);
 			}
 		}
@@ -4888,7 +4992,7 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 
 					if (tt)
 					{
-						sprintf(c.str,"constant float4 %s = { %s };",constants[n],translate_constants[n]);
+						_sprintf(c.str,"constant float4 %s = { %s };",constants[n],translate_constants[n]);
 						vpcst.Add(c);
 					}
 				}
@@ -4900,21 +5004,44 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 			if (flags&VPMORPH)
 			{
 				//TODO
-                strcpy(c.str,"typedef struct");vpinput.Add(c);
-                strcpy(c.str,"{");vpinput.Add(c);
-                strcpy(c.str,"packed_float3 v0;");vpinput.Add(c);
-                strcpy(c.str,"packed_float3 v3;");vpinput.Add(c);
-                strcpy(c.str,"packed_float2 v7;");vpinput.Add(c);
-                strcpy(c.str,"} VS_INPUT1;");vpinput.Add(c);
+				if (flags&BLEND)
+				{
+					strcpy(c.str,"typedef struct");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v0;");vpinput.Add(c);
+					strcpy(c.str,"packed_float4 v2;");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v3;");vpinput.Add(c);
+					strcpy(c.str,"packed_float2 v7;");vpinput.Add(c);
+					strcpy(c.str,"} VS_INPUT1;");vpinput.Add(c);
 
-                strcpy(c.str,"");vpinput.Add(c);
+					strcpy(c.str,"");vpinput.Add(c);
 
-                strcpy(c.str,"typedef struct");vpinput.Add(c);
-                strcpy(c.str,"{");vpinput.Add(c);
-                strcpy(c.str,"packed_float3 v1;");vpinput.Add(c);
-                strcpy(c.str,"packed_float3 v4;");vpinput.Add(c);
-                strcpy(c.str,"packed_float2 v8;");vpinput.Add(c);
-                strcpy(c.str,"} VS_INPUT2;");vpinput.Add(c);
+					strcpy(c.str,"typedef struct");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v1;");vpinput.Add(c);
+					strcpy(c.str,"packed_float4 v5;");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v4;");vpinput.Add(c);
+					strcpy(c.str,"packed_float2 v8;");vpinput.Add(c);
+					strcpy(c.str,"} VS_INPUT2;");vpinput.Add(c);
+				}
+				else
+				{
+					strcpy(c.str,"typedef struct");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v0;");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v3;");vpinput.Add(c);
+					strcpy(c.str,"packed_float2 v7;");vpinput.Add(c);
+					strcpy(c.str,"} VS_INPUT1;");vpinput.Add(c);
+
+					strcpy(c.str,"");vpinput.Add(c);
+
+					strcpy(c.str,"typedef struct");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v1;");vpinput.Add(c);
+					strcpy(c.str,"packed_float3 v4;");vpinput.Add(c);
+					strcpy(c.str,"packed_float2 v8;");vpinput.Add(c);
+					strcpy(c.str,"} VS_INPUT2;");vpinput.Add(c);
+				}
 			}
 			else
 			{
@@ -4948,6 +5075,19 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 			new_input_register("iNorm","float3(indexed.v3)");
 			new_input_register("iNorm2","float3(indexed2.v4)");
 			new_input_register("iTexture0","float2(indexed.v7)");
+			if (flags&BLEND)
+			{
+				if (shadermodel4)
+				{
+					new_input_register("iWeights","Weights");
+					new_input_register("iWIndices","WInd"); //ARRAY
+				}
+				else
+				{
+					new_input_register("iWeights","indexed.v2");
+					new_input_register("iWIndices","WInd"); //ARRAY
+				}
+			}
 		}
 		else
 		{
@@ -5006,8 +5146,8 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 		{
 			if (texture[n])
 			{
-				if (shadermodel4) sprintf(c.str,"Texture2D %s;",texture[n]);
-				else sprintf(c.str,"Texture %s;",texture[n]);
+				if (shadermodel4) _sprintf(c.str,"Texture2D %s;",texture[n]);
+				else _sprintf(c.str,"Texture %s;",texture[n]);
 				vpcst.Add(c);
 			}
 		}
@@ -5019,8 +5159,8 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 		{
 			if (texturevs[n])
 			{
-				if (shadermodel4) sprintf(c.str,"Texture2D %s;",texturevs[n]);
-				else sprintf(c.str,"Texture %s;",texturevs[n]);
+				if (shadermodel4) _sprintf(c.str,"Texture2D %s;",texturevs[n]);
+				else _sprintf(c.str,"Texture %s;",texturevs[n]);
 				vpcst.Add(c);
 			}
 		}
@@ -5042,22 +5182,22 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 					if ((strcmp(constants[n],"trigo_cst3")==0)&&(trigocst[pass][3]==0)) tt=0;
 					if ((strcmp(constants[n],"trigo_cst4")==0)&&(trigocst[pass][4]==0)) tt=0;
 					
-					sprintf(c.str,"float4 %s = { %s };",constants[n],translate_constants[n]);
+					_sprintf(c.str,"float4 %s = { %s };",constants[n],translate_constants[n]);
 				}
 				else
 				{
 					if (LENGTH_VAR[l_constants[n]&0xffff]==1)
 					{
 						int nb=l_constants[n]>>16;
-						if (nb==0) sprintf(c.str,"float4 %s;",constants[n]);
-						else sprintf(c.str,"float4 %s[%d];",constants[n],nb);
+						if (nb==0) _sprintf(c.str,"float4 %s;",constants[n]);
+						else _sprintf(c.str,"float4 %s[%d];",constants[n],nb);
 					}
 
 					if (LENGTH_VAR[l_constants[n]&0xffff]==4)
 					{
 						int nb=l_constants[n]>>16;
-						if (nb==0) sprintf(c.str,"float4x4 %s;",constants[n]);
-						else sprintf(c.str,"float4x4 %s[%d];",constants[n],nb);
+						if (nb==0) _sprintf(c.str,"float4x4 %s;",constants[n]);
+						else _sprintf(c.str,"float4x4 %s[%d];",constants[n],nb);
 					}
 				}
 
@@ -5069,16 +5209,33 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 		{
 			if (flags&VPMORPH)
 			{
-				//TODO
-                strcpy(c.str,"struct VS_INPUT");vpinput.Add(c);
-                strcpy(c.str,"{");vpinput.Add(c);
-                strcpy(c.str,"float4 v0 : POSITION0;");vpinput.Add(c);
-                strcpy(c.str,"float3 v3 : NORMAL0;");vpinput.Add(c);
-                strcpy(c.str,"float2 v7 : TEXCOORD0;");vpinput.Add(c);
-                strcpy(c.str,"float4 v1 : POSITION1;");vpinput.Add(c);
-                strcpy(c.str,"float3 v4 : NORMAL1;");vpinput.Add(c);
-                strcpy(c.str,"float2 v8 : TEXCOORD1;");vpinput.Add(c);
-                strcpy(c.str,"};");vpinput.Add(c);
+				if (weightsandindices)
+				{
+					strcpy(c.str,"struct VS_INPUT");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"float4 v0 : POSITION0;");vpinput.Add(c);
+					strcpy(c.str,"float4 v1 : BLENDWEIGHT0;");vpinput.Add(c);
+					strcpy(c.str,"float3 v3 : NORMAL0;");vpinput.Add(c);
+					strcpy(c.str,"float2 v7 : TEXCOORD0;");vpinput.Add(c);
+
+					strcpy(c.str,"float4 v2 : POSITION1;");vpinput.Add(c);
+					strcpy(c.str,"float4 v4 : BLENDWEIGHT1;");vpinput.Add(c);
+					strcpy(c.str,"float3 v5 : NORMAL1;");vpinput.Add(c);
+					strcpy(c.str,"float2 v8 : TEXCOORD1;");vpinput.Add(c);
+					strcpy(c.str,"};");vpinput.Add(c);
+				}
+				else
+				{
+					strcpy(c.str,"struct VS_INPUT");vpinput.Add(c);
+					strcpy(c.str,"{");vpinput.Add(c);
+					strcpy(c.str,"float4 v0 : POSITION0;");vpinput.Add(c);
+					strcpy(c.str,"float3 v3 : NORMAL0;");vpinput.Add(c);
+					strcpy(c.str,"float2 v7 : TEXCOORD0;");vpinput.Add(c);
+					strcpy(c.str,"float4 v1 : POSITION1;");vpinput.Add(c);
+					strcpy(c.str,"float3 v4 : NORMAL1;");vpinput.Add(c);
+					strcpy(c.str,"float2 v8 : TEXCOORD1;");vpinput.Add(c);
+					strcpy(c.str,"};");vpinput.Add(c);
+				}
 			}
 			else
 			{
@@ -5086,7 +5243,7 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
                 strcpy(c.str,"{");vpinput.Add(c);
 				// vertex format
 				if (flags&XYZ) { strcpy(c.str,"float4 v0 : POSITION;");vpinput.Add(c); }
-				if (flags&BLEND)
+				if (weightsandindices)
 				{
                     strcpy(c.str,"float4 v1 : BLENDWEIGHT;");vpinput.Add(c);
 					if (!shadermodel4) { strcpy(c.str,"DWORD v2 : BLENDINDICES;");vpinput.Add(c); }
@@ -5108,11 +5265,25 @@ void CVertexProgram::header_open_vsh(int pass,unsigned int flags,unsigned int ou
 
 		if (flags&VPMORPH)
 		{
-			new_input_register("iPos","i.v0");
-			new_input_register("iPos2","i.v1");
-			new_input_register("iNorm","i.v3");
-			new_input_register("iNorm2","i.v4");
-			new_input_register("iTexture0","i.v7");
+			if (weightsandindices)
+			{
+				new_input_register("iWeights","Weights");
+				new_input_register("iWIndices","WInd"); //ARRAY
+
+				new_input_register("iPos","i.v0");
+				new_input_register("iPos2","i.v2");
+				new_input_register("iNorm","i.v3");
+				new_input_register("iNorm2","i.v5");
+				new_input_register("iTexture0","i.v7");
+			}
+			else
+			{
+				new_input_register("iPos","i.v0");
+				new_input_register("iPos2","i.v1");
+				new_input_register("iNorm","i.v3");
+				new_input_register("iNorm2","i.v4");
+				new_input_register("iTexture0","i.v7");
+			}
 		}
 		else
 		{
@@ -5237,26 +5408,26 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 				{
 					if (ps_constants_type[n]==1)
                     {
-                        sprintf(c.str,"constant float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+                        _sprintf(c.str,"constant float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
                         vpoutput.Add(c);
                     }
 					else
                     {
                      
                         int mm=0;
-                        sprintf(c.str,"constant float4  %sA = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
+                        _sprintf(c.str,"constant float4  %sA = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
                         vpoutput.Add(c);
                         mm=4;
-                        sprintf(c.str,"constant float4  %sB = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
+                        _sprintf(c.str,"constant float4  %sB = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
                         vpoutput.Add(c);
                         mm=8;
-                        sprintf(c.str,"constant float4  %sC = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
+                        _sprintf(c.str,"constant float4  %sC = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
                         vpoutput.Add(c);
                         mm=12;
-                        sprintf(c.str,"constant float4  %sD = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
+                        _sprintf(c.str,"constant float4  %sD = { %3.4f,%3.4f,%3.4f,%3.4f };",ps_constants[n],float_translate_ps_constants[n][mm+0],float_translate_ps_constants[n][mm+1],float_translate_ps_constants[n][mm+2],float_translate_ps_constants[n][mm+3]);
                         vpoutput.Add(c);
                         
-                        //sprintf(c.str,"constant float4x4  %s = float4x4( %sA,%sB,%sC,%sD );",ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n]);
+                        //_sprintf(c.str,"constant float4x4  %s = float4x4( %sA,%sB,%sC,%sD );",ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n]);
                         
                     }
 				}
@@ -5271,7 +5442,7 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
             strcpy(c.str,"typedef struct");vpoutput.Add(c);
             strcpy(c.str,"{");vpoutput.Add(c);
 
-			//sprintf(c.str,"float4 position [[position]];"); vpoutput.Add(c);
+			//_sprintf(c.str,"float4 position [[position]];"); vpoutput.Add(c);
 			
 			if (modifyZ)
 			{ 
@@ -5284,8 +5455,8 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 			}
 
 			/*
-			if (shadermodel4) { if (modifyZ) { sprintf(c.str,"float Depth : SV_Depth;");vpoutput.Add(c); } 	}
-			else { if (modifyZ) { sprintf(c.str,"float Depth : DEPTH;");vpoutput.Add(c); } }
+			if (shadermodel4) { if (modifyZ) { _sprintf(c.str,"float Depth : SV_Depth;");vpoutput.Add(c); } 	}
+			else { if (modifyZ) { _sprintf(c.str,"float Depth : DEPTH;");vpoutput.Add(c); } }
 			/**/
             strcpy(c.str,"} PS_OUTPUT;");vpoutput.Add(c);
 			c.str[0]='\0';
@@ -5302,14 +5473,14 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 		if (output&DIFFUSE) { strcpy(c.str,"float4 v0;");vpoutput.Add(c); }
 		if (output&SPECULAR) { strcpy(c.str,"float4 v1;");vpoutput.Add(c); }
         /*
-         if (output&_TEX0) { sprintf(c.str,"float4 t0 [[texturecoord0]];");vpoutput.Add(c); }
-         if (output&_TEX1) { sprintf(c.str,"float4 t1 [[texturecoord1]];");vpoutput.Add(c); }
-         if (output&_TEX2) { sprintf(c.str,"float4 t2 [[texturecoord2]];");vpoutput.Add(c); }
-         if (output&_TEX3) { sprintf(c.str,"float4 t3 [[texturecoord3]];");vpoutput.Add(c); }
-         if (output&_TEX4) { sprintf(c.str,"float4 t4 [[texturecoord4]];");vpoutput.Add(c); }
-         if (output&_TEX5) { sprintf(c.str,"float4 t5 [[texturecoord5]];");vpoutput.Add(c); }
-         if (output&_TEX6) { sprintf(c.str,"float4 t6 [[texturecoord6]];");vpoutput.Add(c); }
-         if (output&_TEX7) { sprintf(c.str,"float4 t7 [[texturecoord7]];");vpoutput.Add(c); }
+         if (output&_TEX0) { _sprintf(c.str,"float4 t0 [[texturecoord0]];");vpoutput.Add(c); }
+         if (output&_TEX1) { _sprintf(c.str,"float4 t1 [[texturecoord1]];");vpoutput.Add(c); }
+         if (output&_TEX2) { _sprintf(c.str,"float4 t2 [[texturecoord2]];");vpoutput.Add(c); }
+         if (output&_TEX3) { _sprintf(c.str,"float4 t3 [[texturecoord3]];");vpoutput.Add(c); }
+         if (output&_TEX4) { _sprintf(c.str,"float4 t4 [[texturecoord4]];");vpoutput.Add(c); }
+         if (output&_TEX5) { _sprintf(c.str,"float4 t5 [[texturecoord5]];");vpoutput.Add(c); }
+         if (output&_TEX6) { _sprintf(c.str,"float4 t6 [[texturecoord6]];");vpoutput.Add(c); }
+         if (output&_TEX7) { _sprintf(c.str,"float4 t7 [[texturecoord7]];");vpoutput.Add(c); }
          /**/
         
         if (output&_TEX0) { strcpy(c.str,"float4 t0;");vpoutput.Add(c); }  // [[ sample_no_perspective ]]
@@ -5323,18 +5494,18 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
         
         
         
-        sprintf(c.str,"} VS_OUTPUT%d;",pass);vpoutput.Add(c);
+        _sprintf(c.str,"} VS_OUTPUT%d;",pass);vpoutput.Add(c);
 		c.str[0]='\0';
 		vpoutput.Add(c);
 
         /*
-        sprintf(c.str,"constexpr sampler s0(coord::normalized,address::repeat,min_filter::linear,mag_filter::linear,mip_filter::linear);");
+        _sprintf(c.str,"constexpr sampler s0(coord::normalized,address::repeat,min_filter::linear,mag_filter::linear,mip_filter::linear);");
         vpoutput.Add(c);
         
-        sprintf(c.str,"constexpr sampler s1(coord::normalized,address::repeat,min_filter::nearest,mag_filter::nearest,mip_filter::nearest);");
+        _sprintf(c.str,"constexpr sampler s1(coord::normalized,address::repeat,min_filter::nearest,mag_filter::nearest,mip_filter::nearest);");
         vpoutput.Add(c);
         /**/
-        //sprintf(c.str,"constexpr sampler s0;");
+        //_sprintf(c.str,"constexpr sampler s0;");
         //vpoutput.Add(c);
         
         
@@ -5361,8 +5532,8 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 				{
 					if (translate_ps_constants[n])
 					{
-						if (ps_constants_type[n]==1) sprintf(c.str,"float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
-						else sprintf(c.str,"float4x4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+						if (ps_constants_type[n]==1) _sprintf(c.str,"float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+						else _sprintf(c.str,"float4x4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
 						vpoutput.Add(c);
 					}
 				}
@@ -5373,13 +5544,13 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 
 			for (n=0;n<npsvectors;n++)
 			{
-				sprintf(c.str,"float4 %s;",psvectors[n]);
+				_sprintf(c.str,"float4 %s;",psvectors[n]);
 				vpoutput.Add(c);
 			}
 
 			for (n=0;n<npsmatrices;n++)
 			{
-				sprintf(c.str,"float4x4 %s;",psmatrices[n]);
+				_sprintf(c.str,"float4x4 %s;",psmatrices[n]);
 				vpoutput.Add(c);
 			}
 
@@ -5391,18 +5562,18 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
                 strcpy(c.str,"struct PS_OUTPUT");vpoutput.Add(c);
                 strcpy(c.str,"{");vpoutput.Add(c);
 
-				if (shadermodel4) { sprintf(c.str,"float4 Out : SV_Target;");vpoutput.Add(c); }
-				else { sprintf(c.str,"float4 Out : COLOR0;");vpoutput.Add(c); }
+				if (shadermodel4) { _sprintf(c.str,"float4 Out : SV_Target;");vpoutput.Add(c); }
+				else { _sprintf(c.str,"float4 Out : COLOR0;");vpoutput.Add(c); }
 
-				if (shadermodel4) { if (modifyZ) { sprintf(c.str,"float Depth : SV_Depth;");vpoutput.Add(c); } 	}
-				else { if (modifyZ) { sprintf(c.str,"float Depth : DEPTH;");vpoutput.Add(c); } }
+				if (shadermodel4) { if (modifyZ) { _sprintf(c.str,"float Depth : SV_Depth;");vpoutput.Add(c); } 	}
+				else { if (modifyZ) { _sprintf(c.str,"float Depth : DEPTH;");vpoutput.Add(c); } }
 			
                 strcpy(c.str,"};");vpoutput.Add(c);
 				c.str[0]='\0';
 				vpoutput.Add(c);
 			}
 
-            sprintf(c.str,"struct VS_OUTPUT%d",pass);vpoutput.Add(c);
+            _sprintf(c.str,"struct VS_OUTPUT%d",pass);vpoutput.Add(c);
             strcpy(c.str,"{");vpoutput.Add(c);
 
 			if (shadermodel4) { strcpy(c.str,"float4 p0 : SV_POSITION;");vpoutput.Add(c); }
@@ -5448,10 +5619,10 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 				{
 					for (int i=0;i<ntexture;i++)
 					{
-						sprintf(c.str,"sampler s%d = ",i);vpoutput.Add(c);
+						_sprintf(c.str,"sampler s%d = ",i);vpoutput.Add(c);
                         strcpy(c.str,"sampler_state");vpoutput.Add(c);
                         strcpy(c.str,"{");vpoutput.Add(c);
-						sprintf(c.str,"Texture = <%s>;",texture[i]);vpoutput.Add(c);
+						_sprintf(c.str,"Texture = <%s>;",texture[i]);vpoutput.Add(c);
                         strcpy(c.str,"MipFilter = LINEAR;");vpoutput.Add(c);
                         strcpy(c.str,"MinFilter = LINEAR;");vpoutput.Add(c);
                         strcpy(c.str,"MagFilter = LINEAR;");vpoutput.Add(c);
@@ -5463,10 +5634,10 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 
 					for (int i=0;i<ntexturevs;i++)
 					{
-						sprintf(c.str,"sampler svs%d = ",i);vpoutput.Add(c);
+						_sprintf(c.str,"sampler svs%d = ",i);vpoutput.Add(c);
                         strcpy(c.str,"sampler_state");vpoutput.Add(c);
                         strcpy(c.str,"{");vpoutput.Add(c);
-						sprintf(c.str,"Texture = <%s>;",texturevs[i]);vpoutput.Add(c);
+						_sprintf(c.str,"Texture = <%s>;",texturevs[i]);vpoutput.Add(c);
                         strcpy(c.str,"MipFilter = POINT;");vpoutput.Add(c);
                         strcpy(c.str,"MinFilter = LINEAR;");vpoutput.Add(c);
                         strcpy(c.str,"MagFilter = LINEAR;");vpoutput.Add(c);
@@ -5587,7 +5758,7 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 				{
 					if (translate_ps_constants[n])
 					{
-						sprintf(c.str,"def  c%d, %s",n,translate_ps_constants[n]);
+						_sprintf(c.str,"def  c%d, %s",n,translate_ps_constants[n]);
 						vp.Add(c);
 					}
 				}
@@ -5614,7 +5785,7 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 			{
 				if (RS.Texture[i])
 				{
-					sprintf(c.str,"dcl_2d s%d",i);
+					_sprintf(c.str,"dcl_2d s%d",i);
 					vp.Add(c);
 				}
 			}
@@ -5646,7 +5817,7 @@ void CVertexProgram::header_open_psh(int pass,unsigned int flags,unsigned int ou
 				{
 					if (translate_ps_constants[n])
 					{
-						sprintf(c.str,"def  c%d, %s",n,translate_ps_constants[n]);
+						_sprintf(c.str,"def  c%d, %s",n,translate_ps_constants[n]);
 						vp.Add(c);
 					}
 				}
@@ -5832,7 +6003,7 @@ void CVertexProgram::clear_registers()
 void CVertexProgram::set_register(int n,char *name)
 {
 	registers[n]=(char*) malloc(strlen(name)+1);
-	sprintf(registers[n],"%s",name);
+	_sprintf(registers[n],"%s",name);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5859,8 +6030,8 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 					"		%s = %s ^ %s;\n";
 
 
-	char strtmp[8192];
-	char *res=(char*)malloc(strlen(script)+4096);
+	char strtmp[65536];
+	char *res=(char*)malloc(strlen(script)+32768);
 
 	bool update=false;
 	int pos=0;
@@ -5879,11 +6050,11 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 				tmp[pz]=0;
 
 				int pp=0;
-				sprintf(strtmp,space,rns[0],tmp,rns[0],rns[0],rns[1],tmp,rns[0]);
+				_sprintf(strtmp,space,rns[0],tmp,rns[0],rns[0],rns[1],tmp,rns[0]);
 
 				char * parsed=str_get_scriptfns(strtmp,&pp);
 
-				sprintf(&res[pos],"%s",parsed);
+				_sprintf(&res[pos],"%s",parsed);
 				pos+=(int)strlen(parsed);
 				update=true;
 			}
@@ -5899,11 +6070,11 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 				tmp[pz]=0;
 
 				int pp=0;
-				sprintf(strtmp,normal0,tmp,rns[0],rns[1],rns[0],rns[1]);
+				_sprintf(strtmp,normal0,tmp,rns[0],rns[1],rns[0],rns[1]);
 
 				char * parsed=str_get_scriptfns(strtmp,&pp);
 
-				sprintf(&res[pos],"%s",parsed);
+				_sprintf(&res[pos],"%s",parsed);
 				pos+=(int)strlen(parsed);
 				update=true;
 			}
@@ -5919,11 +6090,11 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 				tmp[pz]=0;
 
 				int pp=0;
-				sprintf(strtmp,vertex0,tmp,rns[0],rns[1],rns[0],rns[1]);
+				_sprintf(strtmp,vertex0,tmp,rns[0],rns[1],rns[0],rns[1]);
 
 				char * parsed=str_get_scriptfns(strtmp,&pp);
 
-				sprintf(&res[pos],"%s",parsed);
+				_sprintf(&res[pos],"%s",parsed);
 				pos+=(int)strlen(parsed);
 				update=true;
 			}
@@ -5939,11 +6110,11 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 				tmp[pz]=0;
 
 				int pp=0;
-				sprintf(strtmp,normal,tmp,rns[0],rns[1],rns[0],rns[1],"tmp",rns[0],rns[1],rns[0],rns[1],tmp,"tmp");
+				_sprintf(strtmp,normal,tmp,rns[0],rns[1],rns[0],rns[1],"tmp",rns[0],rns[1],rns[0],rns[1],tmp,"tmp");
 
 				char * parsed=str_get_scriptfns(strtmp,&pp);
 
-				sprintf(&res[pos],"%s",parsed);
+				_sprintf(&res[pos],"%s",parsed);
 				pos+=(int)strlen(parsed);
 				update=true;
 			}
@@ -5959,18 +6130,18 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 				tmp[pz]=0;
 
 				int pp=0;
-				sprintf(strtmp,vertex,tmp,rns[0],rns[1],rns[0],rns[1],"tmp",rns[0],rns[1],rns[0],rns[1],tmp,"tmp");
+				_sprintf(strtmp,vertex,tmp,rns[0],rns[1],rns[0],rns[1],"tmp",rns[0],rns[1],rns[0],rns[1],tmp,"tmp");
 
 				char * parsed=str_get_scriptfns(strtmp,&pp);
 
-				sprintf(&res[pos],"%s",parsed);
+				_sprintf(&res[pos],"%s",parsed);
 				pos+=(int)strlen(parsed);
 				update=true;
 			}
 		}
 		else
 		{
-			sprintf(&res[pos],"%s\n",tmp);
+			_sprintf(&res[pos],"%s\n",tmp);
 			pos+=(int)strlen(tmp)+1;
 		}
 
@@ -5988,7 +6159,7 @@ void CVertexProgram::parse_inner_func_position(char * &script)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 {
-	char strtmp[8192];
+	char strtmp[65536];
 
 	char * shdsoft1 =	"float libsoftcalcshadowX%s(vec4 pos,float zval)\n"
 						"{\n"
@@ -6301,7 +6472,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (shadowssoft1[n]==0)
 				{					
-					sprintf(strtmp,shdsoft1,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn);
+					_sprintf(strtmp,shdsoft1,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6311,14 +6482,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6340,7 +6511,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (shadowssoft4[n]==0)
 				{					
-					sprintf(strtmp,shdsoft4,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn);
+					_sprintf(strtmp,shdsoft4,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6350,14 +6521,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6380,7 +6551,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (shadowsbilinear[n]==0)
 				{					
-					sprintf(strtmp,shdbilinear,rn,rn,rn,rn4,rn4,rn,rn4,rn,rn4,rn,rn4,rn,rn,rn,rn4,rn,rn4,rn,rn4,rn);
+					_sprintf(strtmp,shdbilinear,rn,rn,rn,rn4,rn4,rn,rn4,rn,rn4,rn,rn4,rn,rn,rn,rn4,rn,rn4,rn,rn4,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6390,14 +6561,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6421,7 +6592,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (mouss1[n]==0)
 				{					
-					sprintf(strtmp,shdmouss,rn,rn);
+					_sprintf(strtmp,shdmouss,rn,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6431,14 +6602,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6462,7 +6633,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (mouss2[n]==0)
 				{					
-					sprintf(strtmp,shdmouss2,rn,rn);
+					_sprintf(strtmp,shdmouss2,rn,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6472,14 +6643,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6501,7 +6672,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 
 				if (shadows[n]==0)
 				{					
-					sprintf(strtmp,shdsimple,rn,rn);
+					_sprintf(strtmp,shdsimple,rn,rn);
 
 					int pos=0;
 					char * parsed=str_get_scriptfns(strtmp,&pos);
@@ -6511,14 +6682,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6544,14 +6715,14 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 					{
 						int len=(int)strlen(funcs);
 						char * nouv=(char*)malloc(len+lent+1);
-						sprintf(nouv,"%s%s",funcs,parsed);
+						_sprintf(nouv,"%s%s",funcs,parsed);
 						free(funcs);
 						funcs=nouv;
 					}
 					else
 					{
 						char * nouv=(char*)malloc(lent+1);
-						sprintf(nouv,"%s",parsed);
+						_sprintf(nouv,"%s",parsed);
 						funcs=nouv;
 					}
 
@@ -6568,7 +6739,7 @@ void CVertexProgram::parse_inner_func(char *script,char *&funcs)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::compile_script(char *script,CList <Code> *vp)
 {
-	char temp[1024];
+	char temp[8192];
 	char *tmp;
 	int p;
 
@@ -6596,7 +6767,7 @@ void CVertexProgram::compile_script(char *script,CList <Code> *vp)
 		{
 			if (!((SYNTAXERROR)||(TYPEERROR)||(DEFINEERROR))) strcpy(ERRORSTR,tmp);
 
-			sprintf(temp, "%s", tmp);
+			_sprintf(temp, "%s", tmp);
 			tmp = str_parse(script, &p);
 			nstrings = 0;
 			if (tmp) compile_code(temp, vp, 0);
@@ -6687,7 +6858,7 @@ char * CVertexProgram::compile_macro(Macro *m,char * param,CList <Code> *vp)
 		n = str_char(tmp, '=');
 		if (n != -1)
 		{
-			sprintf(cmd, tmp);
+			_sprintf(cmd, tmp);
 			cmd[n] = '\0';
 			var(cmd);
 		}
@@ -6724,12 +6895,12 @@ char * CVertexProgram::compile_macro(Macro *m,char * param,CList <Code> *vp)
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = %s",dst[i],src[i]);
+				_sprintf(c.str,"%s = %s",dst[i],src[i]);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s",Inst[_mov][api],dst[i],src[i]);
+				_sprintf(c.str,"%s %s,%s",Inst[_mov][api],dst[i],src[i]);
 				AddInst(vp,c);
 			}
 		}
@@ -6742,7 +6913,7 @@ char * CVertexProgram::compile_macro(Macro *m,char * param,CList <Code> *vp)
 		n = str_char(tmp, '=');
 		if (n != -1)
 		{
-			sprintf(cmd, tmp);
+			_sprintf(cmd, tmp);
 			compile_code(cmd,vp,0);
 		}
 		else
@@ -6822,12 +6993,12 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 
 		nstrings=0;
 
-		if (fn->ret==CALL_FLOAT) sprintf(sfn,"float %s",fn->name);
+		if (fn->ret==CALL_FLOAT) _sprintf(sfn,"float %s",fn->name);
 		else
-		if (fn->ret==CALL_VECTOR2) sprintf(sfn,"float2 %s",fn->name);
+		if (fn->ret==CALL_VECTOR2) _sprintf(sfn,"float2 %s",fn->name);
 		else
-		if (fn->ret==CALL_VECTOR3) sprintf(sfn,"float3 %s",fn->name);
-		else sprintf(sfn,"float4 %s",fn->name);
+		if (fn->ret==CALL_VECTOR3) _sprintf(sfn,"float3 %s",fn->name);
+		else _sprintf(sfn,"float4 %s",fn->name);
 
 		TAG_secondary_vars=false;
 		p=0;
@@ -6835,8 +7006,8 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 		tmp=str_parse_char(fn->def,&p,',');
 		while (tmp)
 		{
-			sprintf(s.str,tmp);
-			sprintf(ss,tmp);
+			_sprintf(s.str,tmp);
+			_sprintf(ss,tmp);
 			io=0;
 			sv="float4";
 			if (fn->defs[n]==CALL_FLOAT) sv="float";
@@ -6851,25 +7022,25 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 
 			if (io)
 			{
-				if (n>0) sprintf(sfn,"%s,inout %s %s",sfn,sv,tmp);
-				else sprintf(sfn,"%s(inout %s %s",sfn,sv,tmp);
+				if (n>0) _sprintf(sfn,"%s,inout %s %s",sfn,sv,tmp);
+				else _sprintf(sfn,"%s(inout %s %s",sfn,sv,tmp);
 			}
 			else
 			{
-				if (n>0) sprintf(sfn,"%s,%s %s",sfn,sv,tmp);
-				else sprintf(sfn,"%s(%s %s",sfn,sv,tmp);
+				if (n>0) _sprintf(sfn,"%s,%s %s",sfn,sv,tmp);
+				else _sprintf(sfn,"%s(%s %s",sfn,sv,tmp);
 			}
 
 			ch=new CVPVariable(REGISTER,ss,fn->entete);
 			ch->tobeused=true;
 			Vars.Add(s.str,*ch);
 			delete ch;
-			sprintf(&paramsFn[n][0],ss);
+			_sprintf(&paramsFn[n][0],ss);
 			n++;
 			tmp=str_parse_char(fn->def,&p,',');
 		}	
 
-		sprintf(sfn,"%s)",sfn);
+		_sprintf(sfn,"%s)",sfn);
         strcpy(entete,sfn);
 
 		if (!shadermodel3) addsemi=true;
@@ -6978,7 +7149,7 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 					if (str_char_count(tmp,'.')>1) SYNTAXERROR=true;
 
 					compile_expression=true;
-					sprintf(c.str,"return %s",var(tmp));
+					_sprintf(c.str,"return %s",var(tmp));
 					AddInst(vp,c);
 					compile_expression=false;
 
@@ -7043,12 +7214,12 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 
 	actual_vp=&tmpvp;
 
-	if (fn->ret==CALL_FLOAT) sprintf(sfn,"float %s",fn->name);
+	if (fn->ret==CALL_FLOAT) _sprintf(sfn,"float %s",fn->name);
 	else
-	if (fn->ret==CALL_VECTOR2) sprintf(sfn,"vec2 %s",fn->name);
+	if (fn->ret==CALL_VECTOR2) _sprintf(sfn,"vec2 %s",fn->name);
 	else
-	if (fn->ret==CALL_VECTOR3) sprintf(sfn,"vec3 %s",fn->name);
-	else sprintf(sfn,"vec4 %s",fn->name);
+	if (fn->ret==CALL_VECTOR3) _sprintf(sfn,"vec3 %s",fn->name);
+	else _sprintf(sfn,"vec4 %s",fn->name);
 
 	TAG_secondary_vars=false;
 	p=0;
@@ -7056,9 +7227,9 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 	tmp=str_parse_char(fn->def,&p,',');
 	while (tmp)
 	{
-		sprintf(s.str,tmp);
-		if (api==0) { sprintf(ss,"r%d",fn->registers[n]); tagtempreg[fn->registers[n]]=666; }
-		else sprintf(ss,tmp);
+		_sprintf(s.str,tmp);
+		if (api==0) { _sprintf(ss,"r%d",fn->registers[n]); tagtempreg[fn->registers[n]]=666; }
+		else _sprintf(ss,tmp);
 
 		io=0;
 		sv="vec4";
@@ -7074,13 +7245,13 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 		
 		if (io)
 		{
-			if (n>0) sprintf(sfn,"%s,inout %s %s",sfn,sv,tmp);
-			else sprintf(sfn,"%s(inout %s %s",sfn,sv,tmp);
+			if (n>0) _sprintf(sfn,"%s,inout %s %s",sfn,sv,tmp);
+			else _sprintf(sfn,"%s(inout %s %s",sfn,sv,tmp);
 		}
 		else
 		{
-			if (n>0) sprintf(sfn,"%s,%s %s",sfn,sv,tmp);
-			else sprintf(sfn,"%s(%s %s",sfn,sv,tmp);
+			if (n>0) _sprintf(sfn,"%s,%s %s",sfn,sv,tmp);
+			else _sprintf(sfn,"%s(%s %s",sfn,sv,tmp);
 		}
 
         strcpy(&paramsFn[n][0],ss);
@@ -7093,7 +7264,7 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 		tmp=str_parse_char(fn->def,&p,',');
 	}
 
-	sprintf(sfn,"%s)",sfn);
+	_sprintf(sfn,"%s)",sfn);
 
 	if (api==1) addsemi=true;
 
@@ -7199,7 +7370,7 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 					char *st=var(tmp);
 					if (strcmp(st,"r11")!=0)
 					{
-						sprintf(c.str,"mov r11,%s",st);
+						_sprintf(c.str,"mov r11,%s",st);
 						AddInst(&tmpvp,c);
 					}
 					output="r11";
@@ -7217,7 +7388,7 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 					if (str_char_count(tmp,'.')>1) SYNTAXERROR=true;
 
 					compile_expression=true;
-					sprintf(c.str,"return %s",var(tmp));
+					_sprintf(c.str,"return %s",var(tmp));
 					AddInst(&tmpvp,c);
 					compile_expression=false;
 
@@ -7233,7 +7404,7 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 
 	if (api==1)
 	{
-		sprintf(c.str,"%s",sfn);
+		_sprintf(c.str,"%s",sfn);
 		AddInst(vp,c);
         strcpy(c.str,"{");
 		AddInst(vp,c);
@@ -7241,11 +7412,11 @@ char * CVertexProgram::compile_function(Macro *fn,CList <Code> *vp)
 		for (n=0;n<32;n++)
 		if (tagregsave[n])
 		{
-			sprintf(c.str,"vec4 r%d;",n);
+			_sprintf(c.str,"vec4 r%d;",n);
 			AddInst(vp,c);
 		}
 
-		sprintf(c.str,"");
+		_sprintf(c.str,"");
 		AddInst(vp,c);
 
 		Code * cc=tmpvp.GetFirst();
@@ -7476,8 +7647,8 @@ char * CVertexProgram::result_parse_condition(char *str)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixelshader)
 {
-    char chaine[1024];
-    char tmp[1024];
+    char chaine[8192];
+    char tmp[8192];
     int p;
 	char * res,*aff;
 	int r;
@@ -7527,7 +7698,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 
 		if (shadermodel3)
 		{
-			sprintf(c.str, "if (%s)", result_parse_condition(test));
+			_sprintf(c.str, "if (%s)", result_parse_condition(test));
 			AddInst00(vp, c);
             strcpy(c.str, "{");
 			AddInst00(vp, c);
@@ -7546,9 +7717,9 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s>=%s)", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s>=%s)", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s>%s)", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s>%s)", var(test), var(&test[p + 1]));
 			}
 			else
 			{
@@ -7557,12 +7728,12 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s<=%s)", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s<=%s)", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s<%s)", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s<%s)", var(test), var(&test[p + 1]));
 			}
 
-			sprintf(c.str, "%s", tmp);
+			_sprintf(c.str, "%s", tmp);
 			AddInst00(vp, c);
             strcpy(c.str, "{");
 			AddInst00(vp, c);
@@ -7590,9 +7761,9 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s>=%s) break", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s>=%s) break", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s>%s) break", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s>%s) break", var(test), var(&test[p + 1]));
 			}
 			else
 			{
@@ -7601,12 +7772,12 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s<=%s) break", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s<=%s) break", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s<%s) break", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s<%s) break", var(test), var(&test[p + 1]));
 			}
 
-			sprintf(c.str, "%s", tmp);
+			_sprintf(c.str, "%s", tmp);
 			AddInst(vp, c);
 
 			floatprocessing=false;
@@ -7627,9 +7798,9 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s>=%s) continue", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s>=%s) continue", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s>%s) continue", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s>%s) continue", var(test), var(&test[p + 1]));
 			}
 			else
 			{
@@ -7638,12 +7809,12 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s<=%s) continue", var(test), var(&test[p + 1]));
+					_sprintf(tmp, "if (%s<=%s) continue", var(test), var(&test[p + 1]));
 				}
-				else sprintf(tmp, "if (%s<%s) continue", var(test), var(&test[p + 1]));
+				else _sprintf(tmp, "if (%s<%s) continue", var(test), var(&test[p + 1]));
 			}
 
-			sprintf(c.str, "%s", tmp);
+			_sprintf(c.str, "%s", tmp);
 			AddInst(vp, c);
 
 			floatprocessing=false;
@@ -7663,9 +7834,9 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s>=%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
+					_sprintf(tmp, "if (%s>=%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
 				}
-				else sprintf(tmp, "if (%s>%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
+				else _sprintf(tmp, "if (%s>%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
 			}
 			else
 			{
@@ -7674,12 +7845,12 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				if (test[p + 1] == '=')
 				{
 					p++;
-					sprintf(tmp, "if (%s<=%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
+					_sprintf(tmp, "if (%s<=%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
 				}
-				else sprintf(tmp, "if (%s<%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
+				else _sprintf(tmp, "if (%s<%s) %s", var(test), var(&test[p + 1]),sDiscardAPI);
 			}
 
-			sprintf(c.str, "%s", tmp);
+			_sprintf(c.str, "%s", tmp);
 			AddInst(vp, c);
 
 			floatprocessing=false;
@@ -7709,10 +7880,10 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 		{
 			strcpy(ERRORSTRREP,str);
 			levelrepglobal++;
-			sprintf(tmp,"%s",ss);
+			_sprintf(tmp,"%s",ss);
 			sscanf(tmp,"%d",&r);
-			if ((api==0)&&(metal==0)) sprintf(c.str,"[loop] for (int %c%d=0;%c%d<%d;%c%d++)",ch[levelrep],levelrep,ch[levelrep],levelrep,r,ch[levelrep],levelrep); // [loop]
-			else sprintf(c.str,"for (int %c%d=0;%c%d<%d;%c%d++)",ch[levelrep],levelrep,ch[levelrep],levelrep,r,ch[levelrep],levelrep);
+			if ((api==0)&&(metal==0)) _sprintf(c.str,"[loop] for (int %c%d=0;%c%d<%d;%c%d++)",ch[levelrep],levelrep,ch[levelrep],levelrep,r,ch[levelrep],levelrep); // [loop]
+			else _sprintf(c.str,"for (int %c%d=0;%c%d<%d;%c%d++)",ch[levelrep],levelrep,ch[levelrep],levelrep,r,ch[levelrep],levelrep);
 			AddInst(vp,c);
             strcpy(c.str,"{");
 			AddInst(vp,c);
@@ -7749,7 +7920,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
             
             if (shadermodel3)
             {
-                sprintf(tmp, "%s", result_parse_condition(test));
+                _sprintf(tmp, "%s", result_parse_condition(test));
             }
             else
             {
@@ -7760,9 +7931,9 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
                     if (test[p + 1] == '=')
                     {
                         p++;
-                        sprintf(tmp, "%s>=%s", var(test), var(&test[p + 1]));
+                        _sprintf(tmp, "%s>=%s", var(test), var(&test[p + 1]));
                     }
-                    else sprintf(tmp, "%s>%s", var(test), var(&test[p + 1]));
+                    else _sprintf(tmp, "%s>%s", var(test), var(&test[p + 1]));
                 }
                 else
                 {
@@ -7771,14 +7942,14 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
                     if (test[p + 1] == '=')
                     {
                         p++;
-                        sprintf(tmp, "%s<=%s", var(test), var(&test[p + 1]));
+                        _sprintf(tmp, "%s<=%s", var(test), var(&test[p + 1]));
                     }
-                    else sprintf(tmp, "%s<%s", var(test), var(&test[p + 1]));
+                    else _sprintf(tmp, "%s<%s", var(test), var(&test[p + 1]));
                 }
             }
 
-			if ((api==0)&&(metal==0)) sprintf(c.str,"[loop] while (%s)",tmp); // [loop]
-			else sprintf(c.str,"while (%s)",tmp);
+			if ((api==0)&&(metal==0)) _sprintf(c.str,"[loop] while (%s)",tmp); // [loop]
+			else _sprintf(c.str,"while (%s)",tmp);
 			AddInst(vp,c);
 
             strcpy(c.str,"{");
@@ -7793,7 +7964,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 	{
 		strcpy(LASTLINESTR,str);
 
-		sprintf(chaine,"%s",str);
+		_sprintf(chaine,"%s",str);
 		str_clean(chaine);
 
 		p=str_char(chaine,'=');
@@ -7832,8 +8003,8 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 				floatprocessinginit=false;
 				if (present<0)
 				{ 
-                    if (api==1) sprintf(c.str, "float %s", chaine);
-                    else sprintf(c.str, "float %s;", chaine);
+                    if (api==1) _sprintf(c.str, "float %s", chaine);
+                    else _sprintf(c.str, "float %s;", chaine);
                     AddInst(vp, c);
 
 					strcpy(floats[nfloats++],chaine);
@@ -7842,7 +8013,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 	
 				if (floating(&chaine[p+1]))
                 {
-                    sprintf(tmp,"%s",&chaine[p+1]);
+                    _sprintf(tmp,"%s",&chaine[p+1]);
                 }
 				else
                 {
@@ -7863,7 +8034,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
                 
                 if (strcmp(aff, chaine) != 0)
                 {
-                    sprintf(c.str, "%s = %s", chaine, aff);
+                    _sprintf(c.str, "%s = %s", chaine, aff);
                     AddInst(vp, c);
                 }
 
@@ -7914,12 +8085,12 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 						{
 							if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 							{
-								sprintf(c.str, "%s = %s", res, aff);
+								_sprintf(c.str, "%s = %s", res, aff);
 								AddInst(vp, c);
 							}
 							else
 							{
-								sprintf(c.str, "%s %s,%s", Inst[_mov][api], res, aff);
+								_sprintf(c.str, "%s %s,%s", Inst[_mov][api], res, aff);
 								AddInst(vp, c);
 							}
 						}
@@ -7941,7 +8112,7 @@ void CVertexProgram::compile_code(char *str,CList <Code> *vp,int last_line_pixel
 					{
 						if (api!=2)
 						{
-							sprintf(c.str,"%s %s,%s",Inst[_mov][api],"result.color",aff);
+							_sprintf(c.str,"%s %s,%s",Inst[_mov][api],"result.color",aff);
 							AddInst(vp,c);
 						}
 					}
@@ -8047,11 +8218,13 @@ int multiple_argument_parse_virg(char *str,char **strings)
 	int pos=0;
 	int n=0;
 
+	if (strlen(str)==0) return 0;
+
 	tmp=str_parse_char_prt(str,&pos,',');
 	while (tmp)
 	{
 		strings[n]=newString();
-		sprintf(strings[n++],"%s",tmp);
+		_sprintf(strings[n++],"%s",tmp);
 		tmp=str_parse_char_prt(str,&pos,',');
 	}
     
@@ -8070,12 +8243,12 @@ char * CVertexProgram::test_force_register(char *str)
 	if (strcmp(str,"")==0) return NULL;
 	else
 	{
-		if (str_parentheses(str)) sprintf(chaine,"%s",str_return_parentheses(str));
-		else sprintf(chaine,"%s",str);
+		if (str_parentheses(str)) _sprintf(chaine,"%s",str_return_parentheses(str));
+		else _sprintf(chaine,"%s",str);
 
 		if (str_match0(chaine,"sample"))
 		{
-			sprintf(tmp,"%s",str_return_parentheses(chaine));
+			_sprintf(tmp,"%s",str_return_parentheses(chaine));
 			p=str_char(tmp,',');
 			tmp[p]='\0';
 
@@ -8153,20 +8326,20 @@ void CVertexProgram::swizzle(char *output, char *tmp4)
 						switch ((int)strlen(&output[sc + 1]))
 						{
 						case 1:
-							sprintf(tmp4, "%s.x", tmp4);
+							_sprintf(tmp4, "%s.x", tmp4);
 							break;
 						case 2:
-							sprintf(tmp4, "%s.xy", tmp4);
+							_sprintf(tmp4, "%s.xy", tmp4);
 							break;
 						case 3:
-							sprintf(tmp4, "%s.xyz", tmp4);
+							_sprintf(tmp4, "%s.xyz", tmp4);
 							break;
 						case 4:
-							//sprintf(tmp4, "%s.xyzw", tmp4);
+							//_sprintf(tmp4, "%s.xyzw", tmp4);
 							break;
 						};
 					}
-					//else sprintf(tmp4, "%s.xyzw", tmp4);
+					//else _sprintf(tmp4, "%s.xyzw", tmp4);
 				}
 			}
 			else
@@ -8175,7 +8348,7 @@ void CVertexProgram::swizzle(char *output, char *tmp4)
 				{
 					char c=tmp4[scc+1];
 					char tmp[1024];
-					sprintf(tmp,tmp4);
+					_sprintf(tmp,tmp4);
 					tmp[scc]='\0';
 
 					int sc = str_last_char(output, '.');
@@ -8186,20 +8359,20 @@ void CVertexProgram::swizzle(char *output, char *tmp4)
 							switch ((int)strlen(&output[sc + 1]))
 							{
 							case 1:
-								sprintf(tmp4, "%s.%c", tmp,c);
+								_sprintf(tmp4, "%s.%c", tmp,c);
 								break;
 							case 2:
-								sprintf(tmp4, "%s.%c%c", tmp,c,c);
+								_sprintf(tmp4, "%s.%c%c", tmp,c,c);
 								break;
 							case 3:
-								sprintf(tmp4, "%s.%c%c%c", tmp,c,c,c);
+								_sprintf(tmp4, "%s.%c%c%c", tmp,c,c,c);
 								break;
 							case 4:
-								sprintf(tmp4, "%s.%c%c%c%c", tmp,c,c,c,c);
+								_sprintf(tmp4, "%s.%c%c%c%c", tmp,c,c,c,c);
 								break;
 							};
 						}
-						else sprintf(tmp4, "%s.%c%c%c%c", tmp,c,c,c,c);
+						else _sprintf(tmp4, "%s.%c%c%c%c", tmp,c,c,c,c);
 					}
 				}
 			}
@@ -8223,13 +8396,13 @@ void CVertexProgram::resfield(char *output, char *tmp4)
 				switch ((int)strlen(&output[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				};
 			}
@@ -8240,7 +8413,7 @@ void CVertexProgram::resfield(char *output, char *tmp4)
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],output)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
 }
@@ -8248,7 +8421,7 @@ void CVertexProgram::resfield(char *output, char *tmp4)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::outputfield1(char *tmp4, char *output, char *rn)
 {
-	sprintf(tmp4, output);
+	_sprintf(tmp4, output);
 
 	if (str_last_char(tmp4, '.') == -1)
 	{
@@ -8257,23 +8430,23 @@ void CVertexProgram::outputfield1(char *tmp4, char *output, char *rn)
 		{
 			if (rn[sc+1]=='v')
 			{
-				//sprintf(tmp4, "%s.xyzw", tmp4);
+				//_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8285,16 +8458,16 @@ void CVertexProgram::outputfield1(char *tmp4, char *output, char *rn)
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) _sprintf(tmp4, "%s.x", tmp4);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::outputfield2(char *tmp4, char *output, char *rn, char *rn2)
 {
-	sprintf(tmp4, output);
+	_sprintf(tmp4, output);
 
 	if (str_last_char(tmp4, '.') == -1)
 	{
@@ -8303,23 +8476,23 @@ void CVertexProgram::outputfield2(char *tmp4, char *output, char *rn, char *rn2)
 		{
 			if (rn[sc+1]=='v')
 			{
-				sprintf(tmp4, "%s.xyzw", tmp4);
+				_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8331,7 +8504,7 @@ void CVertexProgram::outputfield2(char *tmp4, char *output, char *rn, char *rn2)
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
 
@@ -8342,23 +8515,23 @@ void CVertexProgram::outputfield2(char *tmp4, char *output, char *rn, char *rn2)
 		{
 			if (rn2[sc+1]=='v')
 			{
-				//sprintf(tmp4, "%s.xyzw", tmp4);
+				//_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn2[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8370,18 +8543,18 @@ void CVertexProgram::outputfield2(char *tmp4, char *output, char *rn, char *rn2)
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn2)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) sprintf(tmp4, "%s.x", tmp4);
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn2))) sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) _sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn2))) _sprintf(tmp4, "%s.x", tmp4);
 
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,char *rn3)
 {
-	sprintf(tmp4, output);
+	_sprintf(tmp4, output);
 
 	if (str_last_char(tmp4, '.') == -1)
 	{
@@ -8390,23 +8563,23 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 		{
 			if (rn[sc+1]=='v')
 			{
-				//sprintf(tmp4, "%s.xyzw", tmp4);
+				//_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8418,7 +8591,7 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
 
@@ -8429,23 +8602,23 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 		{
 			if (rn2[sc+1]=='v')
 			{
-				//sprintf(tmp4, "%s.xyzw", tmp4);
+				//_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn2[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8457,7 +8630,7 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn2)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 
 	}
@@ -8469,23 +8642,23 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 		{
 			if (rn3[sc+1]=='v')
 			{
-				sprintf(tmp4, "%s.xyzw", tmp4);
+				_sprintf(tmp4, "%s.xyzw", tmp4);
 			}
 			else
 			{
 				switch ((int)strlen(&rn3[sc + 1]))
 				{
 				case 1:
-					sprintf(tmp4, "%s.x", tmp4);
+					_sprintf(tmp4, "%s.x", tmp4);
 					break;
 				case 2:
-					sprintf(tmp4, "%s.xy", tmp4);
+					_sprintf(tmp4, "%s.xy", tmp4);
 					break;
 				case 3:
-					sprintf(tmp4, "%s.xyz", tmp4);
+					_sprintf(tmp4, "%s.xyz", tmp4);
 					break;
 				case 4:
-					//sprintf(tmp4, "%s.xyzw", tmp4);
+					//_sprintf(tmp4, "%s.xyzw", tmp4);
 					break;
 				};
 			}
@@ -8497,13 +8670,13 @@ void CVertexProgram::outputfield3(char *tmp4, char *output, char *rn, char *rn2,
 			for (int kk=0;kk<nfloats;kk++)
 				if (strcmp(floats[kk],rn3)==0) present=kk;
 
-			if (present>=0) sprintf(tmp4, "%s.x", tmp4);
+			if (present>=0) _sprintf(tmp4, "%s.x", tmp4);
 		}
 	}
 
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) sprintf(tmp4, "%s.x", tmp4);
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn2))) sprintf(tmp4, "%s.x", tmp4);
-	if ((str_last_char(tmp4, '.') == -1) && (numb(rn3))) sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn))) _sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn2))) _sprintf(tmp4, "%s.x", tmp4);
+	if ((str_last_char(tmp4, '.') == -1) && (numb(rn3))) _sprintf(tmp4, "%s.x", tmp4);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -8607,9 +8780,9 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 	int n;
 	int t;
 	char *rns[8];
-	char s0[256];
-	char s1[256];
-	char chaine[256];
+	char s0[8192];
+	char s1[8192];
+	char chaine[8192];
 	char *tmp2;
 	char *tmp3;
 	char *tmp4;
@@ -8626,8 +8799,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 	const char ch[4]={ 'a','b','c','d' };
 	char *output=outputbase;
 
+
+	int lln=strlen(str);
+	int pr1=0;
+	int pr2=0;
+	for (n=0;n<lln;n++)
+	{
+		if (str[n]=='(') pr1++;
+		if (str[n]==')') pr2++;
+	}
+
+	if ((pr1!=pr2)||(lln==0)) SYNTAXERROR=true;
+
 	if (floatprocessing)
-		if ((!isfloat(output))&&(str_last_char(output,'.')<0)) sprintf(output,"%s.x",output);
+		if ((!isfloat(output))&&(str_last_char(output,'.')<0)) _sprintf(output,"%s.x",output);
 
     if (nb_modifiers_syntax(output)>4) TYPEERROR=true;
     
@@ -8640,7 +8825,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 
 /*
 	char ssz[1024];
-	sprintf(ssz,"%s : %s",output,str);
+	_sprintf(ssz,"%s : %s",output,str);
 	LOG(ssz);
 /**/
         
@@ -8689,22 +8874,22 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 					if (str_simple(s0)) rn=var(s0);
 					else
 					{
-						if (str_last_char(output,'.')==-1) sprintf(tmp,"r%d",new_temp_register());
+						if (str_last_char(output,'.')==-1) _sprintf(tmp,"r%d",new_temp_register());
 						else
 						{
 							switch (nb_modifiers(output))
 							{
 							case 1:
-								sprintf(tmp,"r%d.x",new_temp_register());
+								_sprintf(tmp,"r%d.x",new_temp_register());
 								break;
 							case 2:
-								sprintf(tmp,"r%d.xy",new_temp_register());
+								_sprintf(tmp,"r%d.xy",new_temp_register());
 								break;
 							case 3:
-								sprintf(tmp,"r%d.xyz",new_temp_register());
+								_sprintf(tmp,"r%d.xyz",new_temp_register());
 								break;
 							case 4:
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 								break;
 							};
 						}
@@ -8716,7 +8901,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 
 					if (numberswz(rn)!=numberswz(rn2)) TYPEERROR=true;
 					
-					sprintf(tmp4,output);
+					_sprintf(tmp4,output);
 					
 					if (str_last_char(tmp4,'.')==-1)
 					{
@@ -8726,16 +8911,16 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							switch (nb_modifiers(rn))
 							{
 							case 1:
-								sprintf(tmp4, "%s.x", output);
+								_sprintf(tmp4, "%s.x", output);
 								break;
 							case 2:
-								sprintf(tmp4, "%s.xy", output);
+								_sprintf(tmp4, "%s.xy", output);
 								break;
 							case 3:
-								sprintf(tmp4, "%s.xyz", output);
+								_sprintf(tmp4, "%s.xyz", output);
 								break;
 							case 4:
-								sprintf(tmp4, "%s", output);
+								_sprintf(tmp4, "%s", output);
 								break;
 							};
 						}
@@ -8749,16 +8934,16 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							switch (nb_modifiers(rn2))
 							{
 							case 1:
-								sprintf(tmp4,"%s.x",output);
+								_sprintf(tmp4,"%s.x",output);
 								break;
 							case 2:
-								sprintf(tmp4,"%s.xy",output);
+								_sprintf(tmp4,"%s.xy",output);
 								break;
 							case 3:
-								sprintf(tmp4,"%s.xyz",output);
+								_sprintf(tmp4,"%s.xyz",output);
 								break;
 							case 4:
-								sprintf(tmp4,"%s",output);
+								_sprintf(tmp4,"%s",output);
 								break;
 							};
 						}						
@@ -8777,12 +8962,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						{
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
-								sprintf(c.str,"%s = %s - %s",tmp4,rn,rn2);
+								_sprintf(c.str,"%s = %s - %s",tmp4,rn,rn2);
 								AddInst(vp,c);
 							}
 							else
 							{
-								sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp4,rn,rn2);
+								_sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp4,rn,rn2);
 								AddInst(vp,c);
 							}
 						}
@@ -8797,7 +8982,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						{
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
-								sprintf(c.str,"%s = %s + %s",tmp4,rn,rn2);
+								_sprintf(c.str,"%s = %s + %s",tmp4,rn,rn2);
 								AddInst(vp,c);
 							}
 							else
@@ -8805,12 +8990,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							
 								if ((pixelshader)&&(api==1))
 								{
-									sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_add][api],tmp4,rn,rn2);
+									_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_add][api],tmp4,rn,rn2);
 									AddInst(vp,c);
 								}
 								else
 								{	
-									sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp4,rn,rn2);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp4,rn,rn2);
 									AddInst(vp,c);
 								}	
 							}
@@ -8826,8 +9011,8 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 					{
 						if (str_last_char(output,'.')==-1)
 						{
-							sprintf(tmp2,"r%d",new_temp_register());
-							sprintf(tmp3,"%s",output);
+							_sprintf(tmp2,"r%d",new_temp_register());
+							_sprintf(tmp3,"%s",output);
 						}
 						else
 						{
@@ -8837,22 +9022,22 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 								switch (nb_modifiers(output))
 								{
 								case 1:
-									sprintf(tmp2,"r%d.x",new_temp_register());
+									_sprintf(tmp2,"r%d.x",new_temp_register());
 									break;
 								case 2:
-									sprintf(tmp2,"r%d.xy",new_temp_register());
+									_sprintf(tmp2,"r%d.xy",new_temp_register());
 									break;
 								case 3:
-									sprintf(tmp2,"r%d.xyz",new_temp_register());
+									_sprintf(tmp2,"r%d.xyz",new_temp_register());
 									break;
 								case 4:
-									sprintf(tmp2,"r%d",new_temp_register());
+									_sprintf(tmp2,"r%d",new_temp_register());
 									break;
 								};
 							}
-							else sprintf(tmp2,"r%d",new_temp_register());
+							else _sprintf(tmp2,"r%d",new_temp_register());
 
-							sprintf(tmp3,"%s",output);
+							_sprintf(tmp3,"%s",output);
 						}
 						
 					}
@@ -8860,8 +9045,8 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 					{
 						if (str_last_char(output,'.')==-1)
 						{
-							sprintf(tmp2,"r%d",new_temp_register());
-							sprintf(tmp3,"r%d",new_temp_register());
+							_sprintf(tmp2,"r%d",new_temp_register());
+							_sprintf(tmp3,"r%d",new_temp_register());
 						}
 						else
 						{
@@ -8871,40 +9056,40 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 								switch (nb_modifiers(output))
 								{
 								case 1:
-									sprintf(tmp2,"r%d.x",new_temp_register());
-									sprintf(tmp3,"r%d.x",new_temp_register());
+									_sprintf(tmp2,"r%d.x",new_temp_register());
+									_sprintf(tmp3,"r%d.x",new_temp_register());
 									break;
 								case 2:
-									sprintf(tmp2,"r%d.xy",new_temp_register());
-									sprintf(tmp3,"r%d.xy",new_temp_register());
+									_sprintf(tmp2,"r%d.xy",new_temp_register());
+									_sprintf(tmp3,"r%d.xy",new_temp_register());
 									break;
 								case 3:
-									sprintf(tmp2,"r%d.xyz",new_temp_register());
-									sprintf(tmp3,"r%d.xyz",new_temp_register());
+									_sprintf(tmp2,"r%d.xyz",new_temp_register());
+									_sprintf(tmp3,"r%d.xyz",new_temp_register());
 									break;
 								case 4:
-									sprintf(tmp2,"r%d",new_temp_register());
-									sprintf(tmp3,"r%d",new_temp_register());
+									_sprintf(tmp2,"r%d",new_temp_register());
+									_sprintf(tmp3,"r%d",new_temp_register());
 									break;
 								};
 							}
 							else
 							{
-								sprintf(tmp2,"r%d",new_temp_register());
-								sprintf(tmp3,"r%d",new_temp_register());
+								_sprintf(tmp2,"r%d",new_temp_register());
+								_sprintf(tmp3,"r%d",new_temp_register());
 							}
 						}
 					}
 
-					sprintf(tmp4,"%s",output);
+					_sprintf(tmp4,"%s",output);
 
 					if (floatprocessing)
 					{
 						if (isfloat(output)) strcpy(tmp4,output);
 
-						if ((!isfloat(tmp2))&&(str_last_char(tmp2,'.')<0)) sprintf(tmp2,"%s.x",tmp2);
+						if ((!isfloat(tmp2))&&(str_last_char(tmp2,'.')<0)) _sprintf(tmp2,"%s.x",tmp2);
 
-						if ((!isfloat(tmp3))&&(str_last_char(tmp3,'.')<0)) sprintf(tmp3,"%s.x",tmp3);
+						if ((!isfloat(tmp3))&&(str_last_char(tmp3,'.')<0)) _sprintf(tmp3,"%s.x",tmp3);
 					}
 
 					if (str_simple(s0))
@@ -8919,13 +9104,13 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
 								
-								if ((numb(rn))&&(str_last_char(tmp3,'.')==-1)) sprintf(tmp3, "%s.x", tmp3);
-								sprintf(c.str,"%s = %s",tmp3,rn);
+								if ((numb(rn))&&(str_last_char(tmp3,'.')==-1)) _sprintf(tmp3, "%s.x", tmp3);
+								_sprintf(c.str,"%s = %s",tmp3,rn);
 								AddInst(vp,c);
 							}
 							else
 							{
-								sprintf(c.str,"%s %s,%s",Inst[_mov][api],tmp3,rn);
+								_sprintf(c.str,"%s %s,%s",Inst[_mov][api],tmp3,rn);
 								AddInst(vp,c);
 							}
 						}
@@ -8967,12 +9152,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 								{
-									sprintf(c.str,"%s = %s - %s",tmp3,tmp3,rn);
+									_sprintf(c.str,"%s = %s - %s",tmp3,tmp3,rn);
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp3,tmp3,rn);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp3,tmp3,rn);
 									AddInst(vp,c);
 								}
 							}
@@ -8987,12 +9172,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 								{
-									sprintf(c.str,"%s = %s + %s",tmp3,tmp3,rn);
+									_sprintf(c.str,"%s = %s + %s",tmp3,tmp3,rn);
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp3,tmp3,rn);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp3,tmp3,rn);
 									AddInst(vp,c);
 								}
 							}
@@ -9023,19 +9208,19 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						{
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
-								sprintf(c.str,"%s = %s - %s",tmp4,tmp3,rn2);
+								_sprintf(c.str,"%s = %s - %s",tmp4,tmp3,rn2);
 								AddInst(vp,c);
 							}
 							else
 							{
 								if ((pixelshader)&&(api==1))
 								{
-									sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_sub][api],tmp4,tmp3,rn2);
+									_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_sub][api],tmp4,tmp3,rn2);
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp4,tmp3,rn2);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp4,tmp3,rn2);
 									AddInst(vp,c);
 								}	
 							}
@@ -9064,19 +9249,19 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						{
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
-								sprintf(c.str,"%s = %s + %s",tmp4,tmp3,rn2);
+								_sprintf(c.str,"%s = %s + %s",tmp4,tmp3,rn2);
 								AddInst(vp,c);
 							}
 							else
 							{	
 								if ((pixelshader)&&(api==1))
 								{
-									sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_add][api],tmp4,tmp3,rn2);
+									_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_add][api],tmp4,tmp3,rn2);
 									AddInst(vp,c);
 								}
 								else
 								{	
-									sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp4,tmp3,rn2);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_add][api],tmp4,tmp3,rn2);
 									AddInst(vp,c);
 								}	
 							}
@@ -9180,7 +9365,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 
 								rn2=compile(s1,tmp,vp);
 								t=1;
@@ -9192,7 +9377,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 								rn=compile(s0,tmp,vp);
 								t=1;
 							}
@@ -9200,7 +9385,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp2,"r%d",new_temp_register());
+								_sprintf(tmp2,"r%d",new_temp_register());
 								rn2=compile(s1,tmp2,vp);
 								t=1;
 							}
@@ -9216,17 +9401,17 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if (str_last_char(output,'.')==-1)
 								{
-									sprintf(tmp3,"r%d",new_temp_register());
-									sprintf(c.str,"%s.x = dot(%s.xyz,%s.xyz)",tmp3,rn,rn2);
+									_sprintf(tmp3,"r%d",new_temp_register());
+									_sprintf(c.str,"%s.x = dot(%s.xyz,%s.xyz)",tmp3,rn,rn2);
 									AddInst(vp,c);
-									sprintf(c.str,"%s = %s.xxxx",output,tmp3);
+									_sprintf(c.str,"%s = %s.xxxx",output,tmp3);
 									AddInst(vp,c);
 
 									return output;
 								}
 								else
 								{
-									sprintf(c.str,"%s = dot(%s.xyz,%s.xyz)",output,rn,rn2);
+									_sprintf(c.str,"%s = dot(%s.xyz,%s.xyz)",output,rn,rn2);
 									AddInst(vp,c);
 								}
 							}
@@ -9234,12 +9419,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if ((pixelshader)&&(api==1))
 								{
-									sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_dp3][api],output,rn,rn2);
+									_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_dp3][api],output,rn,rn2);
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],output,rn,rn2);
+									_sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],output,rn,rn2);
 									AddInst(vp,c);
 								}
 							}
@@ -9256,7 +9441,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 
 								rn2=compile(s1,tmp,vp);
 								t=1;
@@ -9268,7 +9453,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 
 								rn=compile(s0,tmp,vp);
 								t=1;
@@ -9277,7 +9462,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp3,"r%d",new_temp_register());
+								_sprintf(tmp3,"r%d",new_temp_register());
 
 								rn2=compile(s1,tmp3,vp);
 								t=1;
@@ -9285,9 +9470,9 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						}
 
 						if ((strcmp(output,rn)!=0)&&(strcmp(output,rn2)!=0)) tmp0=output;
-						else sprintf(tmp0,"r%d",new_temp_register());
+						else _sprintf(tmp0,"r%d",new_temp_register());
 
-						sprintf(tmp2,"r%d",new_temp_register());
+						_sprintf(tmp2,"r%d",new_temp_register());
 
 						if (api==2)
 						{
@@ -9297,17 +9482,17 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						{
 							if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 							{
-								sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",output,rn,rn2);
+								_sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",output,rn,rn2);
 								AddInst(vp,c);
-								sprintf(c.str,"%s.w = 0.0",output);
+								_sprintf(c.str,"%s.w = 0.0",output);
 								AddInst(vp,c);
 								return output;
 							}
 							else
 							{
-								sprintf(c.str,"%s %s,%s.yzxw,%s.zxyw",Inst[_mul][api],tmp2,rn,rn2);
+								_sprintf(c.str,"%s %s,%s.yzxw,%s.zxyw",Inst[_mul][api],tmp2,rn,rn2);
 								AddInst(vp,c);
-								sprintf(c.str,"%s %s,-%s.zxyw,%s.yzxw,%s",Inst[_mad][api],tmp0,rn,rn2,tmp2);
+								_sprintf(c.str,"%s %s,-%s.zxyw,%s.yzxw,%s",Inst[_mad][api],tmp0,rn,rn2,tmp2);
 								AddInst(vp,c);
 							}
 						}
@@ -9319,8 +9504,8 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 					{
 						int sco=str_last_char(output,'.');
 
-						if (sco!=-1) sprintf(tmp0,"%s",&output[sco]);
-						else sprintf(tmp0,"");
+						if (sco!=-1) _sprintf(tmp0,"%s",&output[sco]);
+						else _sprintf(tmp0,"");
 						
 						t=0;
 						if (str_simple(s0))
@@ -9328,7 +9513,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp,"r%d%s",new_temp_register(),tmp0);
+								_sprintf(tmp,"r%d%s",new_temp_register(),tmp0);
 								rn2=compile(s1,tmp,vp);
 								t=1;
 							}
@@ -9339,7 +9524,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								sprintf(tmp,"r%d%s",new_temp_register(),tmp0);
+								_sprintf(tmp,"r%d%s",new_temp_register(),tmp0);
 								rn=compile(s0,tmp,vp);
 								t=1;
 							}
@@ -9347,7 +9532,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp2,"r%d%s",new_temp_register(),tmp0);
+								_sprintf(tmp2,"r%d%s",new_temp_register(),tmp0);
 								rn2=compile(s1,tmp2,vp);
 								t=1;
 							}
@@ -9378,26 +9563,26 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 								{
-									sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+									_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 									AddInst(vp,c);
 								}
 								else
 								{
 									if (rn[0]=='c')
 									{
-										sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+										_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 										AddInst(vp,c);
 									}
 									else
 									{
 										if ((pixelshader)&&(api==1))
 										{
-											sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+											_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 											AddInst(vp,c);
 										}
 										else 
 										{
-											sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+											_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 											AddInst(vp,c);
 										}	
 									}
@@ -9426,26 +9611,26 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 									{
 										if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 										{
-											sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+											_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 											AddInst(vp,c);
 										}
 										else
 										{
 											if (rn[0]=='c')
 											{
-												sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+												_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if ((pixelshader)&&(api==1))
 												{
-													sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+													_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 													AddInst(vp,c);
 												}
 												else 
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 													AddInst(vp,c);
 												}	
 											}
@@ -9478,45 +9663,45 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 												switch (nb_modifiers(rn2))
 												{
 												case 1:
-													sprintf(tmp4,"%s.x",output);
+													_sprintf(tmp4,"%s.x",output);
 													break;
 												case 2:
-													sprintf(tmp4,"%s.xy",output);
+													_sprintf(tmp4,"%s.xy",output);
 													break;
 												case 3:
-													sprintf(tmp4,"%s.xyz",output);
+													_sprintf(tmp4,"%s.xyz",output);
 													break;
 												case 4:
-													sprintf(tmp4,"%s",output);
+													_sprintf(tmp4,"%s",output);
 													break;
 												};
 
 											}
-											else sprintf(tmp4,"%s",output);
+											else _sprintf(tmp4,"%s",output);
 
 
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9541,26 +9726,26 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 										{
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9594,45 +9779,45 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 												switch (nb_modifiers(rn))
 												{
 												case 1:
-													sprintf(tmp4,"%s.x",output);
+													_sprintf(tmp4,"%s.x",output);
 													break;
 												case 2:
-													sprintf(tmp4,"%s.xy",output);
+													_sprintf(tmp4,"%s.xy",output);
 													break;
 												case 3:
-													sprintf(tmp4,"%s.xyz",output);
+													_sprintf(tmp4,"%s.xyz",output);
 													break;
 												case 4:
-													sprintf(tmp4,"%s",output);
+													_sprintf(tmp4,"%s",output);
 													break;
 												};
 
 											}
-											else sprintf(tmp4,"%s",output);
+											else _sprintf(tmp4,"%s",output);
 
 
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9658,26 +9843,26 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9706,11 +9891,11 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 											int sc=str_last_char(rn,'.');
 											int sc2=str_last_char(rn2,'.');
 												
-											if (sc>=0) sprintf(tmp2,"%s",&rn[sc]);
-											else sprintf(tmp2,"");
+											if (sc>=0) _sprintf(tmp2,"%s",&rn[sc]);
+											else _sprintf(tmp2,"");
 
-											if (sc2>=0) sprintf(tmp3,"%s",&rn2[sc2]);
-											else sprintf(tmp3,"");
+											if (sc2>=0) _sprintf(tmp3,"%s",&rn2[sc2]);
+											else _sprintf(tmp3,"");
 
 											if (map==0)
 											{
@@ -9718,41 +9903,41 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 												{
 													if (strlen(tmp2)>strlen(tmp3))
 													{
-														if (strlen(tmp2)<5) sprintf(tmp4,"%s%s",output,tmp2);
-														else sprintf(tmp4,output);
+														if (strlen(tmp2)<5) _sprintf(tmp4,"%s%s",output,tmp2);
+														else _sprintf(tmp4,output);
 													}
 													else
 													{
-														if (strlen(tmp2)<5) sprintf(tmp4,"%s%s",output,tmp3);
-														else sprintf(tmp4,output);
+														if (strlen(tmp2)<5) _sprintf(tmp4,"%s%s",output,tmp3);
+														else _sprintf(tmp4,output);
 													}
 												}
-												else sprintf(tmp4,output);
+												else _sprintf(tmp4,output);
 											}
-											else sprintf(tmp4,"%s.x",output);
+											else _sprintf(tmp4,"%s.x",output);
 
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",tmp4,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp4,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9775,7 +9960,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 											{
 												if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 												{
-													sprintf(c.str,"%s = %s.xxxx",output,output);
+													_sprintf(c.str,"%s = %s.xxxx",output,output);
 													AddInst(vp,c);
 												}
 												return output;
@@ -9786,26 +9971,26 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 										{
 											if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 											{
-												sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+												_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 												AddInst(vp,c);
 											}
 											else
 											{
 												if (rn[0]=='c')
 												{
-													sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+													_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 													AddInst(vp,c);
 												}
 												else
 												{
 													if ((pixelshader)&&(api==1))
 													{
-														sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}
 													else 
 													{
-														sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+														_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 														AddInst(vp,c);
 													}	
 												}
@@ -9830,33 +10015,33 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 								}
 								else
 								{
-									sprintf(tmp3,rn);
-									sprintf(tmp4,rn2);
+									_sprintf(tmp3,rn);
+									_sprintf(tmp4,rn2);
 									if (!floating(tmp3)) swizzle(output,tmp3);
 									if (!floating(tmp4)) swizzle(output,tmp4);
 
 									if( ((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 									{
-										sprintf(c.str,"%s = %s * %s",output,tmp3,tmp4);
+										_sprintf(c.str,"%s = %s * %s",output,tmp3,tmp4);
 										AddInst(vp,c);
 									}
 									else
 									{
 										if (rn[0]=='c')
 										{
-											sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+											_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 											AddInst(vp,c);
 										}
 										else
 										{
 											if ((pixelshader)&&(api==1))
 											{
-												sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+												_sprintf(c.str,"%s_SAT %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 												AddInst(vp,c);
 											}
 											else 
 											{
-												sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
+												_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn2);
 												AddInst(vp,c);
 											}	
 										}
@@ -9893,9 +10078,9 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp,"r%d.x",new_temp_register());
+								_sprintf(tmp,"r%d.x",new_temp_register());
 								/*
-								if (str_last_char(output,'.')==-1) sprintf(tmp,"r%d",new_temp_register());
+								if (str_last_char(output,'.')==-1) _sprintf(tmp,"r%d",new_temp_register());
 								else
 								{
 									int sc=str_last_char(output,'.');
@@ -9904,20 +10089,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 										switch (strlen(&output[sc+1]))
 										{
 										case 1:
-											sprintf(tmp,"r%d.x",new_temp_register());
+											_sprintf(tmp,"r%d.x",new_temp_register());
 											break;
 										case 2:
-											sprintf(tmp,"r%d.xy",new_temp_register());
+											_sprintf(tmp,"r%d.xy",new_temp_register());
 											break;
 										case 3:
-											sprintf(tmp,"r%d.xyz",new_temp_register());
+											_sprintf(tmp,"r%d.xyz",new_temp_register());
 											break;
 										case 4:
-											sprintf(tmp,"r%d",new_temp_register());
+											_sprintf(tmp,"r%d",new_temp_register());
 											break;
 										};
 									}
-									else sprintf(tmp,"r%d",new_temp_register());
+									else _sprintf(tmp,"r%d",new_temp_register());
 								}
 								/**/
 								rn2=compile(s1,tmp,vp);
@@ -9930,7 +10115,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								if (str_last_char(output,'.')==-1) sprintf(tmp,"r%d",new_temp_register());
+								if (str_last_char(output,'.')==-1) _sprintf(tmp,"r%d",new_temp_register());
 								else
 								{
 									int sc=str_last_char(output,'.');
@@ -9939,20 +10124,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 										switch (nb_modifiers(output))
 										{
 										case 1:
-											sprintf(tmp,"r%d.x",new_temp_register());
+											_sprintf(tmp,"r%d.x",new_temp_register());
 											break;
 										case 2:
-											sprintf(tmp,"r%d.xy",new_temp_register());
+											_sprintf(tmp,"r%d.xy",new_temp_register());
 											break;
 										case 3:
-											sprintf(tmp,"r%d.xyz",new_temp_register());
+											_sprintf(tmp,"r%d.xyz",new_temp_register());
 											break;
 										case 4:
-											sprintf(tmp,"r%d",new_temp_register());
+											_sprintf(tmp,"r%d",new_temp_register());
 											break;
 										};
 									}
-									else sprintf(tmp,"r%d",new_temp_register());
+									else _sprintf(tmp,"r%d",new_temp_register());
 								}
 								rn=compile(s0,tmp,vp);
 								t=1;
@@ -9961,9 +10146,9 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s1)) rn2=var(s1);
 							else
 							{
-								sprintf(tmp2,"r%d.x",new_temp_register());
+								_sprintf(tmp2,"r%d.x",new_temp_register());
 								/*
-								if (str_last_char(output,'.')==-1) sprintf(tmp2,"r%d",new_temp_register());
+								if (str_last_char(output,'.')==-1) _sprintf(tmp2,"r%d",new_temp_register());
 								else
 								{
 									int sc=str_last_char(output,'.');
@@ -9972,20 +10157,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 										switch (strlen(&output[sc+1]))
 										{
 										case 1:
-											sprintf(tmp2,"r%d.x",new_temp_register());
+											_sprintf(tmp2,"r%d.x",new_temp_register());
 											break;
 										case 2:
-											sprintf(tmp2,"r%d.xy",new_temp_register());
+											_sprintf(tmp2,"r%d.xy",new_temp_register());
 											break;
 										case 3:
-											sprintf(tmp2,"r%d.xyz",new_temp_register());
+											_sprintf(tmp2,"r%d.xyz",new_temp_register());
 											break;
 										case 4:
-											sprintf(tmp2,"r%d",new_temp_register());
+											_sprintf(tmp2,"r%d",new_temp_register());
 											break;
 										};
 									}
-									else sprintf(tmp2,"r%d",new_temp_register());
+									else _sprintf(tmp2,"r%d",new_temp_register());
 								}
 								/**/
 								rn2=compile(s1,tmp2,vp);
@@ -10006,7 +10191,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
                                 if (str_last_char(output,'.')==-1)
                                 {
-                                    if (str_last_char(rn,'.')==-1) sprintf(tmp3,"%s",output);
+                                    if (str_last_char(rn,'.')==-1) _sprintf(tmp3,"%s",output);
                                     else
                                     {
                                         int sc=str_last_char(rn,'.');
@@ -10015,39 +10200,39 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
                                             switch (strlen(&rn[sc+1]))
                                             {
                                             case 1:
-                                                sprintf(tmp3,"%s.x",output);
+                                                _sprintf(tmp3,"%s.x",output);
                                                 break;
                                             case 2:
-                                                sprintf(tmp3,"%s.xy",output);
+                                                _sprintf(tmp3,"%s.xy",output);
                                                 break;
                                             case 3:
-                                                sprintf(tmp3,"%s.xyz",output);
+                                                _sprintf(tmp3,"%s.xyz",output);
                                                 break;
                                             case 4:
-                                                sprintf(tmp3,"%s",output);
+                                                _sprintf(tmp3,"%s",output);
                                                 break;
                                             };
                                         }
-                                        else sprintf(tmp3,"%s",output);
+                                        else _sprintf(tmp3,"%s",output);
                                     }
 
-                                    sprintf(c.str,"%s = %s / %s",tmp3,rn,rn2);
+                                    _sprintf(c.str,"%s = %s / %s",tmp3,rn,rn2);
                                     AddInst(vp,c);
                                     
                                     return tmp3;
                                 }
                                 else
                                 {
-                                    sprintf(c.str,"%s = %s / %s",output,rn,rn2);
+                                    _sprintf(c.str,"%s = %s / %s",output,rn,rn2);
                                     AddInst(vp,c);
                                 }
 							}
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
-								sprintf(c.str,"%s %s,%s.w",Inst[_rcp][api],tmp,rn2);
+								_sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(c.str,"%s %s,%s.w",Inst[_rcp][api],tmp,rn2);
 								AddInst(vp,c);
-								sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,tmp);
+								_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,tmp);
 								AddInst(vp,c);
 							}
 						}
@@ -10067,7 +10252,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						}
 						else
 						{
-							sprintf(tmp,"r%d",new_temp_register());
+							_sprintf(tmp,"r%d",new_temp_register());
 							rn=compile(s0,tmp,vp);
 							t=1;
 
@@ -10075,7 +10260,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						}
 
 						if (strcmp(output,rn)!=0) tmp=output;
-						else sprintf(tmp,"r%d",new_temp_register());
+						else _sprintf(tmp,"r%d",new_temp_register());
 
 						if (api==2)
 						{
@@ -10086,7 +10271,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 
 							if ((api==1)&&(shadermodel))
 							{
-								sprintf(c.str,"%s = %s * %s",tmp,rn2,rn);
+								_sprintf(c.str,"%s = %s * %s",tmp,rn2,rn);
 								AddInst(vp,c);
 							}
 							else
@@ -10094,12 +10279,12 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if (metal==1)
 								{
-									if (strcmp(rn,"indexed.v0")==0) sprintf(c.str,"%s = %s * float4(%s, 1.0)",tmp,rn2,rn);
-									else sprintf(c.str,"%s = %s * %s",tmp,rn2,rn);
+									if (strcmp(rn,"indexed.v0")==0) _sprintf(c.str,"%s = %s * float4(%s, 1.0)",tmp,rn2,rn);
+									else _sprintf(c.str,"%s = %s * %s",tmp,rn2,rn);
 								}
 								else
 								{
-									sprintf(c.str,"%s = mul(%s,%s)",tmp,rn,rn2);
+									_sprintf(c.str,"%s = mul(%s,%s)",tmp,rn,rn2);
 								}
 								AddInst(vp,c);
 							}
@@ -10109,18 +10294,18 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 								{
 									str_translate_format(rn2,tmp2,&value);
 
-									sprintf(c.str,"DP4 %s.x,%s,%s%d]",tmp,rn,tmp2,value+0);
+									_sprintf(c.str,"DP4 %s.x,%s,%s%d]",tmp,rn,tmp2,value+0);
 									AddInst(vp,c);
-									sprintf(c.str,"DP4 %s.y,%s,%s%d]",tmp,rn,tmp2,value+1);
+									_sprintf(c.str,"DP4 %s.y,%s,%s%d]",tmp,rn,tmp2,value+1);
 									AddInst(vp,c);
-									sprintf(c.str,"DP4 %s.z,%s,%s%d]",tmp,rn,tmp2,value+2);
+									_sprintf(c.str,"DP4 %s.z,%s,%s%d]",tmp,rn,tmp2,value+2);
 									AddInst(vp,c);
-									sprintf(c.str,"DP4 %s.w,%s,%s%d]",tmp,rn,tmp2,value+3);
+									_sprintf(c.str,"DP4 %s.w,%s,%s%d]",tmp,rn,tmp2,value+3);
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"m4x4 %s,%s,%s",tmp,rn,rn2);
+									_sprintf(c.str,"m4x4 %s,%s,%s",tmp,rn,rn2);
 									AddInst(vp,c);
 								}
 							}
@@ -10142,7 +10327,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 								rn=compile(s0,tmp,vp);
 								t=1;
 							}
@@ -10151,18 +10336,18 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						}
 
 						if (strcmp(output,rn)!=0) tmp=output;
-						else sprintf(tmp, "r%d", new_temp_register());
+						else _sprintf(tmp, "r%d", new_temp_register());
 
 						if (api==2) em->Add(OP_M3X3,tmp,rn,rn2);
 						else
 						{
 							if ((api==1)&&(shadermodel))
 							{
-								sprintf(c.str,"%s = vec4(%s.xyz,0.0)",tmp,rn);
+								_sprintf(c.str,"%s = vec4(%s.xyz,0.0)",tmp,rn);
 								AddInst(vp,c);
-								sprintf(c.str,"%s = %s  * %s",tmp,rn2,tmp);
+								_sprintf(c.str,"%s = %s  * %s",tmp,rn2,tmp);
 								AddInst(vp,c);
-								sprintf(c.str,"%s.w = 0.0",tmp);
+								_sprintf(c.str,"%s.w = 0.0",tmp);
 								AddInst(vp,c);
 							}
 							else
@@ -10170,20 +10355,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							{
 								if (metal==1)
 								{
-									sprintf(c.str, "%s = float4( %s.xyz , 0.0f)", tmp,rn);
+									_sprintf(c.str, "%s = float4( %s.xyz , 0.0f)", tmp,rn);
 									AddInst(vp, c);
-									sprintf(c.str, "%s = %s * %s", tmp, rn2, tmp);
+									_sprintf(c.str, "%s = %s * %s", tmp, rn2, tmp);
 									AddInst(vp,c);
-									sprintf(c.str, "%s.w = 0.0f", tmp);
+									_sprintf(c.str, "%s.w = 0.0f", tmp);
 									AddInst(vp, c);
 								}
 								else
 								{
-									sprintf(c.str, "%s = float4( %s.xyz , 0.0f)", tmp,rn);
+									_sprintf(c.str, "%s = float4( %s.xyz , 0.0f)", tmp,rn);
 									AddInst(vp, c);
-									sprintf(c.str, "%s = mul(%s,%s)", tmp, tmp, rn2);
+									_sprintf(c.str, "%s = mul(%s,%s)", tmp, tmp, rn2);
 									AddInst(vp,c);
-									sprintf(c.str, "%s.w = 0.0f", tmp);
+									_sprintf(c.str, "%s.w = 0.0f", tmp);
 									AddInst(vp, c);
 								}
 							}
@@ -10193,20 +10378,20 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 								if (api)
 								{
 									str_translate_format(rn2,tmp2,&value);
-									sprintf(c.str,"DP3 %s.x,%s,%s%d]",tmp,rn,tmp2,value+0);
+									_sprintf(c.str,"DP3 %s.x,%s,%s%d]",tmp,rn,tmp2,value+0);
 									AddInst(vp,c);
-									sprintf(c.str,"DP3 %s.y,%s,%s%d]",tmp,rn,tmp2,value+1);
+									_sprintf(c.str,"DP3 %s.y,%s,%s%d]",tmp,rn,tmp2,value+1);
 									AddInst(vp,c);
-									sprintf(c.str,"DP3 %s.z,%s,%s%d]",tmp,rn,tmp2,value+2);
+									_sprintf(c.str,"DP3 %s.z,%s,%s%d]",tmp,rn,tmp2,value+2);
 									AddInst(vp,c);
-									sprintf(c.str,"MOV %s.w,%s.x",tmp,var("trigo_cst"));
+									_sprintf(c.str,"MOV %s.w,%s.x",tmp,var("trigo_cst"));
 									AddInst(vp,c);
 								}
 								else
 								{
-									sprintf(c.str,"m3x3 %s.xyz,%s,%s",tmp,rn,rn2);
+									_sprintf(c.str,"m3x3 %s.xyz,%s,%s",tmp,rn,rn2);
 									AddInst(vp,c);
-									sprintf(c.str,"mov %s.w,%s.x",tmp,var("trigo_cst"));
+									_sprintf(c.str,"mov %s.w,%s.x",tmp,var("trigo_cst"));
 									AddInst(vp,c);
 								}
 							}
@@ -10228,7 +10413,7 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 							if (str_simple(s0)) rn=var(s0);
 							else
 							{
-								sprintf(tmp,"r%d",new_temp_register());
+								_sprintf(tmp,"r%d",new_temp_register());
 								rn=compile(s0,tmp,vp);
 								t=1;
 							}
@@ -10237,32 +10422,32 @@ char * CVertexProgram::compile(char *str,char *outputbase,CList <Code> *vp)
 						}
 
 						if (strcmp(output,rn)!=0) tmp=output;
-						else sprintf(tmp, "r%d", new_temp_register());
+						else _sprintf(tmp, "r%d", new_temp_register());
 
 						if (api!=2)
 						{
 							if ((api==1)&&(shadermodel))
 							{
-								sprintf(c.str,"%s.xy = %s.xy",tmp,rn);
+								_sprintf(c.str,"%s.xy = %s.xy",tmp,rn);
 								AddInst(vp,c);
-								sprintf(c.str,"%s.zw = vec2(0.0,0.0)",tmp);
+								_sprintf(c.str,"%s.zw = vec2(0.0,0.0)",tmp);
 								AddInst(vp,c);
-								sprintf(c.str,"%s = %s  * %s",tmp,rn2,tmp);
+								_sprintf(c.str,"%s = %s  * %s",tmp,rn2,tmp);
 								AddInst(vp,c);
-								sprintf(c.str,"%s.zw = vec2(0.0,0.0)",tmp);
+								_sprintf(c.str,"%s.zw = vec2(0.0,0.0)",tmp);
 								AddInst(vp,c);
 							}
 							else
 							if ((api==0)&&(shadermodel3))
 							{
-								sprintf(tmp2, "r%d", new_temp_register());
-								sprintf(c.str, "%s.xy = %s.xy", tmp2,rn);
+								_sprintf(tmp2, "r%d", new_temp_register());
+								_sprintf(c.str, "%s.xy = %s.xy", tmp2,rn);
 								AddInst(vp, c);
-								sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", tmp2);
+								_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", tmp2);
 								AddInst(vp, c);
-								sprintf(c.str, "%s = mul(%s,%s)", tmp, tmp2, rn2);
+								_sprintf(c.str, "%s = mul(%s,%s)", tmp, tmp2, rn2);
 								AddInst(vp,c);
-								sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", tmp);
+								_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", tmp);
 								AddInst(vp, c);
 							}
 						}
@@ -10291,9 +10476,9 @@ _functions_test:
 	if (p0!=-1)
 	{
 		mac=NULL;
-		sprintf(tmp,"%s",chaine);
+		_sprintf(tmp,"%s",chaine);
 		tmp[p0]='\0';
-		sprintf(tmp2,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp2,"%s",str_return_parentheses(chaine));
 		m=ListMacros.GetFirst();
 		while ((m)&&(!mac))
 		{
@@ -10303,7 +10488,7 @@ _functions_test:
 
 		if (mac)
 		{			
-			sprintf(tmp,"%s",compile_macro(mac,tmp2,vp));
+			_sprintf(tmp,"%s",compile_macro(mac,tmp2,vp));
 			return tmp;
 		}
 	}
@@ -10316,7 +10501,7 @@ _functions_test:
 			if ((api==0)&&(!shadermodel3))
 			{
 				affectparameters(chaine,&psfn[ps],vp);
-				sprintf(c.str,"call l%d",ps);
+				_sprintf(c.str,"call l%d",ps);
 				AddInst(vp,c);
 				close_temp_register();
 				tagregsave[11]=1;
@@ -10325,7 +10510,7 @@ _functions_test:
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(tmp,"%s",str_return_parentheses(chaine));
+				_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 				modifiersfn(&psfn[ps],tmp,vp);
 				if (PARAMERROR)
@@ -10336,19 +10521,19 @@ _functions_test:
 				{
 					if (str_char(output,'.')==-1)
 					{
-						if (psfn[ps].ret==CALL_FLOAT) sprintf(c.str,"%s.x = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR2) sprintf(c.str,"%s.xy = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR3) sprintf(c.str,"%s.xyz = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR4) sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_FLOAT) _sprintf(c.str,"%s.x = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR2) _sprintf(c.str,"%s.xy = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR3) _sprintf(c.str,"%s.xyz = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR4) _sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
 					}
-					else sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
+					else _sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
 					AddInst(vp,c);
 				}
 				return output;
 			}
 			else
 			{
-				sprintf(tmp,"%s",str_return_parentheses(chaine));
+				_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 				modifiersfn(&psfn[ps],tmp,vp);
 				if (PARAMERROR)
@@ -10359,12 +10544,12 @@ _functions_test:
 				{
 					if (str_char(output,'.')==-1)
 					{
-						if (psfn[ps].ret==CALL_FLOAT) sprintf(c.str,"%s.x = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR2) sprintf(c.str,"%s.xy = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR3) sprintf(c.str,"%s.xyz = %s(%s)",output,psfn[ps].name,tmp);
-						if (psfn[ps].ret==CALL_VECTOR4) sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_FLOAT) _sprintf(c.str,"%s.x = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR2) _sprintf(c.str,"%s.xy = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR3) _sprintf(c.str,"%s.xyz = %s(%s)",output,psfn[ps].name,tmp);
+						if (psfn[ps].ret==CALL_VECTOR4) _sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
 					}
-					else sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
+					else _sprintf(c.str,"%s = %s(%s)",output,psfn[ps].name,tmp);
 					AddInst(vp,c);
 				}
 				return output;
@@ -10377,7 +10562,7 @@ _functions_test:
 			if ((api==0)&&(!shadermodel3))
 			{
 				affectparameters(chaine,&vsfn[vs],vp);
-				sprintf(c.str,"call l%d",vs);
+				_sprintf(c.str,"call l%d",vs);
 				AddInst(vp,c);
 				close_temp_register();
 				tagregsave[11]=1;
@@ -10386,7 +10571,7 @@ _functions_test:
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(tmp,"%s",str_return_parentheses(chaine));
+				_sprintf(tmp,"%s",str_return_parentheses(chaine));
 				modifiersfn(&vsfn[vs],tmp,vp);
 				if (PARAMERROR)
 				{
@@ -10396,19 +10581,19 @@ _functions_test:
 				{
 					if (str_char(output,'.')==-1)
 					{
-						if (vsfn[vs].ret==CALL_FLOAT) sprintf(c.str,"%s.x = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR2) sprintf(c.str,"%s.xy = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR3) sprintf(c.str,"%s.xyz = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR4) sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_FLOAT) _sprintf(c.str,"%s.x = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR2) _sprintf(c.str,"%s.xy = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR3) _sprintf(c.str,"%s.xyz = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR4) _sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
 					}
-					else sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
+					else _sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
 					AddInst(vp,c);
 				}
 				return output;
 			}
 			else
 			{
-				sprintf(tmp,"%s",str_return_parentheses(chaine));
+				_sprintf(tmp,"%s",str_return_parentheses(chaine));
 				if (PARAMERROR)
 				{
 					if (PRMERRORSTR[0]==0) strcpy(PRMERRORSTR,chaine);
@@ -10418,12 +10603,12 @@ _functions_test:
 					modifiersfn(&vsfn[vs],tmp,vp);
 					if (str_char(output,'.')==-1)
 					{
-						if (vsfn[vs].ret==CALL_FLOAT) sprintf(c.str,"%s.x = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR2) sprintf(c.str,"%s.xy = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR3) sprintf(c.str,"%s.xyz = %s(%s)",output,vsfn[vs].name,tmp);
-						if (vsfn[vs].ret==CALL_VECTOR4) sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_FLOAT) _sprintf(c.str,"%s.x = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR2) _sprintf(c.str,"%s.xy = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR3) _sprintf(c.str,"%s.xyz = %s(%s)",output,vsfn[vs].name,tmp);
+						if (vsfn[vs].ret==CALL_VECTOR4) _sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
 					}
-					else sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
+					else _sprintf(c.str,"%s = %s(%s)",output,vsfn[vs].name,tmp);
 					AddInst(vp,c);
 				}
 				return output;
@@ -10433,7 +10618,7 @@ _functions_test:
 
 	if ((str_match0(chaine,"vec2"))||(str_match0(chaine,"vector2")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -10445,29 +10630,29 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn=compile(&tmp[0],tmp2,vp);
 		}
 
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn2=compile(&tmp[p+1],tmp2,vp);
 		}
 
-		if (str_char(output,'.')==-1) sprintf(tmp0,"%s.xy",output);
-		else sprintf(tmp0,output);
+		if (str_char(output,'.')==-1) _sprintf(tmp0,"%s.xy",output);
+		else _sprintf(tmp0,output);
 
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s = vec2( %s, %s )",tmp0,rn,rn2);
+			_sprintf(c.str,"%s = vec2( %s, %s )",tmp0,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==0)&&(shadermodel3))
 		{
-			sprintf(c.str,"%s = float2( %s, %s )",tmp0,rn,rn2);
+			_sprintf(c.str,"%s = float2( %s, %s )",tmp0,rn,rn2);
 			AddInst(vp,c);
 		}
 
@@ -10477,7 +10662,7 @@ _functions_test:
 
 	if ((str_match0(chaine,"vec3"))||(str_match0(chaine,"vector3")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -10493,36 +10678,36 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn=compile(&tmp[0],tmp2,vp);
 		}
 
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn2=compile(&tmp[p1+1],tmp2,vp);
 		}
 
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp3,"r%d",new_temp_register());
+			_sprintf(tmp3,"r%d",new_temp_register());
 			rn3=compile(&tmp[p2+1],tmp3,vp);
 		}
 
-		if (str_char(output,'.')==-1) sprintf(tmp0,"%s.xyz",output);
-		else sprintf(tmp0,output);
+		if (str_char(output,'.')==-1) _sprintf(tmp0,"%s.xyz",output);
+		else _sprintf(tmp0,output);
 
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s = vec3( %s, %s, %s )",tmp0,rn,rn2,rn3);
+			_sprintf(c.str,"%s = vec3( %s, %s, %s )",tmp0,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==0)&&(shadermodel3))
 		{
-			sprintf(c.str,"%s = float3( %s, %s, %s )",tmp0,rn,rn2,rn3);
+			_sprintf(c.str,"%s = float3( %s, %s, %s )",tmp0,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 
@@ -10534,7 +10719,7 @@ _functions_test:
 
 	if ((str_match0(chaine,"vec4"))||(str_match0(chaine,"vector4")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -10554,40 +10739,40 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn=compile(&tmp[0],tmp2,vp);
 		}
 
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn2=compile(&tmp[p1+1],tmp2,vp);
 		}
 
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp3,"r%d",new_temp_register());
+			_sprintf(tmp3,"r%d",new_temp_register());
 			rn3=compile(&tmp[p2+1],tmp3,vp);
 		}
 
 		if (str_simple(&tmp[p3+1])) rn4=var(&tmp[p3+1]);
 		else
 		{
-			sprintf(tmp4,"r%d",new_temp_register());
+			_sprintf(tmp4,"r%d",new_temp_register());
 			rn4=compile(&tmp[p3+1],tmp4,vp);
 		}
 
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s = vec4( %s, %s, %s,%s )",output,rn,rn2,rn3,rn4);
+			_sprintf(c.str,"%s = vec4( %s, %s, %s,%s )",output,rn,rn2,rn3,rn4);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==0)&&(shadermodel3))
 		{
-			sprintf(c.str,"%s = float4( %s, %s, %s, %s )",output,rn,rn2,rn3,rn4);
+			_sprintf(c.str,"%s = float4( %s, %s, %s, %s )",output,rn,rn2,rn3,rn4);
 			AddInst(vp,c);
 		}
 
@@ -10599,11 +10784,11 @@ _functions_test:
 
 	if ((str_match0(chaine,"mat4"))||(str_match0(chaine,"matrix"))||(str_match0(chaine,"matrix4")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
-		if ((api==1)&&(shadermodel)) sprintf(c.str,"mat4 %s = mat4(",output);
+		if ((api==1)&&(shadermodel)) _sprintf(c.str,"mat4 %s = mat4(",output);
 		else
-		if ((api==0)&&(shadermodel3)) sprintf(c.str,"float4x4 %s = float4x4(",output);
+		if ((api==0)&&(shadermodel3)) _sprintf(c.str,"float4x4 %s = float4x4(",output);
 
 		int nb=0;
 		p=0;
@@ -10613,21 +10798,21 @@ _functions_test:
 			if (str_simple(rn)) rn=var(rn);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn=compile(rn,tmp2,vp);
 			}
 
 			if (nb==0)
 			{
-				if ((api==1)&&(shadermodel)) sprintf(c.str,"%s %s",c.str,rn);
+				if ((api==1)&&(shadermodel)) _sprintf(c.str,"%s %s",c.str,rn);
 				else
-				if ((api==0)&&(shadermodel3)) sprintf(c.str,"%s %s",c.str,rn);
+				if ((api==0)&&(shadermodel3)) _sprintf(c.str,"%s %s",c.str,rn);
 			}
 			else
 			{
-				if ((api==1)&&(shadermodel)) sprintf(c.str,"%s, %s",c.str,rn);
+				if ((api==1)&&(shadermodel)) _sprintf(c.str,"%s, %s",c.str,rn);
 				else
-				if ((api==0)&&(shadermodel3)) sprintf(c.str,"%s, %s",c.str,rn);
+				if ((api==0)&&(shadermodel3)) _sprintf(c.str,"%s, %s",c.str,rn);
 			}
 
 			nb++;
@@ -10638,19 +10823,19 @@ _functions_test:
 		{
 			if (api==0)
 			{
-				if (kl==0) sprintf(c.str,"%s 0.0f",c.str);
-				else sprintf(c.str,"%s, 0.0f",c.str);
+				if (kl==0) _sprintf(c.str,"%s 0.0f",c.str);
+				else _sprintf(c.str,"%s, 0.0f",c.str);
 			}
 			else
 			{
-				if (kl==0) sprintf(c.str,"%s 0.0",c.str);
-				else sprintf(c.str,"%s, 0.0",c.str);
+				if (kl==0) _sprintf(c.str,"%s 0.0",c.str);
+				else _sprintf(c.str,"%s, 0.0",c.str);
 			}
 		}
 
-		if ((api==1)&&(shadermodel)) sprintf(c.str,"%s )",c.str);
+		if ((api==1)&&(shadermodel)) _sprintf(c.str,"%s )",c.str);
 		else
-		if ((api==0)&&(shadermodel3)) sprintf(c.str,"%s )",c.str);
+		if ((api==0)&&(shadermodel3)) _sprintf(c.str,"%s )",c.str);
 
 		AddInst(vp,c);
 
@@ -10659,37 +10844,37 @@ _functions_test:
 
 	if (str_match0(chaine,"float"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if (!floatprocessinginit)
 		{
-			sprintf(c.str,"%s = float(",output);
+			_sprintf(c.str,"%s = float(",output);
 
 			rn=tmp;
 			if (str_simple(rn)) rn=var(rn);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn=compile(rn,tmp2,vp);
 			}
 
-			sprintf(c.str,"%s %s )",c.str,rn);
+			_sprintf(c.str,"%s %s )",c.str,rn);
 
 			AddInst(vp,c);
 		}
 		else
 		{
-			sprintf(c.str,"float %s = float(",output);
+			_sprintf(c.str,"float %s = float(",output);
 
 			rn=tmp;
 			if (str_simple(rn)) rn=var(rn);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn=compile(rn,tmp2,vp);
 			}
 
-			sprintf(c.str,"%s %s )",c.str,rn);
+			_sprintf(c.str,"%s %s )",c.str,rn);
 
 			AddInst(vp,c);
 		}
@@ -10703,7 +10888,7 @@ _functions_test:
 		if (!shadermodel)
 		if (api==0)
 		{
-			sprintf(c.str,"phase");
+			_sprintf(c.str,"phase");
 			AddInst(vp,c);
 			phase=1;
 		}
@@ -10711,7 +10896,7 @@ _functions_test:
 	
 	if ((str_match0(chaine,"sample"))&&(!shadermodel))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
@@ -10733,17 +10918,17 @@ _functions_test:
 			if ((rn2[0]=='r')&&(phase==0))
 			{
 				phase=1;
-				sprintf(c.str,"phase");
+				_sprintf(c.str,"phase");
 				AddInst(vp,c);
 			}
 
-			sprintf(c.str,"texld %s,%s",rn,rn2);
+			_sprintf(c.str,"texld %s,%s",rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			rn=output;
-			sprintf(c.str,"TEX %s,%s,texture[%d],2D",output,rn2,t);
+			_sprintf(c.str,"TEX %s,%s,texture[%d],2D",output,rn2,t);
 			AddInst(vp,c);
 		}
 
@@ -10752,7 +10937,7 @@ _functions_test:
 
     if ((str_match00(chaine, "sampleVShalf.")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -10761,7 +10946,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -10769,7 +10954,7 @@ _functions_test:
         if (!correct_modifier_texture2d(rn2)) TYPEERROR=true;
 
 		char ext[1024];
-		sprintf(ext, &chaine[str_char(chaine, '.')]);
+		_sprintf(ext, &chaine[str_char(chaine, '.')]);
 		ext[str_char(ext, '(')] = '\0';
         
         sscanf(tmp, "%d", &t);
@@ -10777,30 +10962,30 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
             AddInst(vp, c);
 
 			if (strlen(ext)-1==1)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - 1.0", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - 1.0", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==2)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec2(1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec2(1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==3)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec3(1.0,1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec3(1.0,1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==4)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec4(1.0,1.0,1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec4(1.0,1.0,1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
@@ -10814,12 +10999,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -10827,11 +11012,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -10845,45 +11030,45 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
 			if (strlen(ext)-1==1)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - 1.0f", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - 1.0f", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==2)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float2(1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float2(1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==3)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float3(1.0f,1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float3(1.0f,1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==4)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float4(1.0f,1.0f,1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float4(1.0f,1.0f,1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -10891,7 +11076,7 @@ _functions_test:
     else    
     if ((str_match0(chaine, "samplesecondaryVShalf16")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -10900,7 +11085,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -10912,24 +11097,24 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
-            AddInst(vp, c);
-
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
 
-	        sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
+            AddInst(vp, c);
+
+	        _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+			_sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -10941,12 +11126,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -10954,11 +11139,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -10972,30 +11157,30 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
-	        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+	        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+			_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
             AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -11003,7 +11188,7 @@ _functions_test:
     else    
     if ((str_match0(chaine, "sampleVShalf16")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -11012,7 +11197,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -11024,16 +11209,16 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
             AddInst(vp, c);
 
-	        sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+	        _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+			_sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -11045,12 +11230,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -11058,11 +11243,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -11076,30 +11261,30 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
-	        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+	        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+			_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
             AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -11107,7 +11292,7 @@ _functions_test:
     else    
     if ((str_match0(chaine, "samplehalf16")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -11116,7 +11301,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -11128,16 +11313,16 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
+            _sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
             AddInst(vp, c);
 
-	        sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+	        _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+			_sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -11151,12 +11336,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -11164,12 +11349,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -11181,11 +11366,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -11194,17 +11379,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -11219,30 +11404,30 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
             
-	        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+	        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+			_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
             AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
 
@@ -11251,7 +11436,7 @@ _functions_test:
     else
 	if ((str_match00(chaine, "samplehalf.")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -11260,7 +11445,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -11268,7 +11453,7 @@ _functions_test:
         if (!correct_modifier_texture2d(rn2)) TYPEERROR=true;
 
 		char ext[1024];
-		sprintf(ext, &chaine[str_char(chaine, '.')]);
+		_sprintf(ext, &chaine[str_char(chaine, '.')]);
 		ext[str_char(ext, '(')] = '\0';
 
         sscanf(tmp, "%d", &t);
@@ -11276,30 +11461,30 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
+            _sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
             AddInst(vp, c);
 
 			if (strlen(ext)-1==1)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - 1.0", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - 1.0", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==2)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec2(1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec2(1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==3)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec3(1.0,1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec3(1.0,1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==4)
 			{
-	            sprintf(c.str, "%s%s = 2.0 * %s%s - vec4(1.0,1.0,1.0,1.0)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0 * %s%s - vec4(1.0,1.0,1.0,1.0)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
         }
@@ -11314,12 +11499,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -11327,12 +11512,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -11344,11 +11529,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -11357,17 +11542,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -11382,45 +11567,45 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
             
 			if (strlen(ext)-1==1)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - 1.0f", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - 1.0f", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==2)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float2(1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float2(1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==3)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float3(1.0f,1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float3(1.0f,1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
 
 			if (strlen(ext)-1==4)
 			{
-	            sprintf(c.str, "%s%s = 2.0f * %s%s - float4(1.0f,1.0f,1.0f,1.0f)", output,ext, output,ext);
+	            _sprintf(c.str, "%s%s = 2.0f * %s%s - float4(1.0f,1.0f,1.0f,1.0f)", output,ext, output,ext);
 		        AddInst(vp, c);
 			}
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
 
@@ -11429,7 +11614,7 @@ _functions_test:
     else
 	if ((str_match00(chaine, "sample.")) && (shadermodel))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p] = '\0';
@@ -11438,27 +11623,27 @@ _functions_test:
 		if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn2 = compile(&tmp[p + 1], tmp2, vp);
 		}
         
 		if (!correct_modifier_texture2d(rn2)) TYPEERROR=true;
 
-		sprintf(tmp3, "r%d", new_temp_register());
+		_sprintf(tmp3, "r%d", new_temp_register());
 		char ext[1024];
 
-		sprintf(ext, &chaine[str_char(chaine, '.')]);
+		_sprintf(ext, &chaine[str_char(chaine, '.')]);
 		ext[str_char(ext, '(')] = '\0';
 		
-		sprintf(tmp4, "%s%s", tmp3,ext);
+		_sprintf(tmp4, "%s%s", tmp3,ext);
 
 		sscanf(tmp, "%d", &t);
         if ((t<0)||(t>=16)) { t=0; SYNTAXERROR=true; }
         
 		if ((api == 1) && (shadermodel))
 		{
-			sprintf(c.str, "%s = texture2D(%s, vec2(%s))", tmp3, RS.Texture[t], rn2);
+			_sprintf(c.str, "%s = texture2D(%s, vec2(%s))", tmp3, RS.Texture[t], rn2);
 			AddInst(vp, c);
 		}
 		else
@@ -11469,19 +11654,19 @@ _functions_test:
 				if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
 				{
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-					if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-					else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+					if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+					else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-					if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-					else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+					if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+					else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 					
 #endif
 					AddInst(vp, c);
 				}
 				else
 				{
-					if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", tmp3, RS.Texture[t], rn2);
-					else sprintf(c.str, "%s = %s.Sample(smp, %s)", tmp3, RS.Texture[t], rn2);
+					if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", tmp3, RS.Texture[t], rn2);
+					else _sprintf(c.str, "%s = %s.Sample(smp, %s)", tmp3, RS.Texture[t], rn2);
 					AddInst(vp, c);
 				}
 			}
@@ -11492,8 +11677,8 @@ _functions_test:
 					if (RS.Texture[t])
 						if (strcmp(texture[k],RS.Texture[t])==0) res=k;
 
-				if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", tmp3, res, rn2);
-				else sprintf(c.str, "%s = tex2D(s%d, %s)", tmp3, res, rn2);
+				if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", tmp3, res, rn2);
+				else _sprintf(c.str, "%s = tex2D(s%d, %s)", tmp3, res, rn2);
 				AddInst(vp, c);
 			}
 		}
@@ -11503,7 +11688,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampleLOD")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -11512,7 +11697,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -11524,7 +11709,7 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
+            _sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
             AddInst(vp, c);
         }
         else
@@ -11536,12 +11721,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         AddInst(vp, c);
@@ -11549,11 +11734,11 @@ _functions_test:
                     else
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -11567,13 +11752,13 @@ _functions_test:
                     
                     if (levelrep>0)
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                        else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                        else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                        else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                        else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                     }
                     AddInst(vp, c);
                 }
@@ -11581,7 +11766,7 @@ _functions_test:
             else
                 if (api == 0)
                 {
-                    sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+                    _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
                     AddInst(vp, c);
                 }
         return output;
@@ -11589,7 +11774,7 @@ _functions_test:
 	else
 	if((str_match0(chaine,"samplebumpy")) && (shadermodel))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp,',');
 		if(p1<0) { SYNTAXERROR=true; return ""; }
@@ -11602,7 +11787,7 @@ _functions_test:
 		if(str_simple(&tmp[p1 + 1])) rn2 = var(&tmp[p1 + 1]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output,tmp2);
 			rn2 = compile(&tmp[p1 + 1],tmp2,vp);
 		}
@@ -11610,7 +11795,7 @@ _functions_test:
 		if(str_simple(&tmp[p2 + 1])) rn3 = var(&tmp[p2 + 1]);
 		else
 		{
-			sprintf(tmp3,"r%d",new_temp_register());
+			_sprintf(tmp3,"r%d",new_temp_register());
 			resfield(output,tmp3);
 			rn3 = compile(&tmp[p2 + 1],tmp3,vp);
 		}
@@ -11620,34 +11805,34 @@ _functions_test:
 		sscanf(tmp,"%d",&t);
 		if((t<0)||(t>=16)) { t=0; SYNTAXERROR=true; }
 
-		sprintf(tmp4,"r%d",new_temp_register());
+		_sprintf(tmp4,"r%d",new_temp_register());
 
 		if((api == 1) && (shadermodel))
 		{
 			if ((SizingTexture0)&&(t==0)&&(main==1))
 			{
 				// Sample + neighboor
-				sprintf(c.str,"%s.x = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn3,rn3,rn3);
+				_sprintf(c.str,"%s.x = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn3,rn3,rn3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xy = %s.xy + vec2(SIZEDESTZ.z,0.0)",tmp4,rn2);
+				_sprintf(c.str,"%s.xy = %s.xy + vec2(SIZEDESTZ.z,0.0)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,tmp4,tmp4,tmp4);
+				_sprintf(c.str,"%s.y = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,tmp4,tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xy = %s.xy + vec2(0.0,SIZEDESTZ.w)",tmp4,rn2);
+				_sprintf(c.str,"%s.xy = %s.xy + vec2(0.0,SIZEDESTZ.w)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,tmp4,tmp4,tmp4);
+				_sprintf(c.str,"%s.z = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,tmp4,tmp4,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,output,output);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,output,output);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,tmp4);
+				_sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,tmp4);
 				AddInst(vp,c);
 			}
 		}
@@ -11657,27 +11842,27 @@ _functions_test:
 			if((SizingTexture0)&&(t==0)&&(main==1))
 			{
 				// Sample + neighboor
-				sprintf(c.str,"%s.x = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn3,rn3,rn3);
+				_sprintf(c.str,"%s.x = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn3,rn3,rn3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xy = %s.xy + float2(SIZEDESTZ.z,0.0)",tmp4,rn2);
+				_sprintf(c.str,"%s.xy = %s.xy + float2(SIZEDESTZ.z,0.0)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,tmp4,tmp4,tmp4);
+				_sprintf(c.str,"%s.y = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,tmp4,tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xy = %s.xy + float2(0.0,SIZEDESTZ.w)",tmp4,rn2);
+				_sprintf(c.str,"%s.xy = %s.xy + float2(0.0,SIZEDESTZ.w)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,tmp4,tmp4,tmp4);
+				_sprintf(c.str,"%s.z = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,tmp4,tmp4,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,output,output);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,output,output);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %sf",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %sf",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,tmp4);
+				_sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,tmp4);
 				AddInst(vp,c);
 			}
 		}
@@ -11687,167 +11872,167 @@ _functions_test:
 	else
 	if((str_match0(chaine,"samplebump")) && (shadermodel))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if(str_simple(tmp)) rn = var(tmp);
 		else SYNTAXERROR=true;
 
 		if(!correct_modifier_texture2d(rn)) TYPEERROR=true;
 
-		sprintf(tmp2,"r%d",new_temp_register());
-		sprintf(tmp3,"r%d",new_temp_register());
-		sprintf(tmp4,"r%d",new_temp_register());
+		_sprintf(tmp2,"r%d",new_temp_register());
+		_sprintf(tmp3,"r%d",new_temp_register());
+		_sprintf(tmp4,"r%d",new_temp_register());
 
 		if((api == 1) && (shadermodel))
 		{
 			if((SizingTexture0)&&(main==1))
 			{
-				sprintf(c.str,"vec3 a00,a10,a11,a01");
+				_sprintf(c.str,"vec3 a00,a10,a11,a01");
 				AddInst(vp,c);
 
-                sprintf(c.str,"%s.xy = ( floor(%s.xy * SIZEDESTZ.xy ) )* SIZEDESTZ.zw",tmp3,rn);
+                _sprintf(c.str,"%s.xy = ( floor(%s.xy * SIZEDESTZ.xy ) )* SIZEDESTZ.zw",tmp3,rn);
                 AddInst(vp,c);
 
 				// 0,0
-                sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
+                _sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
                 AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
-                sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,-SIZEDESTZ.w)",tmp4,tmp3);
+                _sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,-SIZEDESTZ.w)",tmp4,tmp3);
                 AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,0.0)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,0.0)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"a00.xyz = normalize( %s.xyz )",tmp4);
+				_sprintf(c.str,"a00.xyz = normalize( %s.xyz )",tmp4);
 				AddInst(vp,c);
 
 
 				// 1,0
-				sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,-SIZEDESTZ.w)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,-SIZEDESTZ.w)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-				AddInst(vp,c);
-
-				sprintf(c.str,"%s.xy = %s.xy+vec2(SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
-				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-				AddInst(vp,c);
-				sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				AddInst(vp,c);
+
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"a10.xyz = normalize( %s.xyz )",tmp4);
+				_sprintf(c.str,"a10.xyz = normalize( %s.xyz )",tmp4);
 				AddInst(vp,c);
 
 				// 0,1
-				sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,0.0)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,0.0)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-				AddInst(vp,c);
-
-				sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
-				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-				AddInst(vp,c);
-				sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,SIZEDESTZ.w)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				AddInst(vp,c);
+
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(-SIZEDESTZ.z,SIZEDESTZ.w)",tmp4,tmp3);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"a01.xyz = normalize( %s.xyz )",tmp4);
+				_sprintf(c.str,"a01.xyz = normalize( %s.xyz )",tmp4);
 				AddInst(vp,c);
 
 				// 1,1
-				sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,0.0)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-				AddInst(vp,c);
-
-				sprintf(c.str,"%s.xy = %s.xy+vec2(SIZEDESTZ.z,0.0)",tmp4,tmp3);
-				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-				AddInst(vp,c);
-				sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,SIZEDESTZ.w)",tmp4,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(SIZEDESTZ.z,0.0)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+				_sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+				AddInst(vp,c);
+
+				_sprintf(c.str,"%s.xy = %s.xy+vec2(0.0,SIZEDESTZ.w)",tmp4,tmp3);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+				AddInst(vp,c);
+				_sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
 				AddInst(vp,c);
 
 				// Normal
-				sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+				_sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+				_sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
 				AddInst(vp,c);
-				sprintf(c.str,"a11.xyz = normalize( %s.xyz )",tmp4);
+				_sprintf(c.str,"a11.xyz = normalize( %s.xyz )",tmp4);
 				AddInst(vp,c);
 
                 // bilinear
 
-                sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy )",tmp3,rn);
+                _sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy )",tmp3,rn);
                 AddInst(vp,c);
-				sprintf(c.str,"%s.xy = %s.xy * SIZEDESTZ.xy - %s.xy",tmp4,rn,tmp3);
+				_sprintf(c.str,"%s.xy = %s.xy * SIZEDESTZ.xy - %s.xy",tmp4,rn,tmp3);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xyz = a00.xyz + %s.x*(a10.xyz - a00.xyz)",tmp2,tmp4);
+				_sprintf(c.str,"%s.xyz = a00.xyz + %s.x*(a10.xyz - a00.xyz)",tmp2,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = a01.xyz + %s.x*(a11.xyz - a01.xyz)",tmp3,tmp4);
-				AddInst(vp,c);
-
-				sprintf(c.str,"%s.xyz = %s.xyz + %s.y*(%s.xyz - %s.xyz)",output,tmp2,tmp4,tmp3,tmp2);
+				_sprintf(c.str,"%s.xyz = a01.xyz + %s.x*(a11.xyz - a01.xyz)",tmp3,tmp4);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xyz *= vec3(-1.0,-1.0,0.6)",output);
+				_sprintf(c.str,"%s.xyz = %s.xyz + %s.y*(%s.xyz - %s.xyz)",output,tmp2,tmp4,tmp3,tmp2);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
+				_sprintf(c.str,"%s.xyz *= vec3(-1.0,-1.0,0.6)",output);
+				AddInst(vp,c);
+
+				_sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
 				AddInst(vp,c);
 
 			}
@@ -11857,152 +12042,152 @@ _functions_test:
 			{
 				if((SizingTexture0)&&(main==1))
 				{
-					sprintf(c.str,"float3 a00,a10,a11,a01");
+					_sprintf(c.str,"float3 a00,a10,a11,a01");
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy) * SIZEDESTZ.zw",tmp3,rn);
+					_sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy) * SIZEDESTZ.zw",tmp3,rn);
 					AddInst(vp,c);
 
                     // 0,0
-                    sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,-SIZEDESTZ.w)",tmp4,tmp3);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,0.0f)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,-SIZEDESTZ.w)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,0.0f)",tmp4,tmp3);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
                     // Normal
-                    sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+                    _sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+                    _sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
                     AddInst(vp,c);
-                    sprintf(c.str,"a00.xyz = normalize( %s.xyz )",tmp4);
+                    _sprintf(c.str,"a00.xyz = normalize( %s.xyz )",tmp4);
                     AddInst(vp,c);
 
 
                     // 1,0
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,-SIZEDESTZ.w)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,-SIZEDESTZ.w)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.xy = %s.xy+float2(SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(SIZEDESTZ.z,-SIZEDESTZ.w)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
                     // Normal
-                    sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+                    _sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+                    _sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
                     AddInst(vp,c);
-                    sprintf(c.str,"a10.xyz = normalize( %s.xyz )",tmp4);
+                    _sprintf(c.str,"a10.xyz = normalize( %s.xyz )",tmp4);
                     AddInst(vp,c);
 
                     // 0,1
-                    sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,0.0f)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,0.0f)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,SIZEDESTZ.w)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(-SIZEDESTZ.z,SIZEDESTZ.w)",tmp4,tmp3);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
                     // Normal
-                    sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+                    _sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
+                    _sprintf(c.str,"%s.z = %s",tmp4,value_bumpy_str);
                     AddInst(vp,c);
-                    sprintf(c.str,"a01.xyz = normalize( %s.xyz )",tmp4);
+                    _sprintf(c.str,"a01.xyz = normalize( %s.xyz )",tmp4);
                     AddInst(vp,c);
 
                     // 1,1
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,0.0f)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.xy = %s.xy+float2(SIZEDESTZ.z,0.0f)",tmp4,tmp3);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
-                    AddInst(vp,c);
-                    sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.x = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,SIZEDESTZ.w)",tmp4,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(SIZEDESTZ.z,0.0f)",tmp4,tmp3);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
+                    _sprintf(c.str,"%s.y = %s.a",tmp2,tmp4);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.xy = %s.xy+float2(0.0f,SIZEDESTZ.w)",tmp4,tmp3);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s = TiledSample0(%s.xy)",tmp4,tmp4);
+                    AddInst(vp,c);
+                    _sprintf(c.str,"%s.z = %s.a",tmp2,tmp4);
                     AddInst(vp,c);
 
                     // Normal
-                    sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
+                    _sprintf(c.str,"%s.xy = %s.yz - %s.xx",tmp4,tmp2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = %sf",tmp4,value_bumpy_str);
+                    _sprintf(c.str,"%s.z = %sf",tmp4,value_bumpy_str);
                     AddInst(vp,c);
-                    sprintf(c.str,"a11.xyz = normalize( %s.xyz )",tmp4);
+                    _sprintf(c.str,"a11.xyz = normalize( %s.xyz )",tmp4);
                     AddInst(vp,c);
 
                     // bilinear
 
-                    sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy )",tmp3,rn);
+                    _sprintf(c.str,"%s.xy = floor(%s.xy * SIZEDESTZ.xy )",tmp3,rn);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xy = %s.xy * SIZEDESTZ.xy - %s.xy",tmp4,rn,tmp3);
+                    _sprintf(c.str,"%s.xy = %s.xy * SIZEDESTZ.xy - %s.xy",tmp4,rn,tmp3);
                     AddInst(vp,c);
 
-					sprintf(c.str,"%s.xyz = a00.xyz + %s.x*(a10.xyz - a00.xyz)",tmp2,tmp4);
+					_sprintf(c.str,"%s.xyz = a00.xyz + %s.x*(a10.xyz - a00.xyz)",tmp2,tmp4);
 					AddInst(vp,c);
-					sprintf(c.str,"%s.xyz = a01.xyz + %s.x*(a11.xyz - a01.xyz)",tmp3,tmp4);
-					AddInst(vp,c);
-
-					sprintf(c.str,"%s.xyz = %s.xyz + %s.y*(%s.xyz - %s.xyz)",output,tmp2,tmp4,tmp3,tmp2);
+					_sprintf(c.str,"%s.xyz = a01.xyz + %s.x*(a11.xyz - a01.xyz)",tmp3,tmp4);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s.xyz *= float3(-1.0f,-1.0f,0.2f)",output);
+					_sprintf(c.str,"%s.xyz = %s.xyz + %s.y*(%s.xyz - %s.xyz)",output,tmp2,tmp4,tmp3,tmp2);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
+					_sprintf(c.str,"%s.xyz *= float3(-1.0f,-1.0f,0.2f)",output);
+					AddInst(vp,c);
+
+					_sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
 					AddInst(vp,c);
 				}
 			}
@@ -12012,7 +12197,7 @@ _functions_test:
 	else
     if ((str_match0(chaine, "samplehalf")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12021,7 +12206,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12035,26 +12220,26 @@ _functions_test:
         {
 			if ((FSRSample0)&&(t==0)&&(main==1))
 			{
-				sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
+				_sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF0(vec2(gxy),%s)", output, valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF0(vec2(gxy),%s)", output, valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			if ((FSRSample1)&&(t==1)&&(main==1))
 			{
-				sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
+				_sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF1(vec2(bxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF1(vec2(bxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			{
-				sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
+				_sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
 				AddInst(vp, c);
 			}
 
-            sprintf(c.str, "%s.xyz = 2.0 * %s.xyz - vec3(1.0,1.0,1.0)", output, output);
+            _sprintf(c.str, "%s.xyz = 2.0 * %s.xyz - vec3(1.0,1.0,1.0)", output, output);
             AddInst(vp, c);
         }
         else
@@ -12062,17 +12247,17 @@ _functions_test:
         {
 			if ((FSRSample0)&&(t==0)&&(main==1))
 			{
-				sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
+				_sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF0(float2(gxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF0(float2(gxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			if ((FSRSample1)&&(t==1)&&(main==1))
 			{
-				sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
+				_sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF1(float2(bxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF1(float2(bxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
@@ -12084,12 +12269,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -12097,12 +12282,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -12114,11 +12299,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -12127,17 +12312,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -12152,24 +12337,24 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
             
-            sprintf(c.str, "%s.xyz = 2.0f * %s.xyz - float3(1.0f,1.0f,1.0f)", output, output);
+            _sprintf(c.str, "%s.xyz = 2.0f * %s.xyz - float3(1.0f,1.0f,1.0f)", output, output);
             AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
 
@@ -12178,7 +12363,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampleVSOffsetClamp")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
 
         p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -12191,7 +12376,7 @@ _functions_test:
         if (str_simple(&tmp[p1 + 1])) rn2 = var(&tmp[p1 + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p1 + 1], tmp2, vp);
         }
@@ -12199,7 +12384,7 @@ _functions_test:
         if (str_simple(&tmp[p2 + 1])) rn3 = var(&tmp[p2 + 1]);
         else
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             resfield(output, tmp3);
             rn3 = compile(&tmp[p2 + 1], tmp3, vp);
         }
@@ -12218,16 +12403,16 @@ _functions_test:
                 return "";
             }
 
-            sprintf(tmp3, "r%d", new_temp_register());
-            sprintf(c.str, "%s.xy = (%s+vec2(0.5,0.5)) * %s", tmp3, rn2, rn3);
+            _sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(c.str, "%s.xy = (%s+vec2(0.5,0.5)) * %s", tmp3, rn2, rn3);
             AddInst(vp, c);
 
-            sprintf(c.str, "%s.x = clamp(%s.x, 0.0, 1.0)", tmp3, tmp3);
+            _sprintf(c.str, "%s.x = clamp(%s.x, 0.0, 1.0)", tmp3, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = clamp(%s.y, 0.0, 1.0)", tmp3, tmp3);
+            _sprintf(c.str, "%s.y = clamp(%s.y, 0.0, 1.0)", tmp3, tmp3);
             AddInst(vp, c);
 
-            sprintf(c.str, "%s = texture2DLod(%s, %s.xy,0.0)", output, RS.TextureVS[t], tmp3);
+            _sprintf(c.str, "%s = texture2DLod(%s, %s.xy,0.0)", output, RS.TextureVS[t], tmp3);
             AddInst(vp, c);
         }
         else
@@ -12237,9 +12422,9 @@ _functions_test:
             {
                 if (metal==1)
                 {
-                    sprintf(tmp3, "r%d", new_temp_register());
-                    if (str_match(rn2,"pixel.")) sprintf(c.str, "%s.xy = %s.xy * %s", tmp3, rn2, rn3);
-                    else sprintf(c.str, "%s.xy = %s * %s", tmp3, rn2, rn3);
+                    _sprintf(tmp3, "r%d", new_temp_register());
+                    if (str_match(rn2,"pixel.")) _sprintf(c.str, "%s.xy = %s.xy * %s", tmp3, rn2, rn3);
+                    else _sprintf(c.str, "%s.xy = %s * %s", tmp3, rn2, rn3);
                     AddInst(vp, c);
                     
                     if (str_last_char(rn3, '.') == -1)
@@ -12249,12 +12434,12 @@ _functions_test:
                         return "";
                     }
 
-                    sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
+                    _sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
+                    _sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
                     AddInst(vp, c);
 
-                    sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], tmp3);
                     AddInst(vp, c);
                 }
                 else
@@ -12266,19 +12451,19 @@ _functions_test:
                         return "";
                     }
 
-                    sprintf(tmp3, "r%d", new_temp_register());
-                    sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
+                    _sprintf(tmp3, "r%d", new_temp_register());
+                    _sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
                     AddInst(vp, c);
 
-                    sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
+                    _sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
+                    _sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
                     AddInst(vp, c);
 
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], tmp3);
 #else
-                    sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], tmp3);
 #endif
                     AddInst(vp, c);
                 }
@@ -12297,22 +12482,22 @@ _functions_test:
                     if (RS.TextureVS[t])
                         if (strcmp(texture[k],RS.TextureVS[t])==0) res=k;
                 
-                sprintf(tmp3, "r%d", new_temp_register());
-                sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
+                _sprintf(tmp3, "r%d", new_temp_register());
+                _sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
                 AddInst(vp, c);
 
-                sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
+                _sprintf(c.str, "%s.x = clamp(%s.x, 0.0f, 1.0f)", tmp3, tmp3);
                 AddInst(vp, c);
-                sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
+                _sprintf(c.str, "%s.y = clamp(%s.y, 0.0f, 1.0f)", tmp3, tmp3);
                 AddInst(vp, c);
 
                 if (levelrep>0)
                 {
-                    sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
+                    _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
                 }
                 else
                 {
-                    sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
+                    _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
                 }
                 AddInst(vp, c);
             }
@@ -12320,7 +12505,7 @@ _functions_test:
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12328,7 +12513,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampleVSOffset")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
 
         p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -12341,7 +12526,7 @@ _functions_test:
         if (str_simple(&tmp[p1 + 1])) rn2 = var(&tmp[p1 + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p1 + 1], tmp2, vp);
         }
@@ -12349,7 +12534,7 @@ _functions_test:
         if (str_simple(&tmp[p2 + 1])) rn3 = var(&tmp[p2 + 1]);
         else
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             resfield(output, tmp3);
             rn3 = compile(&tmp[p2 + 1], tmp3, vp);
         }
@@ -12368,11 +12553,11 @@ _functions_test:
                 return "";
             }
 
-            sprintf(tmp3, "r%d", new_temp_register());
-            sprintf(c.str, "%s.xy = (%s+vec2(0.5,0.5)) * %s", tmp3, rn2, rn3);
+            _sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(c.str, "%s.xy = (%s+vec2(0.5,0.5)) * %s", tmp3, rn2, rn3);
             AddInst(vp, c);
 
-            sprintf(c.str, "%s = texture2DLod(%s, %s.xy,0.0)", output, RS.TextureVS[t], tmp3);
+            _sprintf(c.str, "%s = texture2DLod(%s, %s.xy,0.0)", output, RS.TextureVS[t], tmp3);
             AddInst(vp, c);
         }
         else
@@ -12382,9 +12567,9 @@ _functions_test:
             {
                 if (metal==1)
                 {
-                    sprintf(tmp3, "r%d", new_temp_register());
-                    if (str_match(rn2,"pixel.")) sprintf(c.str, "%s.xy = %s.xy * %s", tmp3, rn2, rn3);
-                    else sprintf(c.str, "%s.xy = %s * %s", tmp3, rn2, rn3);
+                    _sprintf(tmp3, "r%d", new_temp_register());
+                    if (str_match(rn2,"pixel.")) _sprintf(c.str, "%s.xy = %s.xy * %s", tmp3, rn2, rn3);
+                    else _sprintf(c.str, "%s.xy = %s * %s", tmp3, rn2, rn3);
                     AddInst(vp, c);
                     
                     if (str_last_char(rn3, '.') == -1)
@@ -12394,7 +12579,7 @@ _functions_test:
                         return "";
                     }
 
-                    sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], tmp3);
                     AddInst(vp, c);
                 }
                 else
@@ -12406,14 +12591,14 @@ _functions_test:
                         return "";
                     }
 
-                    sprintf(tmp3, "r%d", new_temp_register());
-                    sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
+                    _sprintf(tmp3, "r%d", new_temp_register());
+                    _sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
                     AddInst(vp, c);
 
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], tmp3);
 #else
-                    sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], tmp3);
+                    _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], tmp3);
 #endif
                     AddInst(vp, c);
                 }
@@ -12432,17 +12617,17 @@ _functions_test:
                     if (RS.TextureVS[t])
                         if (strcmp(texture[k],RS.TextureVS[t])==0) res=k;
                 
-                sprintf(tmp3, "r%d", new_temp_register());
-                sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
+                _sprintf(tmp3, "r%d", new_temp_register());
+                _sprintf(c.str, "%s.xy = (%s+float2(0.5f,0.5f)) * %s", tmp3, rn2, rn3);
                 AddInst(vp, c);
 
                 if (levelrep>0)
                 {
-                    sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
+                    _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
                 }
                 else
                 {
-                    sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
+                    _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, tmp3);
                 }
                 AddInst(vp, c);
             }
@@ -12450,7 +12635,7 @@ _functions_test:
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12458,7 +12643,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampleVShalf")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12467,7 +12652,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12479,9 +12664,9 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
             AddInst(vp, c);
-			sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
+			_sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
 			AddInst(vp, c);
         }
         else
@@ -12493,12 +12678,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -12506,11 +12691,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -12524,24 +12709,24 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
-			sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
+			_sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
 			AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12549,7 +12734,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplesecondaryVShalf")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12558,7 +12743,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12570,16 +12755,16 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
-            AddInst(vp, c);
-
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
+            AddInst(vp, c);
+
+			_sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
 			AddInst(vp, c);
         }
         else
@@ -12591,12 +12776,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -12604,11 +12789,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -12622,23 +12807,23 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
-			sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
+			_sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
 			AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12646,7 +12831,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplesecondaryVS")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12655,7 +12840,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12667,13 +12852,13 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
 
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s.xy),0.0)", output, RS.TextureVS[t], tmp3);
             AddInst(vp, c);
         }
         else
@@ -12685,12 +12870,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -12698,11 +12883,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -12716,13 +12901,13 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
@@ -12730,7 +12915,7 @@ _functions_test:
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12738,7 +12923,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampleVS")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12747,7 +12932,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12759,7 +12944,7 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
+            _sprintf(c.str, "%s = texture2DLod(%s, vec2(%s),0.0)", output, RS.TextureVS[t], rn2);
             AddInst(vp, c);
         }
         else
@@ -12771,12 +12956,12 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.TextureVS[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.TextureVS[t], rn2);
                         
                     }
                     AddInst(vp, c);
@@ -12784,11 +12969,11 @@ _functions_test:
                 else
                 {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smpvs, %s.xy)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.Sample(smpvs, %s)", output, RS.TextureVS[t], rn2);
 #else
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s.xy,0)", output, RS.TextureVS[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smpvs, %s,0)", output, RS.TextureVS[t], rn2);
 #endif
                     AddInst(vp, c);
                 }
@@ -12802,13 +12987,13 @@ _functions_test:
                 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(svs%d, float4(%s,0,0))", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
@@ -12816,7 +13001,7 @@ _functions_test:
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12824,7 +13009,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplesecondaryhalf16")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12833,7 +13018,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12845,24 +13030,24 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
             
-            sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
+            _sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
             AddInst(vp, c);
 
-	        sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+	        _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0*(255.0 * %s.z + %s.y)/255.0 - 1.0", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+			_sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -12876,12 +13061,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -12889,12 +13074,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -12906,11 +13091,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -12919,17 +13104,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -12944,30 +13129,30 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
-	        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+	        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 		    AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
+            _sprintf(c.str, "%s.y = 2.0f*(255.0f * %s.z + %s.y)/255.0f - 1.0f", output, output, output);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+			_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
             AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -12975,7 +13160,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplesecondaryhalf")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -12984,7 +13169,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -12996,18 +13181,18 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
             
-            sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
+            _sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
             AddInst(vp, c);
 
-			sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
+			_sprintf(c.str, "%s = 2.0 * %s.xyzw - vec4(1.0,1.0,1.0,1.0)",output,output);
 			AddInst(vp, c);
         }
         else
@@ -13021,12 +13206,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -13034,12 +13219,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -13051,11 +13236,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -13064,17 +13249,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -13089,24 +13274,24 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
 
-			sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
+			_sprintf(c.str, "%s = 2.0f * %s - float4(1.0f,1.0f,1.0f,1.0f)",output,output);
 			AddInst(vp, c);
         }
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -13114,7 +13299,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplesecondary")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -13123,7 +13308,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -13135,15 +13320,15 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
-            else sprintf(c.str, "%s.xy = %s", tmp3,rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s.xy = %s.xy", tmp3,rn2);
+            else _sprintf(c.str, "%s.xy = %s", tmp3,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
+            _sprintf(c.str, "%s.y = 1.0 - %s.y", tmp3,tmp3);
             AddInst(vp, c);
             
-            sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
+            _sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], tmp3);
             AddInst(vp, c);
         }
         else
@@ -13157,12 +13342,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -13170,12 +13355,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -13187,11 +13372,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         AddInst(vp, c);
                     }
@@ -13200,17 +13385,17 @@ _functions_test:
                         if (levelrep>0)
                         {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
                         }
                         AddInst(vp, c);
                     }
@@ -13225,13 +13410,13 @@ _functions_test:
 
                 if (levelrep>0)
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-                    else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+                    else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
                 }
                 AddInst(vp, c);
             }
@@ -13239,7 +13424,7 @@ _functions_test:
         else
         if (api == 0)
         {
-            sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+            _sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
             AddInst(vp, c);
         }
         return output;
@@ -13247,7 +13432,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "samplebasedepth")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -13256,7 +13441,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -13268,8 +13453,8 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {            
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], rn2);
-            else sprintf(c.str, "%s = texture2D(%s, %s)", output, RS.Texture[t], rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], rn2);
+            else _sprintf(c.str, "%s = texture2D(%s, %s)", output, RS.Texture[t], rn2);
             AddInst(vp, c);
         }
         else
@@ -13281,20 +13466,20 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                     }
                     AddInst(vp, c);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0).r", output, RS.Texture[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0).r", output, RS.Texture[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0).r", output, RS.Texture[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0).r", output, RS.Texture[t], rn2);
                     AddInst(vp, c);
                 }
             }
@@ -13305,8 +13490,8 @@ _functions_test:
                     if (RS.Texture[t])
                         if (strcmp(texture[k],RS.Texture[t])==0) res=k;
 
-                if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0)).r", output, res, rn2);
-                else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0)).r", output, res, rn2);
+                if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0)).r", output, res, rn2);
+                else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0)).r", output, res, rn2);
                 AddInst(vp, c);
             }
         }
@@ -13316,7 +13501,7 @@ _functions_test:
     else
     if ((str_match0(chaine, "sampledepth")) && (shadermodel))
     {
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -13325,7 +13510,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -13337,10 +13522,10 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {            
-            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], rn2);
-            else sprintf(c.str, "%s = texture2D(%s, %s)", output, RS.Texture[t], rn2);
+            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = texture2D(%s, %s.xy)", output, RS.Texture[t], rn2);
+            else _sprintf(c.str, "%s = texture2D(%s, %s)", output, RS.Texture[t], rn2);
             AddInst(vp, c);
-			sprintf(c.str, "%s.x = 1.0 - 2.0 * %s.x", output, output);
+			_sprintf(c.str, "%s.x = 1.0 - 2.0 * %s.x", output, output);
             AddInst(vp, c);
         }
         else
@@ -13352,20 +13537,20 @@ _functions_test:
                 {
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                        _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                        else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                        else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                     }
                     AddInst(vp, c);
                 }
                 else
                 {
-                    if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0).r", output, RS.Texture[t], rn2);
-                    else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0).r", output, RS.Texture[t], rn2);
+                    if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0).r", output, RS.Texture[t], rn2);
+                    else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0).r", output, RS.Texture[t], rn2);
                     AddInst(vp, c);
                 }
             }
@@ -13376,8 +13561,8 @@ _functions_test:
                     if (RS.Texture[t])
                         if (strcmp(texture[k],RS.Texture[t])==0) res=k;
 
-                if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0)).r", output, res, rn2);
-                else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0)).r", output, res, rn2);
+                if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0)).r", output, res, rn2);
+                else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0)).r", output, res, rn2);
                 AddInst(vp, c);
             }
         }
@@ -13387,7 +13572,7 @@ _functions_test:
     else
 	if ((str_match0(chaine, "sample")) && (shadermodel))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p] = '\0';
@@ -13396,7 +13581,7 @@ _functions_test:
 		if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn2 = compile(&tmp[p + 1], tmp2, vp);
 		}
@@ -13410,22 +13595,22 @@ _functions_test:
 		{
 			if ((FSRSample0)&&(t==0)&&(main==1))
 			{
-				sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
+				_sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF0(vec2(gxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF0(vec2(gxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			if ((FSRSample1)&&(t==1)&&(main==1))
 			{
-				sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
+				_sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF1(vec2(bxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF1(vec2(bxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			{
-				sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
+				_sprintf(c.str, "%s = texture2D(%s, vec2(%s))", output, RS.Texture[t], rn2);
 				AddInst(vp, c);
 			}
 		}
@@ -13434,17 +13619,17 @@ _functions_test:
 		{
 			if ((FSRSample0)&&(t==0)&&(main==1))
 			{
-				sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
+				_sprintf(c.str, "AU2 gxy = AU2(%s * SIZEDEST0.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF0(float2(gxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF0(float2(gxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
 			if ((FSRSample1)&&(t==1)&&(main==1))
 			{
-				sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
+				_sprintf(c.str, "AU2 bxy = AU2(%s * SIZEDEST1.xy)",rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = FsrRcasF1(float2(bxy),%s)", output,valueFSRRCASSample);
+				_sprintf(c.str, "%s = FsrRcasF1(float2(bxy),%s)", output,valueFSRRCASSample);
 				AddInst(vp, c);
 			}
 			else
@@ -13456,12 +13641,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s1, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s1, %s))", output, RS.Texture[t], rn2);
                             
                         }
                     }
@@ -13469,12 +13654,12 @@ _functions_test:
                     {
                         if (str_match(rn2,"pixel."))
                         {
-                            sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
                         }
                         else
                         {
-                            if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
-                            else sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
+                            if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = float4(%s.sample(s0, %s.xy))", output, RS.Texture[t], rn2);
+                            else _sprintf(c.str, "%s = float4(%s.sample(s0, %s))", output, RS.Texture[t], rn2);
                             
                         }
                         
@@ -13486,11 +13671,11 @@ _functions_test:
                     if ((RS.Mip[t]==_POINT)||(shadertexturelevel))
                     {
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-						else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+						else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-						else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+						else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
 						AddInst(vp, c);
 					}
@@ -13499,17 +13684,17 @@ _functions_test:
 						if (levelrep>0)
 						{
 #if defined(WINDOWS_PHONE)&&!defined(WINDOWS_STORE)
-							if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-							else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+							if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+							else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 #else
-							if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
-							else sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
+							if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.SampleLevel(smp, %s.xy,0)", output, RS.Texture[t], rn2);
+							else _sprintf(c.str, "%s = %s.SampleLevel(smp, %s,0)", output, RS.Texture[t], rn2);
 #endif
 						}
 						else
 						{
-							if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
-							else sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
+							if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.Sample(smp, %s.xy)", output, RS.Texture[t], rn2);
+							else _sprintf(c.str, "%s = %s.Sample(smp, %s)", output, RS.Texture[t], rn2);
 						}
 						AddInst(vp, c);
 					}
@@ -13524,13 +13709,13 @@ _functions_test:
 
 				if (levelrep>0)
 				{
-					if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
-					else sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
+					if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s.xy,0,0))", output, res, rn2);
+					else _sprintf(c.str, "%s = tex2Dlod(s%d, float4(%s,0,0))", output, res, rn2);
 				}
 				else
 				{
-					if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
-					else sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
+					if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = tex2D(s%d, %s.xy)", output, res, rn2);
+					else _sprintf(c.str, "%s = tex2D(s%d, %s)", output, res, rn2);
 				}
 				AddInst(vp, c);
 			}
@@ -13538,7 +13723,7 @@ _functions_test:
 		else
 		if (api == 0)
 		{
-			sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
+			_sprintf(c.str, "texld %s,%s,s%d", output, rn2, t);
 			AddInst(vp, c);
 		}
 		return output;
@@ -13549,20 +13734,20 @@ _functions_test:
     {
         FSR=1;
         
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         
         rn2 = var(tmp);
         if (!correct_modifier_texture2d(rn2)) TYPEERROR=true;
         
-        sprintf(c.str, "FsrEasuCon(SIZETEX.x,SIZETEX.y,SIZETEX.x,SIZETEX.y,SIZEDEST.x,SIZEDEST.y)");
+        _sprintf(c.str, "FsrEasuCon(SIZETEX.x,SIZETEX.y,SIZETEX.x,SIZETEX.y,SIZEDEST.x,SIZEDEST.y)");
         AddInst(vp, c);
         
-        sprintf(c.str, "AU2 gxy = AU2(%s.xy * SIZEDEST.xy)",rn2);
+        _sprintf(c.str, "AU2 gxy = AU2(%s.xy * SIZEDEST.xy)",rn2);
         AddInst(vp, c);
-        sprintf(c.str, "AF3 col = FsrEasuF(gxy)");
+        _sprintf(c.str, "AF3 col = FsrEasuF(gxy)");
         AddInst(vp, c);
-        if (api==1) sprintf(c.str, "%s = vec4(col.xyz,1.0)", output);
-        else sprintf(c.str, "%s = float4(col.xyz,1.0f)", output);
+        if (api==1) _sprintf(c.str, "%s = vec4(col.xyz,1.0)", output);
+        else _sprintf(c.str, "%s = float4(col.xyz,1.0f)", output);
         AddInst(vp, c);
 
         return output;
@@ -13572,7 +13757,7 @@ _functions_test:
     {
         FSR=2;
         
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -13581,7 +13766,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -13589,7 +13774,7 @@ _functions_test:
         if (str_simple(tmp)) rn = var(tmp);
         else
         {
-            sprintf(tmp3, "r%d", new_temp_register());
+            _sprintf(tmp3, "r%d", new_temp_register());
             resfield(output, tmp3);
             rn = compile(tmp, tmp3, vp);
         }
@@ -13599,16 +13784,16 @@ _functions_test:
         //float sh=0.0f;
         //sscanf(tmp, "%f", &sh);
 
-        sprintf(c.str, "FsrRcasCon(%s)",rn);
+        _sprintf(c.str, "FsrRcasCon(%s)",rn);
         AddInst(vp, c);
         
-        sprintf(c.str, "AU2 gxy = AU2(%s.xy * SIZEDEST.xy)",rn2);
+        _sprintf(c.str, "AU2 gxy = AU2(%s.xy * SIZEDEST.xy)",rn2);
         AddInst(vp, c);
-        //sprintf(c.str, "AF3 col = FsrRcasF(gxy,FILMGRAIN.xyz)");
-        sprintf(c.str, "AF3 col = FsrRcasF(gxy)");
+        //_sprintf(c.str, "AF3 col = FsrRcasF(gxy,FILMGRAIN.xyz)");
+        _sprintf(c.str, "AF3 col = FsrRcasF(gxy)");
         AddInst(vp, c);
-        if (api==1) sprintf(c.str, "%s = vec4(col.xyz,1.0)", output);
-        else sprintf(c.str, "%s = float4(col.xyz,1.0f)", output);
+        if (api==1) _sprintf(c.str, "%s = vec4(col.xyz,1.0)", output);
+        else _sprintf(c.str, "%s = float4(col.xyz,1.0f)", output);
         AddInst(vp, c);
 
         return output;
@@ -13624,7 +13809,7 @@ _functions_test:
         if (str_match0(chaine, "gatherGreen")) { comp=1; gatherfn="GatherGreen"; compo="component::y"; swizl=".g"; }
         if (str_match0(chaine, "gatherBlue")) { comp=2; gatherfn="GatherBlue"; compo="component::z"; swizl=".b"; }
         
-        sprintf(tmp, "%s", str_return_parentheses(chaine));
+        _sprintf(tmp, "%s", str_return_parentheses(chaine));
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
         tmp[p] = '\0';
@@ -13633,7 +13818,7 @@ _functions_test:
         if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
         else
         {
-            sprintf(tmp2, "r%d", new_temp_register());
+            _sprintf(tmp2, "r%d", new_temp_register());
             resfield(output, tmp2);
             rn2 = compile(&tmp[p + 1], tmp2, vp);
         }
@@ -13645,36 +13830,36 @@ _functions_test:
         
         if ((api == 1) && (shadermodel))
         {
-            //sprintf(c.str, "ivec2 isize = textureSize(%s,0)", RS.Texture[t]);
+            //_sprintf(c.str, "ivec2 isize = textureSize(%s,0)", RS.Texture[t]);
             //AddInst(vp, c);
-            //sprintf(c.str, "%s = texturegather2D(%s, vec2(%s),ivec2(0),%d)", output, RS.Texture[t], rn2,comp);
+            //_sprintf(c.str, "%s = texturegather2D(%s, vec2(%s),ivec2(0),%d)", output, RS.Texture[t], rn2,comp);
             //AddInst(vp, c);
 
-            sprintf(c.str, "vec4 gth");
+            _sprintf(c.str, "vec4 gth");
             AddInst(vp, c);
 
             // 0,0
-            sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(-0.5,0.5)", rn2);
+            _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(-0.5,0.5)", rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.x = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
+            _sprintf(c.str, "%s.x = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
             AddInst(vp, c);
 
             // 1,0
-            sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(0.5,0.5)", rn2);
+            _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(0.5,0.5)", rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
+            _sprintf(c.str, "%s.y = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
             AddInst(vp, c);
 
             // 1,1
-            sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(0.5,-0.5)", rn2);
+            _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(0.5,-0.5)", rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.z = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
+            _sprintf(c.str, "%s.z = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
             AddInst(vp, c);
 
             // 0,1
-            sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(-0.5,-0.5)", rn2);
+            _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + vec2(-0.5,-0.5)", rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.w = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
+            _sprintf(c.str, "%s.w = texture2D(%s, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t],swizl);
             AddInst(vp, c);
         }
         else
@@ -13691,88 +13876,88 @@ _functions_test:
                     /*
                     if (str_match(rn2,"pixel."))
                     {
-                        sprintf(c.str, "%s = %s.gather(s0, %s.xy,int2(0),%s)", output, RS.Texture[t], rn2, compo);
+                        _sprintf(c.str, "%s = %s.gather(s0, %s.xy,int2(0),%s)", output, RS.Texture[t], rn2, compo);
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.gather(s0, %s.xy,int2(0),%s)", output, RS.Texture[t], rn2, compo);
-                        else sprintf(c.str, "%s = %s.gather(s0, %s,int2(0),%s)", output, RS.Texture[t], rn2, compo);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.gather(s0, %s.xy,int2(0),%s)", output, RS.Texture[t], rn2, compo);
+                        else _sprintf(c.str, "%s = %s.gather(s0, %s,int2(0),%s)", output, RS.Texture[t], rn2, compo);
                         
                     }
                     AddInst(vp, c);
                     /**/
                     
-                    sprintf(c.str, "float4 gth");
+                    _sprintf(c.str, "float4 gth");
                     AddInst(vp, c);
 
                     // 0,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(-0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(-0.5,0.5)", rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.x = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+                    _sprintf(c.str, "%s.x = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
                     AddInst(vp, c);
 
                     // 1,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(0.5,0.5)", rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.y = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+                    _sprintf(c.str, "%s.y = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
                     AddInst(vp, c);
 
                     // 1,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(0.5,-0.5)", rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+                    _sprintf(c.str, "%s.z = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
                     AddInst(vp, c);
 
                     // 0,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(-0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) + float2(-0.5,-0.5)", rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+                    _sprintf(c.str, "%s.w = %s.sample(s1, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
                     AddInst(vp, c);
 
                 }
                 else
                 {
-					sprintf(c.str, "float4 gth");
+					_sprintf(c.str, "float4 gth");
 					AddInst(vp, c);
 
 					// 0,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.x = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 1,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.y = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 1,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,-0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.z = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.z = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 0,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,-0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.w = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.w = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 					/*
                     if (levelrep>0)
                     {
 #ifdef WINDOWS_PHONE
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.%s(smp, %s.xy,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
-                        else sprintf(c.str, "%s = %s.%s(smp, %s,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.%s(smp, %s.xy,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        else _sprintf(c.str, "%s = %s.%s(smp, %s,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
 #else
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.%s(smp, %s.xy,0,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
-                        else sprintf(c.str, "%s = %s.%s(smp, %s,0,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.%s(smp, %s.xy,0,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        else _sprintf(c.str, "%s = %s.%s(smp, %s,0,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
 #endif
                     }
                     else
                     {
-                        if (str_last_char(rn2, '.') == -1) sprintf(c.str, "%s = %s.%s(smp, %s.xy,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
-                        else sprintf(c.str, "%s = %s.%s(smp, %s,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        if (str_last_char(rn2, '.') == -1) _sprintf(c.str, "%s = %s.%s(smp, %s.xy,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
+                        else _sprintf(c.str, "%s = %s.%s(smp, %s,int2(0,0))", output, RS.Texture[t], gatherfn, rn2);
                     }
                     AddInst(vp, c);
 					/**/
@@ -13782,31 +13967,31 @@ _functions_test:
             {
 				if (shadermodel4)
 				{
-					sprintf(c.str, "float4 gth");
+					_sprintf(c.str, "float4 gth");
 					AddInst(vp, c);
 
 					// 0,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.x = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 1,0
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.y = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 1,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(0.5,-0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.z = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.z = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 					// 0,1
-                    sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,-0.5)", rn2);
+                    _sprintf(c.str, "gth.xy = floor(%s.xy * SIZETEX.xy) +float2(-0.5,-0.5)", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.w = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
+					_sprintf(c.str, "%s.w = %s.Sample(smp, gth.xy * SIZETEX.zw)%s", output, RS.Texture[t], swizl);
 					AddInst(vp, c);
 
 				}
@@ -13817,39 +14002,39 @@ _functions_test:
 						if (RS.Texture[t])
 							if (strcmp(texture[k],RS.Texture[t])==0) res=k;
 
-					sprintf(c.str, "float4 gth");
+					_sprintf(c.str, "float4 gth");
 					AddInst(vp, c);
 
 					// 0,0
-					sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) - 0.5", rn2);
+					_sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) - 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) + 0.5", rn2);
+					_sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) + 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.x = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
+					_sprintf(c.str, "%s.x = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
 					AddInst(vp, c);
 
 					// 1,0
-					sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) + 0.5", rn2);
+					_sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) + 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) + 0.5", rn2);
+					_sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) + 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.y = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
+					_sprintf(c.str, "%s.y = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
 					AddInst(vp, c);
 
 					// 1,1
-					sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) + 0.5", rn2);
+					_sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) + 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) - 0.5", rn2);
+					_sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) - 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.z = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
+					_sprintf(c.str, "%s.z = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
 					AddInst(vp, c);
 
 					// 0,1
-					sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) - 0.5", rn2);
+					_sprintf(c.str, "gth.x = floor(%s.x * SIZETEX.x) - 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) - 0.5", rn2);
+					_sprintf(c.str, "gth.y = floor(%s.y * SIZETEX.y) - 0.5", rn2);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.w = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
+					_sprintf(c.str, "%s.w = tex2D(s%d, gth.xy * SIZETEX.zw)%s", output, res,swizl);
 					AddInst(vp, c);
 				}
             }
@@ -13859,7 +14044,7 @@ _functions_test:
 
 	if (str_match0(chaine,"mul_x2"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -13868,7 +14053,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -13876,29 +14061,29 @@ _functions_test:
 		if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 
 		if ((api == 0) && (!shadermodel3))
 		{
-			sprintf(c.str,"mul_x2 %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"mul_x2 %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = 2.0 * %s * %s",output,rn,rn2);
+				_sprintf(c.str,"%s = 2.0 * %s * %s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
 
-				sprintf(c.str,"ADD_SAT %s,%s,%s",rn,rn,rn);
+				_sprintf(c.str,"ADD_SAT %s,%s,%s",rn,rn,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -13908,37 +14093,37 @@ _functions_test:
 
 	if ( (str_match0(chaine,"reciprocal")) || (str_match0(chaine,"rcp")) )
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"rcp %s,%s.w",output,rn);
+			_sprintf(c.str,"rcp %s,%s.w",output,rn);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str,"%s = 1.0f / %s.w",output,rn);
+				_sprintf(c.str,"%s = 1.0f / %s.w",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s = 1.0 / %s.w",output,rn);
+				_sprintf(c.str,"%s = 1.0 / %s.w",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"RCP %s,%s.w",output,rn);
+				_sprintf(c.str,"RCP %s,%s.w",output,rn);
 				AddInst(vp,c);
 			}
 		}
@@ -13948,7 +14133,7 @@ _functions_test:
 	
 	if (str_match0(chaine,"mul_x4"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -13957,7 +14142,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -13965,30 +14150,30 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"mul_x4 %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"mul_x4 %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = 4.0 * %s * %s",output,rn,rn2);
+				_sprintf(c.str,"%s = 4.0 * %s * %s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"ADD_SAT %s,%s,%s",rn,rn,rn);
+				_sprintf(c.str,"ADD_SAT %s,%s,%s",rn,rn,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"ADD_SAT %s,%s,%s",rn2,rn2,rn2);
+				_sprintf(c.str,"ADD_SAT %s,%s,%s",rn2,rn2,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -13997,7 +14182,7 @@ _functions_test:
 
 	if (str_match0(chaine,"mul_sat"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14006,7 +14191,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -14014,7 +14199,7 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
@@ -14022,25 +14207,25 @@ _functions_test:
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"mul_sat %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"mul_sat %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s = clamp( %s * %s , 0.0, 1.0)",output,rn,rn2);
+				_sprintf(c.str,"%s = clamp( %s * %s , 0.0, 1.0)",output,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str,"%s = clamp( %s * %s , 0.0f, 1.0f)",output,rn,rn2);
+				_sprintf(c.str,"%s = clamp( %s * %s , 0.0f, 1.0f)",output,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"MUL_SAT %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14050,7 +14235,7 @@ _functions_test:
 
 	if (str_match0(chaine,"mul"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14059,7 +14244,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -14067,26 +14252,26 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 		
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"mul %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"mul %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = %s * %s",output,rn,rn2);
+				_sprintf(c.str,"%s = %s * %s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"MUL %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"MUL %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14096,48 +14281,48 @@ _functions_test:
 
 	if (str_match0(chaine,"InsideBall"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(tmp, tmp2, vp);
 		}
 
-		sprintf(tmp3, "r%d", new_temp_register());
+		_sprintf(tmp3, "r%d", new_temp_register());
 
 		// pos=InsideBall(XYZ,R)
 
 		if (api==1)
 		{
-			sprintf(c.str,"if (%s.w>0.001)",rn);
+			_sprintf(c.str,"if (%s.w>0.001)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.w = length(%s.xyz)",tmp3,tmp3);
+			_sprintf(c.str,"%s.w = length(%s.xyz)",tmp3,tmp3);
 			AddInst(vp,c);
-			sprintf(c.str,"if (%s.w<%s.w) %s;",tmp3,rn,sDiscardAPI);
+			_sprintf(c.str,"if (%s.w<%s.w) %s;",tmp3,rn,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 		else
 		{
-			sprintf(c.str,"if (%s.w>0.001f)",rn);
+			_sprintf(c.str,"if (%s.w>0.001f)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.w = length(%s.xyz)",tmp3,tmp3);
+			_sprintf(c.str,"%s.w = length(%s.xyz)",tmp3,tmp3);
 			AddInst(vp,c);
-			sprintf(c.str,"if (%s.w<%s.w) %s",tmp3,rn,sDiscardAPI);
+			_sprintf(c.str,"if (%s.w<%s.w) %s",tmp3,rn,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 
@@ -14146,44 +14331,44 @@ _functions_test:
 	else
 	if (str_match0(chaine,"InsideCube"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(tmp, tmp2, vp);
 		}
 
-		sprintf(tmp3, "r%d", new_temp_register());
+		_sprintf(tmp3, "r%d", new_temp_register());
 
 		// pos=InsideCube(XYZ,L)
 
 		if (api==1)
 		{
-			sprintf(c.str,"if (%s.w>0.001)",rn);
+			_sprintf(c.str,"if (%s.w>0.001)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"if ((abs(%s.x)<%s.w)&&(abs(%s.y)<%s.w)&&(abs(%s.z)<%s.w)) %s;",tmp3,rn,tmp3,rn,tmp3,rn,sDiscardAPI);
+			_sprintf(c.str,"if ((abs(%s.x)<%s.w)&&(abs(%s.y)<%s.w)&&(abs(%s.z)<%s.w)) %s;",tmp3,rn,tmp3,rn,tmp3,rn,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 		else
 		{
-			sprintf(c.str,"if (%s.w>0.001f)",rn);
+			_sprintf(c.str,"if (%s.w>0.001f)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"if ((abs(%s.x)<%s.w)&&(abs(%s.y)<%s.w)&&(abs(%s.z)<%s.w)) %s",tmp3,rn,tmp3,rn,tmp3,rn,sDiscardAPI);
+			_sprintf(c.str,"if ((abs(%s.x)<%s.w)&&(abs(%s.y)<%s.w)&&(abs(%s.z)<%s.w)) %s",tmp3,rn,tmp3,rn,tmp3,rn,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 
@@ -14192,7 +14377,7 @@ _functions_test:
 	else
 	if (str_match0(chaine,"InsideBox"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14201,7 +14386,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -14209,39 +14394,39 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn2 = compile(&tmp[p + 1], tmp4, vp);
 		}
 
-		sprintf(tmp3, "r%d", new_temp_register());
+		_sprintf(tmp3, "r%d", new_temp_register());
 
 		// pos=InsideBox(XYZ,Lxyz)
 
 		if (api==1)
 		{
-			sprintf(c.str,"if (%s.w>0.001)",rn);
+			_sprintf(c.str,"if (%s.w>0.001)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"if ((abs(%s.x)<%s.x)&&(abs(%s.y)<%s.y)&&(abs(%s.z)<%s.z)) %s;",tmp3,rn2,tmp3,rn2,tmp3,rn2,sDiscardAPI);
+			_sprintf(c.str,"if ((abs(%s.x)<%s.x)&&(abs(%s.y)<%s.y)&&(abs(%s.z)<%s.z)) %s;",tmp3,rn2,tmp3,rn2,tmp3,rn2,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 		else
 		{
-			sprintf(c.str,"if (%s.w>0.001f)",rn);
+			_sprintf(c.str,"if (%s.w>0.001f)",rn);
 			AddInst2(vp,c);
-			sprintf(c.str,"{");
+			_sprintf(c.str,"{");
 			AddInst2(vp,c);
-			sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
+			_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,output);
 			AddInst(vp,c);
-			sprintf(c.str,"if ((abs(%s.x)<%s.x)&&(abs(%s.y)<%s.y)&&(abs(%s.z)<%s.z)) %s",tmp3,rn2,tmp3,rn2,tmp3,rn2,sDiscardAPI);
+			_sprintf(c.str,"if ((abs(%s.x)<%s.x)&&(abs(%s.y)<%s.y)&&(abs(%s.z)<%s.z)) %s",tmp3,rn2,tmp3,rn2,tmp3,rn2,sDiscardAPI);
 			AddInst(vp,c);
-			sprintf(c.str,"}");
+			_sprintf(c.str,"}");
 			AddInst2(vp,c);
 		}
 
@@ -14267,63 +14452,63 @@ _functions_test:
         }
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             
             rn=var(rns[0]);
             rn2=var(rns[1]);
 			rn3=var(rns[2]);
 			rn4=var(rns[3]);
 
-			sprintf(tmp3, "r%d", new_temp_register());
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 
 			// Lighting(pos,N,LIGHT,COLLIGHT)
 
 			if (api==1)
 			{
-				sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,rn3);
+				_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,rn3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.w = length(%s.xyz)",tmp4,tmp3);
+				_sprintf(c.str,"%s.w = length(%s.xyz)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = dot(%s.xyz,%s.xyz)",tmp4,tmp3,rn2);
+				_sprintf(c.str,"%s.y = dot(%s.xyz,%s.xyz)",tmp4,tmp3,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = clamp(-%s.y,0.0,1.0)",tmp4,tmp4);
+				_sprintf(c.str,"%s.y = clamp(-%s.y,0.0,1.0)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.w/%s.w",tmp4,rn3,tmp4);
+				_sprintf(c.str,"%s.x = %s.w/%s.w",tmp4,rn3,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = vec4(0.0,0.0,0.0,0.0)",output);
+				_sprintf(c.str,"%s = vec4(0.0,0.0,0.0,0.0)",output);
 				AddInst(vp,c);
-				sprintf(c.str,"if (%s.x<%s.w)",tmp4,rn4);
+				_sprintf(c.str,"if (%s.x<%s.w)",tmp4,rn4);
 				AddInst2(vp,c);
-				sprintf(c.str,"{");
+				_sprintf(c.str,"{");
 				AddInst2(vp,c);
-				sprintf(c.str,"%s.rgb=%s.rgb*%s.x*%s.y",output,rn4,tmp4,tmp4);
+				_sprintf(c.str,"%s.rgb=%s.rgb*%s.x*%s.y",output,rn4,tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"}");
+				_sprintf(c.str,"}");
 				AddInst2(vp,c);
 			}
 			else
 			if (api==0)
 			{
-				sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,rn3);
+				_sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp3,rn,rn3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.w = length(%s.xyz)",tmp4,tmp3);
+				_sprintf(c.str,"%s.w = length(%s.xyz)",tmp4,tmp3);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = dot(%s.xyz,%s.xyz)",tmp4,tmp3,rn2);
+				_sprintf(c.str,"%s.y = dot(%s.xyz,%s.xyz)",tmp4,tmp3,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.y = clamp(-%s.y,0.0f,1.0f)",tmp4,tmp4);
+				_sprintf(c.str,"%s.y = clamp(-%s.y,0.0f,1.0f)",tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = %s.w/%s.w",tmp4,rn3,tmp4);
+				_sprintf(c.str,"%s.x = %s.w/%s.w",tmp4,rn3,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = float4(0.0f,0.0f,0.0f,0.0f)",output);
+				_sprintf(c.str,"%s = float4(0.0f,0.0f,0.0f,0.0f)",output);
 				AddInst(vp,c);
-				sprintf(c.str,"if (%s.x<%s.w)",tmp4,rn4);
+				_sprintf(c.str,"if (%s.x<%s.w)",tmp4,rn4);
 				AddInst2(vp,c);
-				sprintf(c.str,"{");
+				_sprintf(c.str,"{");
 				AddInst2(vp,c);
-				sprintf(c.str,"%s.rgb=%s.rgb*%s.x*%s.y",output,rn4,tmp4,tmp4);
+				_sprintf(c.str,"%s.rgb=%s.rgb*%s.x*%s.y",output,rn4,tmp4,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"}");
+				_sprintf(c.str,"}");
 				AddInst2(vp,c);
 			}
 		}
@@ -14358,25 +14543,25 @@ _functions_test:
 			{
 				if ((str_last_char(output, '.') == -1)&&(str_last_char(rn, '.') == -1))
 				{
-					sprintf(c.str,"%s.rgb = libpolynomial(%s.rgb,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+					_sprintf(c.str,"%s.rgb = libpolynomial(%s.rgb,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 					AddInst(vp,c);
 				}
 				else
 				{
 					if ((str_last_char(output, '.') == -1)&&(str_last_char(rn, '.') != -1))
 					{
-						sprintf(c.str,"%s.rgb = libpolynomial(%s,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s.rgb = libpolynomial(%s,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 					else
 					if ((str_last_char(output, '.') != -1)&&(str_last_char(rn, '.') == -1))
 					{
-						sprintf(c.str,"%s = libpolynomial(%s.rgb,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s = libpolynomial(%s.rgb,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 					else
 					{
-						sprintf(c.str,"%s = libpolynomial(%s,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s = libpolynomial(%s,vec4(%s,%s,%s,%s))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 				}
@@ -14385,25 +14570,25 @@ _functions_test:
 			{
 				if ((str_last_char(output, '.') == -1)&&(str_last_char(rn, '.') == -1))
 				{
-					sprintf(c.str,"%s.rgb = libpolynomial(%s.rgb,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+					_sprintf(c.str,"%s.rgb = libpolynomial(%s.rgb,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 					AddInst(vp,c);
 				}
 				else
 				{
 					if ((str_last_char(output, '.') == -1)&&(str_last_char(rn, '.') != -1))
 					{
-						sprintf(c.str,"%s.rgb = libpolynomial(%s,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s.rgb = libpolynomial(%s,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 					else
 					if ((str_last_char(output, '.') != -1)&&(str_last_char(rn, '.') == -1))
 					{
-						sprintf(c.str,"%s = libpolynomial(%s.rgb,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s = libpolynomial(%s.rgb,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 					else
 					{
-						sprintf(c.str,"%s = libpolynomial(%s,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
+						_sprintf(c.str,"%s = libpolynomial(%s,float4(%sf,%sf,%sf,%sf))",output,rn,rns[1],rns[2],rns[3],rns[4]);
 						AddInst(vp,c);
 					}
 				}
@@ -14437,7 +14622,7 @@ _functions_test:
 
 			// ShadowSimple(tex,pos,zval)
 
-			sprintf(c.str,"%s = libcalcsimpleshadow%s(%s,%s)",output,rn,rn2,rn3);
+			_sprintf(c.str,"%s = libcalcsimpleshadow%s(%s,%s)",output,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 		return output;
@@ -14477,13 +14662,13 @@ _functions_test:
 
 			if (str_last_char(output, '.') == -1)
 			{
-				if (str_last_char(rn, '.') == -1) sprintf(c.str,"%s.rgb = libsimplemouss%s(%s.xyz,%s)",output,rns[0],rn,rn2);
-				else sprintf(c.str,"%s.rgb = libsimplemouss%s(%s,%s)",output,rns[0],rn,rn2);
+				if (str_last_char(rn, '.') == -1) _sprintf(c.str,"%s.rgb = libsimplemouss%s(%s.xyz,%s)",output,rns[0],rn,rn2);
+				else _sprintf(c.str,"%s.rgb = libsimplemouss%s(%s,%s)",output,rns[0],rn,rn2);
 			}
 			else
 			{
-				if (str_last_char(rn, '.') == -1) sprintf(c.str,"%s = libsimplemouss%s(%s.xyz,%s)",output,rns[0],rn,rn2);
-				else sprintf(c.str,"%s = libsimplemouss%s(%s,%s)",output,rns[0],rn,rn2);
+				if (str_last_char(rn, '.') == -1) _sprintf(c.str,"%s = libsimplemouss%s(%s.xyz,%s)",output,rns[0],rn,rn2);
+				else _sprintf(c.str,"%s = libsimplemouss%s(%s,%s)",output,rns[0],rn,rn2);
 			}
 			AddInst(vp,c);
 		}
@@ -14533,13 +14718,13 @@ _functions_test:
 
 			if (str_last_char(output, '.') == -1)
 			{
-				if (str_last_char(rn, '.') == -1) sprintf(c.str,"%s.rgb = libmouss%s(%s.xyz,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
-				else sprintf(c.str,"%s.rgb = libmouss%s(%s,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
+				if (str_last_char(rn, '.') == -1) _sprintf(c.str,"%s.rgb = libmouss%s(%s.xyz,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
+				else _sprintf(c.str,"%s.rgb = libmouss%s(%s,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
 			}
 			else
 			{
-				if (str_last_char(rn, '.') == -1) sprintf(c.str,"%s = libmouss%s(%s.xyz,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
-				else sprintf(c.str,"%s = libmouss%s(%s,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
+				if (str_last_char(rn, '.') == -1) _sprintf(c.str,"%s = libmouss%s(%s.xyz,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
+				else _sprintf(c.str,"%s = libmouss%s(%s,%s,%s,%s)",output,rns[0],rn,rn2,rn3,rn4);
 			}
 			AddInst(vp,c);
 		}
@@ -14572,7 +14757,7 @@ _functions_test:
 
 			// ShadowSoft(tex,pos,zval,blur)
 
-			sprintf(c.str,"%s = libcalcshadowsoftX%s(%s,%s,%s)",output,rn,rn2,rn3,rn4);
+			_sprintf(c.str,"%s = libcalcshadowsoftX%s(%s,%s,%s)",output,rn,rn2,rn3,rn4);
 			AddInst(vp,c);
 		}
 		return output;
@@ -14603,7 +14788,7 @@ _functions_test:
 
 			// ShadowSoft(tex,pos,zval)
 
-			sprintf(c.str,"%s = libcalcshadowsoft%s(%s,%s)",output,rn,rn2,rn3);
+			_sprintf(c.str,"%s = libcalcshadowsoft%s(%s,%s)",output,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 		return output;
@@ -14635,7 +14820,7 @@ _functions_test:
 
 			// ShadowBilinear(tex,pos,zval,SIZE)
 
-			sprintf(c.str,"%s = libshadowbilinear%s(%s,%s)",output,rn,rn2,rn3);
+			_sprintf(c.str,"%s = libshadowbilinear%s(%s,%s)",output,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 		return output;
@@ -14643,7 +14828,7 @@ _functions_test:
 
 	if (str_match0(chaine,"dot_sat"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14652,7 +14837,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -14660,36 +14845,36 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"dp3_sat %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"dp3_sat %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s.x = clamp( dot( %s.xyz , %s.xyz ) , 0.0, 1.0 )",output,rn,rn2);
+				_sprintf(c.str,"%s.x = clamp( dot( %s.xyz , %s.xyz ) , 0.0, 1.0 )",output,rn,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = %s.xxxx",output,output);
+				_sprintf(c.str,"%s = %s.xxxx",output,output);
 				AddInst(vp,c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str,"%s.x = saturate( dot( %s.xyz , %s.xyz ) )",output,rn,rn2);
+				_sprintf(c.str,"%s.x = saturate( dot( %s.xyz , %s.xyz ) )",output,rn,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = %s.xxxx",output,output);
+				_sprintf(c.str,"%s = %s.xxxx",output,output);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"DP3_SAT %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"DP3_SAT %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14699,7 +14884,7 @@ _functions_test:
 
 	if ((str_match0(chaine,"dotofbx2"))||(str_match0(chaine,"dotbx2")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14708,7 +14893,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -14716,7 +14901,7 @@ _functions_test:
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp5, "r%d", new_temp_register());
+			_sprintf(tmp5, "r%d", new_temp_register());
 			resfield(output, tmp5);
 			rn2 = compile(&tmp[p + 1], tmp5, vp);
 		}
@@ -14725,21 +14910,21 @@ _functions_test:
 		{
 			if (shadermodel)
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
-				sprintf(tmp4,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp4,"r%d",new_temp_register());
 				
-				sprintf(c.str,"sub %s,%s,%s",tmp3,rn,var("zerocinq"));
+				_sprintf(c.str,"sub %s,%s,%s",tmp3,rn,var("zerocinq"));
 				AddInst(vp,c);
-				sprintf(c.str,"sub %s,%s,%s",tmp4,rn2,var("zerocinq"));
+				_sprintf(c.str,"sub %s,%s,%s",tmp4,rn2,var("zerocinq"));
 				AddInst(vp,c);
-				sprintf(c.str,"dp3 %s,%s,%s",output,tmp3,tmp4);
+				_sprintf(c.str,"dp3 %s,%s,%s",output,tmp3,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"add %s,%s,%s",output,output,output);
+				_sprintf(c.str,"add %s,%s,%s",output,output,output);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"dp3_x2 %s,%s_bias,-%s_bias",output,rn,rn2);
+				_sprintf(c.str,"dp3_x2 %s,%s_bias,-%s_bias",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14747,42 +14932,42 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
-				sprintf(tmp4,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp4,"r%d",new_temp_register());
 
-				sprintf(c.str,"%s.xyz = %s.xyz - vec3( 0.5, 0.5, 0.5)",tmp3,rn);
+				_sprintf(c.str,"%s.xyz = %s.xyz - vec3( 0.5, 0.5, 0.5)",tmp3,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = %s.xyz - vec3( 0.5, 0.5, 0.5)",tmp4,rn2);
+				_sprintf(c.str,"%s.xyz = %s.xyz - vec3( 0.5, 0.5, 0.5)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = dot( %s.xyz , %s.xyz )",output,tmp3,tmp4);
+				_sprintf(c.str,"%s.x = dot( %s.xyz , %s.xyz )",output,tmp3,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = 4.0 * %s.xxxx",output,output);
+				_sprintf(c.str,"%s = 4.0 * %s.xxxx",output,output);
 				AddInst(vp,c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
-				sprintf(tmp4,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp4,"r%d",new_temp_register());
 
-				sprintf(c.str,"%s.xyz = %s.xyz - float3( 0.5f, 0.5f, 0.5f)",tmp3,rn);
+				_sprintf(c.str,"%s.xyz = %s.xyz - float3( 0.5f, 0.5f, 0.5f)",tmp3,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = %s.xyz - float3( 0.5f, 0.5f, 0.5f)",tmp4,rn2);
+				_sprintf(c.str,"%s.xyz = %s.xyz - float3( 0.5f, 0.5f, 0.5f)",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.x = dot( %s.xyz , %s.xyz )",output,tmp3,tmp4);
+				_sprintf(c.str,"%s.x = dot( %s.xyz , %s.xyz )",output,tmp3,tmp4);
 				AddInst(vp,c);
-				sprintf(c.str,"%s = 4.0f * %s.xxxx",output,output);
+				_sprintf(c.str,"%s = 4.0f * %s.xxxx",output,output);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
-				sprintf(tmp4,"r%d",new_temp_register());
-				sprintf(c.str,"SUB %s,%s,zerocinq",tmp3,rn);
+				_sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp4,"r%d",new_temp_register());
+				_sprintf(c.str,"SUB %s,%s,zerocinq",tmp3,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"SUB %s,%s,zerocinq",tmp4,rn2);
+				_sprintf(c.str,"SUB %s,%s,zerocinq",tmp4,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"DP3_SAT %s,%s,%s",output,tmp3,tmp4);
+				_sprintf(c.str,"DP3_SAT %s,%s,%s",output,tmp3,tmp4);
 				AddInst(vp,c);
 			}
 		}
@@ -14791,7 +14976,7 @@ _functions_test:
 
 	if (str_match0(chaine,"dot4"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14800,48 +14985,48 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			rn = compile(&tmp[0], tmp2, vp);
 		}
 
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"dp4 %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"dp4 %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				if (str_char(rn,'.')==-1) sprintf(tmp2,"%s",rn);
-				else sprintf(tmp2,"%s",rn);
+				if (str_char(rn,'.')==-1) _sprintf(tmp2,"%s",rn);
+				else _sprintf(tmp2,"%s",rn);
 
-				if (str_char(rn2,'.')==-1) sprintf(tmp3,"%s",rn2);
-				else sprintf(tmp3,"%s",rn2);
+				if (str_char(rn2,'.')==-1) _sprintf(tmp3,"%s",rn2);
+				else _sprintf(tmp3,"%s",rn2);
 
 				if (str_char(output,'.')!=-1)
 				{	
-					sprintf(c.str,"%s = dot( %s , %s )",output,tmp2,tmp3);
+					_sprintf(c.str,"%s = dot( %s , %s )",output,tmp2,tmp3);
 					AddInst(vp,c);
 				}
 				else
 				{	
-					sprintf(c.str,"%s.x = dot( %s , %s )",output,tmp2,tmp3);
+					_sprintf(c.str,"%s.x = dot( %s , %s )",output,tmp2,tmp3);
 					AddInst(vp,c);
-					sprintf(c.str,"%s = %s.xxxx",output,output);
+					_sprintf(c.str,"%s = %s.xxxx",output,output);
 					AddInst(vp,c);
 				}
 			}
 			else
 			{
-				sprintf(c.str,"DP4 %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"DP4 %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14851,7 +15036,7 @@ _functions_test:
 	else
 	if (str_match0(chaine,"dot"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14860,48 +15045,48 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			rn = compile(&tmp[0], tmp2, vp);
 		}
 
 		if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			rn2 = compile(&tmp[p + 1], tmp3, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"dp3 %s,%s,%s",output,rn,rn2);
+			_sprintf(c.str,"dp3 %s,%s,%s",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				if (str_char(rn,'.')==-1) sprintf(tmp2,"%s.xyz",rn);
-				else sprintf(tmp2,"%s",rn);
+				if (str_char(rn,'.')==-1) _sprintf(tmp2,"%s.xyz",rn);
+				else _sprintf(tmp2,"%s",rn);
 
-				if (str_char(rn2,'.')==-1) sprintf(tmp3,"%s.xyz",rn2);
-				else sprintf(tmp3,"%s",rn2);
+				if (str_char(rn2,'.')==-1) _sprintf(tmp3,"%s.xyz",rn2);
+				else _sprintf(tmp3,"%s",rn2);
 
 				if (str_char(output,'.')!=-1)
 				{	
-					sprintf(c.str,"%s = dot( %s , %s )",output,tmp2,tmp3);
+					_sprintf(c.str,"%s = dot( %s , %s )",output,tmp2,tmp3);
 					AddInst(vp,c);
 				}
 				else
 				{	
-					sprintf(c.str,"%s.x = dot( %s , %s )",output,tmp2,tmp3);
+					_sprintf(c.str,"%s.x = dot( %s , %s )",output,tmp2,tmp3);
 					AddInst(vp,c);
-					sprintf(c.str,"%s = %s.xxxx",output,output);
+					_sprintf(c.str,"%s = %s.xxxx",output,output);
 					AddInst(vp,c);
 				}
 			}
 			else
 			{
-				sprintf(c.str,"DP3 %s,%s,%s",output,rn,rn2);
+				_sprintf(c.str,"DP3 %s,%s,%s",output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -14911,7 +15096,7 @@ _functions_test:
 
     if (str_match0(chaine,"scale"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -14924,15 +15109,15 @@ _functions_test:
             if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
             else
             {
-                sprintf(tmp3, "r%d", new_temp_register());
+                _sprintf(tmp3, "r%d", new_temp_register());
                 rn2 = compile(&tmp[p + 1], tmp3, vp);
             }
         
             if (api==1)
             {
-                sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
+                _sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
                 AddInst(vp, c);
-                sprintf(c.str, "%s.w = 1.0", output);
+                _sprintf(c.str, "%s.w = 1.0", output);
                 AddInst(vp, c);
                 return output;
             }
@@ -14940,17 +15125,17 @@ _functions_test:
             {
                 if (metal==1)
                 {
-                    sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
+                    _sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.w = 1.0", output);
+                    _sprintf(c.str, "%s.w = 1.0", output);
                     AddInst(vp, c);
                     return output;
                 }
                 else
                 {
-                    sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
+                    _sprintf(c.str, "%s.xyz = %s.xyz * %s", output, rn, rn2);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.w = 1.0f", output);
+                    _sprintf(c.str, "%s.w = 1.0f", output);
                     AddInst(vp, c);
                     return output;
                 }
@@ -14963,17 +15148,17 @@ _functions_test:
     {
         char *str=str_return_parentheses(chaine);
         
-        sprintf(tmp2,"r%d",new_temp_register());
+        _sprintf(tmp2,"r%d",new_temp_register());
         if (str_simple(str)) rn=var(str);
         else rn=compile(str,tmp2,vp);
 
         if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
         {
-            if (api==0) sprintf(c.str,"%s.xyz = %s.xyz * 2.0f - float3(1.0f,1.0f,1.0f)",output,rn);
-            else sprintf(c.str,"%s.xyz = %s.xyz * 2.0 - vec3(1.0,1.0,1.0)",output,rn);
+            if (api==0) _sprintf(c.str,"%s.xyz = %s.xyz * 2.0f - float3(1.0f,1.0f,1.0f)",output,rn);
+            else _sprintf(c.str,"%s.xyz = %s.xyz * 2.0 - vec3(1.0,1.0,1.0)",output,rn);
             AddInst(vp,c);
-            if (api==0) sprintf(c.str,"%s.w = 0.0f",output);
-            else sprintf(c.str,"%s.w = 0.0",output);
+            if (api==0) _sprintf(c.str,"%s.w = 0.0f",output);
+            else _sprintf(c.str,"%s.w = 0.0",output);
             AddInst(vp,c);
         }
         
@@ -14991,19 +15176,19 @@ _functions_test:
             return "";
         }
 
-        sprintf(tmp2,"r%d",new_temp_register());
+        _sprintf(tmp2,"r%d",new_temp_register());
         if (str_simple(str)) rn=var(str);
         else rn=compile(str,tmp2,vp);
 
         if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
         {
-            if (api==0) sprintf(c.str,"%s.xyz = %s.xyz - float3(0.5f,0.5f,0.5f)",output,rn);
-            else sprintf(c.str,"%s.xyz = %s.xyz - vec3(0.5,0.5,0.5)",output,rn);
+            if (api==0) _sprintf(c.str,"%s.xyz = %s.xyz - float3(0.5f,0.5f,0.5f)",output,rn);
+            else _sprintf(c.str,"%s.xyz = %s.xyz - vec3(0.5,0.5,0.5)",output,rn);
             AddInst(vp,c);
-            sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
+            _sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,output);
             AddInst(vp,c);
-            if (api==0) sprintf(c.str,"%s.w = 0.0f",output);
-            else sprintf(c.str,"%s.w = 0.0",output);
+            if (api==0) _sprintf(c.str,"%s.w = 0.0f",output);
+            else _sprintf(c.str,"%s.w = 0.0",output);
             AddInst(vp,c);
         }
         
@@ -15021,7 +15206,7 @@ _functions_test:
             return "";
         }
         
-        sprintf(tmp2,"r%d",new_temp_register());
+        _sprintf(tmp2,"r%d",new_temp_register());
         if (str_simple(str)) rn=var(str);
         else rn=compile(str,tmp2,vp);
 
@@ -15040,57 +15225,57 @@ _functions_test:
             char *val=output;
             char *coef=rn;
 
-            sprintf(c.str, "%s.w = norm( %s.xyz )",val,val);
+            _sprintf(c.str, "%s.w = norm( %s.xyz )",val,val);
             AddInst(vp, c);
-            sprintf(c.str, "if (%s.w < %s.y)", val, coef);
+            _sprintf(c.str, "if (%s.w < %s.y)", val, coef);
             AddInst2(vp, c);
-            sprintf(c.str, "{");
+            _sprintf(c.str, "{");
             AddInst2(vp, c);
-                if (api==1) sprintf(c.str, "%s.z = 1.0",val); else sprintf(c.str, "%s.z = 1.0f",val);
+                if (api==1) _sprintf(c.str, "%s.z = 1.0",val); else _sprintf(c.str, "%s.z = 1.0f",val);
                 AddInst(vp, c);
-            sprintf(c.str, "}");
+            _sprintf(c.str, "}");
             AddInst2(vp, c);
-            sprintf(c.str, "else");
+            _sprintf(c.str, "else");
             AddInst2(vp, c);
-            sprintf(c.str, "{");
+            _sprintf(c.str, "{");
             AddInst2(vp, c);
 
-                sprintf(c.str, "if (%s.w > %s.x)", val, coef);
+                _sprintf(c.str, "if (%s.w > %s.x)", val, coef);
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
-                    if (api==1) sprintf(c.str, "%s.z = 0.0",val); else sprintf(c.str, "%s.z = 0.0f",val);
+                    if (api==1) _sprintf(c.str, "%s.z = 0.0",val); else _sprintf(c.str, "%s.z = 0.0f",val);
                     AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
-                sprintf(c.str, "else");
+                _sprintf(c.str, "else");
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
 
-                    sprintf(c.str,"%s.z = ( %s.x - %s.w ) * %s.z",val,coef,val,coef);
+                    _sprintf(c.str,"%s.z = ( %s.x - %s.w ) * %s.z",val,coef,val,coef);
                     AddInst(vp,c);
 
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
 
-            sprintf(c.str, "}");
+            _sprintf(c.str, "}");
             AddInst2(vp, c);
 
 /*
-            sprintf(c.str,"%s.x = %s.w - %s.y",val,val,coef);
+            _sprintf(c.str,"%s.x = %s.w - %s.y",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
+            _sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
+            _sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
+            _sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.x = %s.w - %s.x",val,val,coef);
+            _sprintf(c.str,"%s.x = %s.w - %s.x",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
+            _sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
+            _sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
             AddInst(vp,c);
 /**/
         }
@@ -15117,7 +15302,7 @@ _functions_test:
         }
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             
             rn2=var(rns[0]);
             rn=var(rns[1]);
@@ -15140,55 +15325,55 @@ _functions_test:
                 char *val=output;
                 char *coef=rn;
 
-                sprintf(c.str, "if (%s < %s.y)", rn2, coef);
+                _sprintf(c.str, "if (%s < %s.y)", rn2, coef);
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
-                    if (api==1) sprintf(c.str, "%s.z = 1.0",val); else sprintf(c.str, "%s.z = 1.0f",val);
+                    if (api==1) _sprintf(c.str, "%s.z = 1.0",val); else _sprintf(c.str, "%s.z = 1.0f",val);
                     AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
-                sprintf(c.str, "else");
+                _sprintf(c.str, "else");
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
 
-                    sprintf(c.str, "if (%s > %s.x)", rn2, coef);
+                    _sprintf(c.str, "if (%s > %s.x)", rn2, coef);
                     AddInst2(vp, c);
-                    sprintf(c.str, "{");
+                    _sprintf(c.str, "{");
                     AddInst2(vp, c);
-                        if (api==1) sprintf(c.str, "%s.z = 0.0",val); else sprintf(c.str, "%s.z = 0.0f",val);
+                        if (api==1) _sprintf(c.str, "%s.z = 0.0",val); else _sprintf(c.str, "%s.z = 0.0f",val);
                         AddInst(vp, c);
-                    sprintf(c.str, "}");
+                    _sprintf(c.str, "}");
                     AddInst2(vp, c);
-                    sprintf(c.str, "else");
+                    _sprintf(c.str, "else");
                     AddInst2(vp, c);
-                    sprintf(c.str, "{");
+                    _sprintf(c.str, "{");
                     AddInst2(vp, c);
 
-                        sprintf(c.str,"%s.z = ( %s.x - %s ) * %s.z",val,coef,rn2,coef);
+                        _sprintf(c.str,"%s.z = ( %s.x - %s ) * %s.z",val,coef,rn2,coef);
                         AddInst(vp,c);
 
-                    sprintf(c.str, "}");
+                    _sprintf(c.str, "}");
                     AddInst2(vp, c);
 
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
 
 /*
-                sprintf(c.str,"%s.x = %s - %s.y",val,rn2,coef);
+                _sprintf(c.str,"%s.x = %s - %s.y",val,rn2,coef);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
+                _sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
+                _sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
+                _sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.x = %s - %s.x",val,rn2,coef);
+                _sprintf(c.str,"%s.x = %s - %s.x",val,rn2,coef);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
+                _sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
                 AddInst(vp,c);
-                sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
+                _sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
                 AddInst(vp,c);
 /**/
             }
@@ -15207,7 +15392,7 @@ _functions_test:
             return "";
         }
 
-        sprintf(tmp2,"r%d",new_temp_register());
+        _sprintf(tmp2,"r%d",new_temp_register());
         if (str_simple(str)) rn=var(str);
         else rn=compile(str,tmp2,vp);
 
@@ -15226,55 +15411,55 @@ _functions_test:
             char *val=output;
             char *coef=rn;
 
-            sprintf(c.str, "if (%s.w < %s.y)", val, coef);
+            _sprintf(c.str, "if (%s.w < %s.y)", val, coef);
             AddInst2(vp, c);
-            sprintf(c.str, "{");
+            _sprintf(c.str, "{");
             AddInst2(vp, c);
-                if (api==1) sprintf(c.str, "%s.z = 1.0",val); else sprintf(c.str, "%s.z = 1.0f",val);
+                if (api==1) _sprintf(c.str, "%s.z = 1.0",val); else _sprintf(c.str, "%s.z = 1.0f",val);
                 AddInst(vp, c);
-            sprintf(c.str, "}");
+            _sprintf(c.str, "}");
             AddInst2(vp, c);
-            sprintf(c.str, "else");
+            _sprintf(c.str, "else");
             AddInst2(vp, c);
-            sprintf(c.str, "{");
+            _sprintf(c.str, "{");
             AddInst2(vp, c);
 
-                sprintf(c.str, "if (%s.w > %s.x)", val, coef);
+                _sprintf(c.str, "if (%s.w > %s.x)", val, coef);
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
-                    if (api==1) sprintf(c.str, "%s.z = 0.0",val); else sprintf(c.str, "%s.z = 0.0f",val);
+                    if (api==1) _sprintf(c.str, "%s.z = 0.0",val); else _sprintf(c.str, "%s.z = 0.0f",val);
                     AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
-                sprintf(c.str, "else");
+                _sprintf(c.str, "else");
                 AddInst2(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst2(vp, c);
 
-                    sprintf(c.str,"%s.z = ( %s.x - %s.w ) * %s.z",val,coef,val,coef);
+                    _sprintf(c.str,"%s.z = ( %s.x - %s.w ) * %s.z",val,coef,val,coef);
                     AddInst(vp,c);
 
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst2(vp, c);
 
-            sprintf(c.str, "}");
+            _sprintf(c.str, "}");
             AddInst2(vp, c);
             
 /*
-            sprintf(c.str,"%s.x = %s.w - %s.y",val,val,coef);
+            _sprintf(c.str,"%s.x = %s.w - %s.y",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
+            _sprintf(c.str,"%s.y = %s.x * %s.z",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
+            _sprintf(c.str,"%s.y = 1.0 - %s.y",val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
+            _sprintf(c.str,"%s.z = ( %s.x >= 0.0 ) ? %s.y : 1.0", val,val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.x = %s.w - %s.x",val,val,coef);
+            _sprintf(c.str,"%s.x = %s.w - %s.x",val,val,coef);
             AddInst(vp,c);
-            sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
+            _sprintf(c.str,"%s.y = ( %s.x >= 0.0 ) ? 0.0 : %s.z", val,val,val);
             AddInst(vp,c);
-            sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
+            _sprintf(c.str,"%s.z = %s.z * %s.y",val,val,val);
             AddInst(vp,c);
 /**/
         }
@@ -15319,31 +15504,31 @@ _functions_test:
                     char *val=output;
                     char *coef=rn;
 
-                    sprintf(c.str, "if (%s > %s.y)", rn2, coef);
+                    _sprintf(c.str, "if (%s > %s.y)", rn2, coef);
                     AddInst2(vp, c);
-                    sprintf(c.str, "{");
+                    _sprintf(c.str, "{");
                     AddInst2(vp, c);
 
-                        sprintf(c.str, "if (%s > %s.x)", rn2, coef);
+                        _sprintf(c.str, "if (%s > %s.x)", rn2, coef);
                         AddInst2(vp, c);
-                        sprintf(c.str, "{");
+                        _sprintf(c.str, "{");
                         AddInst2(vp, c);
-                            if (api==1) sprintf(c.str, "%s = 0.0",rii); else sprintf(c.str, "%s = 0.0f",rii);
+                            if (api==1) _sprintf(c.str, "%s = 0.0",rii); else _sprintf(c.str, "%s = 0.0f",rii);
                             AddInst(vp, c);
-                        sprintf(c.str, "}");
+                        _sprintf(c.str, "}");
                         AddInst2(vp, c);
-                        sprintf(c.str, "else");
+                        _sprintf(c.str, "else");
                         AddInst2(vp, c);
-                        sprintf(c.str, "{");
+                        _sprintf(c.str, "{");
                         AddInst2(vp, c);
 
-                            sprintf(c.str,"%s *= ( %s.x - %s ) * %s.z",rii,coef,rn2,coef);
+                            _sprintf(c.str,"%s *= ( %s.x - %s ) * %s.z",rii,coef,rn2,coef);
                             AddInst(vp,c);
 
-                        sprintf(c.str, "}");
+                        _sprintf(c.str, "}");
                         AddInst2(vp, c);
 
-                    sprintf(c.str, "}");
+                    _sprintf(c.str, "}");
                     AddInst2(vp, c);
 
                 }
@@ -15388,31 +15573,31 @@ _functions_test:
                     char *val=output;
                     char *coef=rn;
 
-                    sprintf(c.str, "if (%s.w > %s.y)", val, coef);
+                    _sprintf(c.str, "if (%s.w > %s.y)", val, coef);
                     AddInst2(vp, c);
-                    sprintf(c.str, "{");
+                    _sprintf(c.str, "{");
                     AddInst2(vp, c);
 
-                        sprintf(c.str, "if (%s.w > %s.x)", val, coef);
+                        _sprintf(c.str, "if (%s.w > %s.x)", val, coef);
                         AddInst2(vp, c);
-                        sprintf(c.str, "{");
+                        _sprintf(c.str, "{");
                         AddInst2(vp, c);
-                            if (api==1) sprintf(c.str, "%s = 0.0",rii); else sprintf(c.str, "%s = 0.0f",rii);
+                            if (api==1) _sprintf(c.str, "%s = 0.0",rii); else _sprintf(c.str, "%s = 0.0f",rii);
                             AddInst(vp, c);
-                        sprintf(c.str, "}");
+                        _sprintf(c.str, "}");
                         AddInst2(vp, c);
-                        sprintf(c.str, "else");
+                        _sprintf(c.str, "else");
                         AddInst2(vp, c);
-                        sprintf(c.str, "{");
+                        _sprintf(c.str, "{");
                         AddInst2(vp, c);
 
-                            sprintf(c.str,"%s *= ( %s.x - %s.w ) * %s.z",rii,coef,val,coef);
+                            _sprintf(c.str,"%s *= ( %s.x - %s.w ) * %s.z",rii,coef,val,coef);
                             AddInst(vp,c);
 
-                        sprintf(c.str, "}");
+                        _sprintf(c.str, "}");
                         AddInst2(vp, c);
 
-                    sprintf(c.str, "}");
+                    _sprintf(c.str, "}");
                     AddInst2(vp, c);
                 }
             }
@@ -15431,9 +15616,9 @@ _functions_test:
  
             if (api==1)
             {
-                sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
+                _sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
                 AddInst(vp, c);
-                sprintf(c.str, "%s.w = 1.0", output);
+                _sprintf(c.str, "%s.w = 1.0", output);
                 AddInst(vp, c);
                 return output;
             }
@@ -15441,17 +15626,17 @@ _functions_test:
             {
                 if (metal==1)
                 {
-                    sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
+                    _sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.w = 1.0f", output);
+                    _sprintf(c.str, "%s.w = 1.0f", output);
                     AddInst(vp, c);
                     return output;
                 }
                 else
                 {
-                    sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
+                    _sprintf(c.str, "%s.xyz = %s.xyz", output, rn);
                     AddInst(vp, c);
-                    sprintf(c.str, "%s.w = 1.0f", output);
+                    _sprintf(c.str, "%s.w = 1.0f", output);
                     AddInst(vp, c);
                     return output;
                 }
@@ -15464,20 +15649,20 @@ _functions_test:
 	{
 		char *str=str_return_parentheses(chaine);
 		
-		sprintf(tmp2,"r%d",new_temp_register());
+		_sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"frc %s,%s",output,rn);
+			_sprintf(c.str,"frc %s,%s",output,rn);
 			AddInst(vp,c);
 		}
 		else
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str, "%s = %s", output, rn);
+				_sprintf(c.str, "%s = %s", output, rn);
 				AddInst(vp, c);
 				return output;
 			}
@@ -15486,7 +15671,7 @@ _functions_test:
 			{
 				if (shadermodel4)
 				{
-					sprintf(c.str, "%s = %s", output, rn);
+					_sprintf(c.str, "%s = %s", output, rn);
 					AddInst(vp, c);
 					return output;
 				}
@@ -15495,14 +15680,14 @@ _functions_test:
                     if (metal==1)
                     {
                         outputfield1(tmp4, output, rn);
-                        sprintf(c.str, "%s = fract( %s )", tmp4, rn);
+                        _sprintf(c.str, "%s = fract( %s )", tmp4, rn);
                         AddInst(vp, c);
                         return tmp4;
                     }
                     else
                     {
                         outputfield1(tmp4, output, rn);
-                        sprintf(c.str, "%s = frac( %s )", tmp4, rn);
+                        _sprintf(c.str, "%s = frac( %s )", tmp4, rn);
                         AddInst(vp, c);
                         return tmp4;
                     }
@@ -15510,7 +15695,7 @@ _functions_test:
 			}
 			else
 			{
-				sprintf(c.str,"FRC %s,%s",output,rn);
+				_sprintf(c.str,"FRC %s,%s",output,rn);
 				AddInst(vp,c);
 			}
 		}
@@ -15523,13 +15708,13 @@ _functions_test:
 	{
 		char *str=str_return_parentheses(chaine);
 		
-		sprintf(tmp2,"r%d",new_temp_register());
+		_sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"frc %s,%s",output,rn);
+			_sprintf(c.str,"frc %s,%s",output,rn);
 			AddInst(vp,c);
 		}
 		else
@@ -15537,7 +15722,7 @@ _functions_test:
 			if ((api==1)&&(shadermodel))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = fract( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = fract( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
@@ -15545,14 +15730,14 @@ _functions_test:
 			if ((api==0)&&(shadermodel3))
 			{
 				outputfield1(tmp4, output, rn);
-				if (metal==1) sprintf(c.str, "%s = fract( %s )", tmp4, rn);
-				else sprintf(c.str, "%s = frac( %s )", tmp4, rn);
+				if (metal==1) _sprintf(c.str, "%s = fract( %s )", tmp4, rn);
+				else _sprintf(c.str, "%s = frac( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str,"FRC %s,%s",output,rn);
+				_sprintf(c.str,"FRC %s,%s",output,rn);
 				AddInst(vp,c);
 			}
 		}
@@ -15562,7 +15747,7 @@ _functions_test:
 
 	if ((str_match0(chaine, "cmp")) || (str_match0(chaine, "compare")))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -15575,7 +15760,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -15583,7 +15768,7 @@ _functions_test:
 		if (str_simple(&tmp[p1 + 1])) rn2 = var(&tmp[p1 + 1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p1 + 1], tmp3, vp);
 		}
@@ -15591,14 +15776,14 @@ _functions_test:
 		if (str_simple(&tmp[p2 + 1])) rn3 = var(&tmp[p2 + 1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn3 = compile(&tmp[p2 + 1], tmp4, vp);
 		}
 
 		if ((api == 0) && (!shadermodel3))
 		{
-			sprintf(c.str, "cmp %s,%s,%s,%s", output, rn, rn2, rn3);
+			_sprintf(c.str, "cmp %s,%s,%s,%s", output, rn, rn2, rn3);
 			AddInst(vp, c);
 		}
 		else
@@ -15608,18 +15793,18 @@ _functions_test:
 				int sc=str_last_char(rn,'.');
 				if (sc==-1)
 				{
-					sprintf(c.str, "%s.x = ( %s.x >= 0.0 ) ? %s.x : %s.x", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s.x = ( %s.x >= 0.0 ) ? %s.x : %s.x", output, rn, rn2, rn3);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.y = ( %s.y >= 0.0 ) ? %s.y : %s.y", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s.y = ( %s.y >= 0.0 ) ? %s.y : %s.y", output, rn, rn2, rn3);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.z = ( %s.z >= 0.0 ) ? %s.z : %s.z", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s.z = ( %s.z >= 0.0 ) ? %s.z : %s.z", output, rn, rn2, rn3);
 					AddInst(vp, c);
-					sprintf(c.str, "%s.w = ( %s.w >= 0.0 ) ? %s.w : %s.w", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s.w = ( %s.w >= 0.0 ) ? %s.w : %s.w", output, rn, rn2, rn3);
 					AddInst(vp, c);
 				}
 				else
 				{				
-					sprintf(c.str, "%s = ( %s >= 0.0 ) ? %s : %s", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s = ( %s >= 0.0 ) ? %s : %s", output, rn, rn2, rn3);
 					AddInst(vp, c);
 				}
 			}
@@ -15631,30 +15816,30 @@ _functions_test:
 					int sc=str_last_char(rn,'.');
 					if (sc==-1)
 					{
-						sprintf(c.str, "%s.x = ( %s.x >= 0.0f ) ? %s.x : %s.x", output, rn, rn2, rn3);
+						_sprintf(c.str, "%s.x = ( %s.x >= 0.0f ) ? %s.x : %s.x", output, rn, rn2, rn3);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.y = ( %s.y >= 0.0f ) ? %s.y : %s.y", output, rn, rn2, rn3);
+						_sprintf(c.str, "%s.y = ( %s.y >= 0.0f ) ? %s.y : %s.y", output, rn, rn2, rn3);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.z = ( %s.z >= 0.0f ) ? %s.z : %s.z", output, rn, rn2, rn3);
+						_sprintf(c.str, "%s.z = ( %s.z >= 0.0f ) ? %s.z : %s.z", output, rn, rn2, rn3);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.w = ( %s.w >= 0.0f ) ? %s.w : %s.w", output, rn, rn2, rn3);
+						_sprintf(c.str, "%s.w = ( %s.w >= 0.0f ) ? %s.w : %s.w", output, rn, rn2, rn3);
 						AddInst(vp, c);
 					}
 					else
 					{				
-						sprintf(c.str, "%s = ( %s >= 0.0f ) ? %s : %s", output, rn, rn2, rn3);
+						_sprintf(c.str, "%s = ( %s >= 0.0f ) ? %s : %s", output, rn, rn2, rn3);
 						AddInst(vp, c);
 					}
 				}
 				else
 				{
-					sprintf(c.str, "%s = ( %s >= 0.0f ) ? %s : %s", output, rn, rn2, rn3);
+					_sprintf(c.str, "%s = ( %s >= 0.0f ) ? %s : %s", output, rn, rn2, rn3);
 					AddInst(vp, c);
 				}
 			}
 			else
 			{
-				sprintf(c.str, "CMP %s,%s,%s,%s", output, rn, rn2, rn3);
+				_sprintf(c.str, "CMP %s,%s,%s,%s", output, rn, rn2, rn3);
 				AddInst(vp, c);
 			}
 		}
@@ -15664,7 +15849,7 @@ _functions_test:
 
 	if (str_match0(chaine, "refract"))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -15677,7 +15862,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -15685,7 +15870,7 @@ _functions_test:
 		if (str_simple(&tmp[p1 + 1])) rn2 = var(&tmp[p1 + 1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p1 + 1], tmp3, vp);
 		}
@@ -15693,14 +15878,14 @@ _functions_test:
 		if (str_simple(&tmp[p2 + 1])) rn3 = var(&tmp[p2 + 1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn3 = compile(&tmp[p2 + 1], tmp4, vp);
 		}
 
 		if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 		{
-			sprintf(c.str, "%s = refract( %s , %s , %s)", output, rn, rn2, rn3);
+			_sprintf(c.str, "%s = refract( %s , %s , %s)", output, rn, rn2, rn3);
 			AddInst(vp, c);
 		}
 
@@ -15709,7 +15894,7 @@ _functions_test:
 
 	if ((str_match0(chaine, "mix_sat"))||(str_match0(chaine, "lerp_sat")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -15722,7 +15907,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -15730,7 +15915,7 @@ _functions_test:
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p1 + 1], tmp3, vp);
 		}
@@ -15738,14 +15923,14 @@ _functions_test:
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn3 = compile(&tmp[p2 + 1], tmp4, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"lrp_sat %s,%s,%s,%s",output,rn3,rn,rn2);
+			_sprintf(c.str,"lrp_sat %s,%s,%s,%s",output,rn3,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
@@ -15754,24 +15939,24 @@ _functions_test:
 			{
 				if (metal==1)
 				{
-					sprintf(c.str,"%s = saturate( mix( %s , %s , %s) )",output,rn,rn2,rn3);
+					_sprintf(c.str,"%s = saturate( mix( %s , %s , %s) )",output,rn,rn2,rn3);
 					AddInst(vp,c);
 				}
 				else
 				{
-					sprintf(c.str,"%s = saturate( lerp( %s , %s , %s) )",output,rn,rn2,rn3);
+					_sprintf(c.str,"%s = saturate( lerp( %s , %s , %s) )",output,rn,rn2,rn3);
 					AddInst(vp,c);
 				}
 			}
 			else
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s =  saturate( mix( %s , %s , %s  ) )",output,rn,rn2,rn3);
+				_sprintf(c.str,"%s =  saturate( mix( %s , %s , %s  ) )",output,rn,rn2,rn3);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"LRP_SAT %s,%s,%s,%s",output,rn3,rn,rn2);
+				_sprintf(c.str,"LRP_SAT %s,%s,%s,%s",output,rn3,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -15781,7 +15966,7 @@ _functions_test:
 	else
 	if ((str_match0(chaine, "mix"))||(str_match0(chaine, "lerp")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -15794,7 +15979,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -15802,7 +15987,7 @@ _functions_test:
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p1 + 1], tmp3, vp);
 		}
@@ -15810,14 +15995,14 @@ _functions_test:
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn3 = compile(&tmp[p2 + 1], tmp4, vp);
 		}
 
 		if ((api==0)&&(!shadermodel3))
 		{
-			sprintf(c.str,"lrp %s,%s,%s,%s",output,rn3,rn,rn2);
+			_sprintf(c.str,"lrp %s,%s,%s,%s",output,rn3,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
@@ -15826,24 +16011,24 @@ _functions_test:
 			{
 				if (metal==1)
 				{
-					sprintf(c.str,"%s =  mix( %s , %s , %s  )",output,rn,rn2,rn3);
+					_sprintf(c.str,"%s =  mix( %s , %s , %s  )",output,rn,rn2,rn3);
 					AddInst(vp,c);
 				}
 				else
 				{
-					sprintf(c.str,"%s = lerp( %s , %s , %s)",output,rn,rn2,rn3);
+					_sprintf(c.str,"%s = lerp( %s , %s , %s)",output,rn,rn2,rn3);
 					AddInst(vp,c);
 				}
 			}
 			else
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s =  mix( %s , %s , %s  )",output,rn,rn2,rn3);
+				_sprintf(c.str,"%s =  mix( %s , %s , %s  )",output,rn,rn2,rn3);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"LRP %s,%s,%s,%s",output,rn3,rn,rn2);
+				_sprintf(c.str,"LRP %s,%s,%s,%s",output,rn3,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -15854,7 +16039,7 @@ _functions_test:
 
 	if (str_match0(chaine,"smoothstep"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -15867,7 +16052,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(&tmp[0], tmp2, vp);
 		}
@@ -15875,7 +16060,7 @@ _functions_test:
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp3, "r%d", new_temp_register());
+			_sprintf(tmp3, "r%d", new_temp_register());
 			resfield(output, tmp3);
 			rn2 = compile(&tmp[p1 + 1], tmp3, vp);
 		}
@@ -15883,14 +16068,14 @@ _functions_test:
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp4, "r%d", new_temp_register());
+			_sprintf(tmp4, "r%d", new_temp_register());
 			resfield(output, tmp4);
 			rn3 = compile(&tmp[p2 + 1], tmp4, vp);
 		}
 
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
-			sprintf(c.str,"%s = smoothstep( %s , %s , %s )",output,rn,rn2,rn3);
+			_sprintf(c.str,"%s = smoothstep( %s , %s , %s )",output,rn,rn2,rn3);
 			AddInst(vp,c);
 		}
 
@@ -15899,7 +16084,7 @@ _functions_test:
 
 	if (str_match0(chaine,"coord"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		rn=var(tmp);
 
@@ -15907,13 +16092,13 @@ _functions_test:
 		{
 			if (!shadermodel)
 			{
-				if (str_char(output,'.')==-1) sprintf(c.str,"texcrd %s.rgb,%s",output,rn);
-				else sprintf(c.str,"texcrd %s,%s",output,rn);
+				if (str_char(output,'.')==-1) _sprintf(c.str,"texcrd %s.rgb,%s",output,rn);
+				else _sprintf(c.str,"texcrd %s,%s",output,rn);
 			}
 			else
 			{
-				if (shadermodel3) sprintf(c.str,"%s = %s",output,rn);
-				else sprintf(c.str,"mov %s,%s",output,rn);
+				if (shadermodel3) _sprintf(c.str,"%s = %s",output,rn);
+				else _sprintf(c.str,"mov %s,%s",output,rn);
 			}
 			AddInst(vp,c);
 		}
@@ -15921,12 +16106,12 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s = %s",output,rn);
+				_sprintf(c.str,"%s = %s",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"MOV %s,%s",output,rn);
+				_sprintf(c.str,"MOV %s,%s",output,rn);
 				AddInst(vp,c);
 			}
 		}
@@ -15942,12 +16127,12 @@ _functions_test:
 		}
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(str_return_parentheses(chaine), tmp2, vp);
 		}
 
-		sprintf(rn1,"r%d",new_temp_register());
+		_sprintf(rn1,"r%d",new_temp_register());
 
 		if (api==2)
 		{
@@ -15959,24 +16144,24 @@ _functions_test:
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,rn);
+				_sprintf(c.str,"%s.xyz = normalize( %s.xyz )",output,rn);
 				AddInst(vp,c);
-				if (api==0) sprintf(c.str,"%s.w = 0.0f",output);
-				else sprintf(c.str,"%s.w = 0.0",output);
+				if (api==0) _sprintf(c.str,"%s.w = 0.0f",output);
+				else _sprintf(c.str,"%s.w = 0.0",output);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],rn1,rn1);
+				_sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],rn1,rn1);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn1);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],output,rn,rn1);
 				AddInst(vp,c);
 			}
 		}
 
-		sprintf(tmp,"%s",output);
+		_sprintf(tmp,"%s",output);
 		return tmp;
 	}
 
@@ -15988,11 +16173,11 @@ _functions_test:
 		}
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(str_return_parentheses(chaine), tmp2, vp);
 		}
-		sprintf(rn1,"r%d",new_temp_register());
+		_sprintf(rn1,"r%d",new_temp_register());
 
 		if (api==2)
 		{
@@ -16004,20 +16189,20 @@ _functions_test:
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = length( %s )",output,rn);
+				_sprintf(c.str,"%s = length( %s )",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],rn1,rn1);
+				_sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],rn1,rn1);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s.w",Inst[_rcp][api],output,rn1);
+				_sprintf(c.str,"%s %s,%s.w",Inst[_rcp][api],output,rn1);
 				AddInst(vp,c);
 			}
 		}
-		sprintf(tmp,"%s",output);
+		_sprintf(tmp,"%s",output);
 		return tmp;
 	}
 
@@ -16029,13 +16214,13 @@ _functions_test:
 		}
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			rn = compile(str_return_parentheses(chaine), tmp2, vp);
 		}
 
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
-			sprintf(c.str,"%s = %s.x*%s.x + %s.y*%s.y + %s.z*%s.z ",output,rn,rn,rn,rn,rn,rn);
+			_sprintf(c.str,"%s = %s.x*%s.x + %s.y*%s.y + %s.z*%s.z ",output,rn,rn,rn,rn,rn,rn);
 			AddInst(vp,c);
 		}
 
@@ -16045,13 +16230,13 @@ _functions_test:
 	if (str_match0(chaine,"inv"))
 	{
 		char *str=str_return_parentheses(chaine);
-		sprintf(tmp2,"r%d",new_temp_register());
+		_sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		
 		if (api==2)
 		{
-			sprintf(rn1,"r%d",new_temp_register());
+			_sprintf(rn1,"r%d",new_temp_register());
 			em->Add(OP_DP3,rn1,rn,rn);
 			em->Add(OP_RSQ,output,rn1,NULL);
 		}
@@ -16059,25 +16244,25 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s = 1.0 / length(%s.xyz)",output,rn);
+				_sprintf(c.str,"%s = 1.0 / length(%s.xyz)",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str,"%s = 1.0f / length(%s.xyz)",output,rn);
+				_sprintf(c.str,"%s = 1.0f / length(%s.xyz)",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(rn1,"r%d",new_temp_register());
-				sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
+				_sprintf(rn1,"r%d",new_temp_register());
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_dp3][api],rn1,rn,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],output,rn1);
+				_sprintf(c.str,"%s %s,%s.w",Inst[_rsq][api],output,rn1);
 				AddInst(vp,c);
 			}
 		}
-		sprintf(tmp,"%s",output);
+		_sprintf(tmp,"%s",output);
 		return tmp;
 	}
 
@@ -16090,7 +16275,7 @@ _functions_test:
 		}
 		else
 		{
-			sprintf(tmp2, "r%d", new_temp_register());
+			_sprintf(tmp2, "r%d", new_temp_register());
 			resfield(output, tmp2);
 			rn = compile(str_return_parentheses(chaine), tmp2, vp);
 		}
@@ -16103,17 +16288,17 @@ _functions_test:
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = %s;",output,rn);  // TODO
+				_sprintf(c.str,"%s = %s;",output,rn);  // TODO
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s",Inst[_lit][api],output,rn);
+				_sprintf(c.str,"%s %s,%s",Inst[_lit][api],output,rn);
 				AddInst(vp,c);
 			}
 		}
 
-		sprintf(tmp,"%s",output);
+		_sprintf(tmp,"%s",output);
 		return tmp;
 	}
 
@@ -16126,20 +16311,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16155,16 +16340,16 @@ _functions_test:
 					switch (nb)
 					{
 					case 1:
-						sprintf(tmp4,"0.5f");
+						_sprintf(tmp4,"0.5f");
 						break;
 					case 2:
-						sprintf(tmp4,"float2(0.5f,0.5f)");
+						_sprintf(tmp4,"float2(0.5f,0.5f)");
 						break;
 					case 3:
-						sprintf(tmp4,"float3(0.5f,0.5f,0.5f)");
+						_sprintf(tmp4,"float3(0.5f,0.5f,0.5f)");
 						break;
 					case 4:
-						sprintf(tmp4,"float4(0.5f,0.5f,0.5f,0.5f)");
+						_sprintf(tmp4,"float4(0.5f,0.5f,0.5f,0.5f)");
 						break;
 					};
 				}
@@ -16173,31 +16358,31 @@ _functions_test:
 					switch (nb)
 					{
 					case 1:
-						sprintf(tmp4,"0.5");
+						_sprintf(tmp4,"0.5");
 						break;
 					case 2:
-						sprintf(tmp4,"vec2(0.5,0.5)");
+						_sprintf(tmp4,"vec2(0.5,0.5)");
 						break;
 					case 3:
-						sprintf(tmp4,"vec3(0.5,0.5,0.5)");
+						_sprintf(tmp4,"vec3(0.5,0.5,0.5)");
 						break;
 					case 4:
-						sprintf(tmp4,"vec4(0.5,0.5,0.5,0.5)");
+						_sprintf(tmp4,"vec4(0.5,0.5,0.5,0.5)");
 						break;
 					};
 				}
 
 				if (nb>0)
 				{
-					if (api==1) sprintf(c.str, "%s = 2.0 * (%s - %s)", output, rn, tmp4);
-                    else sprintf(c.str, "%s = 2.0f * (%s - %s)", output, rn, tmp4);
+					if (api==1) _sprintf(c.str, "%s = 2.0 * (%s - %s)", output, rn, tmp4);
+                    else _sprintf(c.str, "%s = 2.0f * (%s - %s)", output, rn, tmp4);
 					AddInst(vp, c);
 				}
 			}
 			else
 			if ( api==0 )
 			{
-				sprintf(c.str, "%s %s,%s_bx2", Inst[_mov][api], output, rn);
+				_sprintf(c.str, "%s %s,%s_bx2", Inst[_mov][api], output, rn);
 				AddInst(vp, c);
 			}
 		}
@@ -16215,20 +16400,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16242,13 +16427,13 @@ _functions_test:
 			if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = log2( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = log2( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str, "%s %s,%s", Inst[_log2][api], output, rn);
+				_sprintf(c.str, "%s %s,%s", Inst[_log2][api], output, rn);
 				AddInst(vp, c);
 			}
 		}
@@ -16266,20 +16451,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16287,7 +16472,7 @@ _functions_test:
 		if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = log( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = log( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16305,20 +16490,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16332,13 +16517,13 @@ _functions_test:
 			if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = exp2( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = exp2( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str, "%s %s,%s", Inst[_exp2][api], output, rn);
+				_sprintf(c.str, "%s %s,%s", Inst[_exp2][api], output, rn);
 				AddInst(vp, c);
 			}
 		}
@@ -16356,20 +16541,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16377,7 +16562,7 @@ _functions_test:
 		if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = exp( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = exp( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16394,20 +16579,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16421,13 +16606,13 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = abs( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = abs( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,-%s",Inst[_max][api],output,rn,rn);
+				_sprintf(c.str,"%s %s,%s,-%s",Inst[_max][api],output,rn,rn);
 				AddInst(vp,c);
 			}
 		}
@@ -16438,7 +16623,7 @@ _functions_test:
 
 	if ((str_match0(chaine, "tgt"))||(str_match0(chaine, "tangent")))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -16450,7 +16635,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
@@ -16463,7 +16648,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn = compile(&tmp[0], tmp2, vp);
@@ -16473,7 +16658,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				if (t == 0) sprintf(tmp3, "r%d", new_temp_register());
+				if (t == 0) _sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 
 				rn2 = compile(&tmp[p + 1], tmp3, vp);
@@ -16489,41 +16674,41 @@ _functions_test:
 		{
 			if ((api == 1) && (shadermodel))
 			{
-				sprintf(tmp, "r%d", new_temp_register());
-				sprintf(c.str,"%s.xyz = cross( -%s.xyz, %s.xyz )",output,rn,rn2);
+				_sprintf(tmp, "r%d", new_temp_register());
+				_sprintf(c.str,"%s.xyz = cross( -%s.xyz, %s.xyz )",output,rn,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = cross( vec3(0.0,%s.z,%s.y), %s.xyz )",tmp,rn,rn,rn2);
+				_sprintf(c.str,"%s.xyz = cross( vec3(0.0,%s.z,%s.y), %s.xyz )",tmp,rn,rn,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) )",output,tmp);
+				_sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) )",output,tmp);
 				AddInst(vp,c);
-				sprintf(c.str,"{");
+				_sprintf(c.str,"{");
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz=%s.xyz",output,tmp);
+				_sprintf(c.str,"%s.xyz=%s.xyz",output,tmp);
 				AddInst(vp,c);
-				sprintf(c.str,"}");
+				_sprintf(c.str,"}");
 				AddInst(vp,c);
-				sprintf(c.str,"%s.w = 0.0",output);
+				_sprintf(c.str,"%s.w = 0.0",output);
 				AddInst(vp,c);
 			}
 			else
 			if ((api == 0) && (shadermodel3))
 			{
-				sprintf(tmp, "r%d", new_temp_register());
-				sprintf(c.str,"%s.xyz = cross( -%s.xyz, %s.xyz )",output,rn,rn2);
+				_sprintf(tmp, "r%d", new_temp_register());
+				_sprintf(c.str,"%s.xyz = cross( -%s.xyz, %s.xyz )",output,rn,rn2);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.xyz = cross( float3(0.0f,%s.z,%s.y), %s.xyz )",tmp,rn,rn,rn2);
+				_sprintf(c.str,"%s.xyz = cross( float3(0.0f,%s.z,%s.y), %s.xyz )",tmp,rn,rn,rn2);
 				AddInst(vp,c);
 
-				sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) ) %s.xyz=%s.xyz",output,tmp,output,tmp);
+				_sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) ) %s.xyz=%s.xyz",output,tmp,output,tmp);
 				AddInst(vp,c);
-				sprintf(c.str,"%s.w = 0.0f",output);
+				_sprintf(c.str,"%s.w = 0.0f",output);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str, "%s %s,%s,%s", Inst[_dp3][api], output, rn, rn2);
+				_sprintf(c.str, "%s %s,%s,%s", Inst[_dp3][api], output, rn, rn2);
 				AddInst(vp, c);
-				sprintf(c.str, "%s %s,%s,%s,%s", Inst[_mad][api], output, output, rn2, rn);
+				_sprintf(c.str, "%s %s,%s,%s,%s", Inst[_mad][api], output, output, rn2, rn);
 				AddInst(vp, c);
 			}
 		}
@@ -16532,7 +16717,7 @@ _functions_test:
 
 	if (str_match0(chaine, "reflect"))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -16544,7 +16729,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
@@ -16557,7 +16742,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn = compile(&tmp[0], tmp2, vp);
@@ -16567,7 +16752,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				if (t == 0) sprintf(tmp3, "r%d", new_temp_register());
+				if (t == 0) _sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 
 				rn2 = compile(&tmp[p + 1], tmp3, vp);
@@ -16577,7 +16762,7 @@ _functions_test:
 
 		if (((api == 1) && (shadermodel)) || ((api == 0) && (shadermodel3)))
 		{
-			sprintf(c.str, "%s = reflect( %s , %s )", output, rn, rn2);
+			_sprintf(c.str, "%s = reflect( %s , %s )", output, rn, rn2);
 			AddInst(vp, c);
 		}
 		return output;
@@ -16585,7 +16770,7 @@ _functions_test:
 
 	if (str_match0(chaine, "mod"))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -16597,7 +16782,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
@@ -16610,7 +16795,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn = compile(&tmp[0], tmp2, vp);
@@ -16620,7 +16805,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				if (t == 0) sprintf(tmp3, "r%d", new_temp_register());
+				if (t == 0) _sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 
 				rn2 = compile(&tmp[p + 1], tmp3, vp);
@@ -16630,13 +16815,13 @@ _functions_test:
 
 		if ((api == 1) && (shadermodel))
 		{
-			sprintf(c.str, "%s = mod( %s , %s )", output, rn, rn2);
+			_sprintf(c.str, "%s = mod( %s , %s )", output, rn, rn2);
 			AddInst(vp, c);
 		}
 		else
 		if ((api == 0) && (shadermodel3))
 		{
-			sprintf(c.str, "%s = fmod( %s , %s )", output, rn, rn2);
+			_sprintf(c.str, "%s = fmod( %s , %s )", output, rn, rn2);
 			AddInst(vp, c);
 		}
 
@@ -16653,17 +16838,17 @@ _functions_test:
 		{
 			if (str_char(output,'.')!=-1)
 			{
-                if (api==1) sprintf(c.str,"%s = float(%c%d)",output,ch[vv],vv);
-                else sprintf(c.str,"%s = (float) %c%d",output,ch[vv],vv);
+                if (api==1) _sprintf(c.str,"%s = float(%c%d)",output,ch[vv],vv);
+                else _sprintf(c.str,"%s = (float) %c%d",output,ch[vv],vv);
                 AddInst(vp,c);
 
 				return output;
 			}
 			else
 			{
-				sprintf(tmp2,"%s.x",output);
-                if (api==1) sprintf(c.str,"%s = float(%c%d)",tmp2,ch[vv],vv);
-                else sprintf(c.str,"%s = (float) %c%d",tmp2,ch[vv],vv);
+				_sprintf(tmp2,"%s.x",output);
+                if (api==1) _sprintf(c.str,"%s = float(%c%d)",tmp2,ch[vv],vv);
+                else _sprintf(c.str,"%s = (float) %c%d",tmp2,ch[vv],vv);
                 AddInst(vp,c);
 
 				return tmp2;
@@ -16680,20 +16865,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16708,31 +16893,31 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = floor( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = floor( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(r0,"r%d",new_temp_register());
+				_sprintf(r0,"r%d",new_temp_register());
 
 				if ((str_char(rn,'.')==-1)&&(str_char(output,'.')==-1))
 				{
-					sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,rn);
+					_sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
+					_sprintf(c.str,"%s %s.x,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.y",Inst[_scalar_exp][api],r0,rn);
+					_sprintf(c.str,"%s %s.y,%s.y",Inst[_scalar_exp][api],r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,-%s.y,%s.y",Inst[_add][api],output,r0,rn);
+					_sprintf(c.str,"%s %s.y,-%s.y,%s.y",Inst[_add][api],output,r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.z",Inst[_scalar_exp][api],r0,rn);
+					_sprintf(c.str,"%s %s.y,%s.z",Inst[_scalar_exp][api],r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.z,-%s.y,%s.z",Inst[_add][api],output,r0,rn);
+					_sprintf(c.str,"%s %s.z,-%s.y,%s.z",Inst[_add][api],output,r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.w",Inst[_scalar_exp][api],r0,rn);
+					_sprintf(c.str,"%s %s.y,%s.w",Inst[_scalar_exp][api],r0,rn);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.w,-%s.y,%s.w",Inst[_add][api],output,r0,rn);
+					_sprintf(c.str,"%s %s.w,-%s.y,%s.w",Inst[_add][api],output,r0,rn);
 					AddInst(vp,c);
 
 				}
@@ -16740,19 +16925,19 @@ _functions_test:
 				{
 					if ((str_char(rn,'.')!=-1)&&(str_char(output,'.')!=-1))
 					{
-						sprintf(c.str,"%s %s.y,%s",Inst[_scalar_exp][api],r0,rn);
+						_sprintf(c.str,"%s %s.y,%s",Inst[_scalar_exp][api],r0,rn);
 						AddInst(vp,c);
-						sprintf(c.str,"%s %s,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
+						_sprintf(c.str,"%s %s,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
 						AddInst(vp,c);
 					}
 
 					if ((str_char(rn,'.')!=-1)&&(str_char(output,'.')==-1))
 					{
-						sprintf(c.str,"%s %s.y,%s",Inst[_scalar_exp][api],r0,rn);
+						_sprintf(c.str,"%s %s.y,%s",Inst[_scalar_exp][api],r0,rn);
 						AddInst(vp,c);
-						sprintf(c.str,"%s %s.x,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
+						_sprintf(c.str,"%s %s.x,-%s.y,%s.x",Inst[_add][api],output,r0,rn);
 						AddInst(vp,c);
-						sprintf(c.str,"%s %s.yzw,%s.x",Inst[_add][api],output,output);
+						_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_add][api],output,output);
 						AddInst(vp,c);
 					}
 				}
@@ -16772,20 +16957,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16795,7 +16980,7 @@ _functions_test:
 		if ((api==1)&&(shadermodel))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = fract( %s * 0.5 )*2.0", tmp4, rn);
+			_sprintf(c.str, "%s = fract( %s * 0.5 )*2.0", tmp4, rn);
 			AddInst(vp, c);
 
 			char * len="1.0";
@@ -16803,14 +16988,14 @@ _functions_test:
 			if (numberswz(rn)==3) len="vec3(1.0,1.0,1.0)";
 			if (numberswz(rn)==4) len="vec4(1.0,1.0,1.0,1.0)";
 
-			sprintf(c.str, "%s = %s - abs( %s - %s )", tmp4, len, tmp4, len);
+			_sprintf(c.str, "%s = %s - abs( %s - %s )", tmp4, len, tmp4, len);
 			AddInst(vp, c);
 		}
 		else
 		{
 			outputfield1(tmp4, output, rn);
-			if (metal==1) sprintf(c.str, "%s = fract( %s * 0.5f ) * 2.0f", tmp4, rn);
-			else sprintf(c.str, "%s = frac( %s * 0.5f ) * 2.0f", tmp4, rn);
+			if (metal==1) _sprintf(c.str, "%s = fract( %s * 0.5f ) * 2.0f", tmp4, rn);
+			else _sprintf(c.str, "%s = frac( %s * 0.5f ) * 2.0f", tmp4, rn);
 			AddInst(vp, c);
 
 			char * len="1.0f";
@@ -16818,7 +17003,7 @@ _functions_test:
 			if (numberswz(rn)==3) len="float3(1.0f,1.0f,1.0f)";
 			if (numberswz(rn)==4) len="float4(1.0f,1.0f,1.0f,1.0f)";
 
-			sprintf(c.str, "%s = %s - abs( %s - %s )", tmp4, len, tmp4, len);
+			_sprintf(c.str, "%s = %s - abs( %s - %s )", tmp4, len, tmp4, len);
 			AddInst(vp, c);
 				
 		}
@@ -16836,20 +17021,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16857,7 +17042,7 @@ _functions_test:
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = trunc( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = trunc( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16875,20 +17060,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16896,7 +17081,7 @@ _functions_test:
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = round( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = round( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16914,20 +17099,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16935,7 +17120,7 @@ _functions_test:
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = degrees( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = degrees( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16953,20 +17138,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -16974,7 +17159,7 @@ _functions_test:
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = radians( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = radians( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -16990,25 +17175,25 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
 
-		sprintf(rn1, "r%d", new_temp_register());
+		_sprintf(rn1, "r%d", new_temp_register());
 
 		if (api == 2)
 		{
@@ -17019,7 +17204,7 @@ _functions_test:
 			if ((api == 1) && (shadermodel))
 			{				
 				outputfield1(tmp4, rn1, rn);
-				sprintf(c.str, "%s = 1.0 / sqrt( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = 1.0 / sqrt( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
@@ -17027,18 +17212,18 @@ _functions_test:
 			if ((api == 0) && (shadermodel3))
 			{
 				outputfield1(tmp4, rn1, rn);
-				sprintf(c.str, "%s = 1.0f / sqrt( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = 1.0f / sqrt( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str, "%s %s,%s.w", Inst[_rsq][api], rn1, rn);
+				_sprintf(c.str, "%s %s,%s.w", Inst[_rsq][api], rn1, rn);
 				AddInst(vp, c);
 			}
 		}
 
-		sprintf(tmp, "%s", rn1);
+		_sprintf(tmp, "%s", rn1);
 		return tmp;
 	}
 	else
@@ -17051,20 +17236,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17078,7 +17263,7 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str, "%s = rsqrt( %s )", tmp4, rn);
+				_sprintf(c.str, "%s = rsqrt( %s )", tmp4, rn);
 				AddInst(vp, c);
 				return tmp4;
 			}
@@ -17096,20 +17281,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17117,7 +17302,7 @@ _functions_test:
 		if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 		{
 			outputfield1(tmp4, output, rn);
-			sprintf(c.str, "%s = sqrt( %s )", tmp4, rn);
+			_sprintf(c.str, "%s = sqrt( %s )", tmp4, rn);
 			AddInst(vp, c);
 			return tmp4;
 		}
@@ -17127,7 +17312,7 @@ _functions_test:
 
 	if (str_match0(chaine,"atan2"))
 	{
-		sprintf(tmp, "%s", str_return_parentheses(chaine));
+		_sprintf(tmp, "%s", str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -17139,7 +17324,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
@@ -17152,7 +17337,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn = var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 
 				rn = compile(&tmp[0], tmp2, vp);
@@ -17162,7 +17347,7 @@ _functions_test:
 			if (str_simple(&tmp[p + 1])) rn2 = var(&tmp[p + 1]);
 			else
 			{
-				if (t == 0) sprintf(tmp3, "r%d", new_temp_register());
+				if (t == 0) _sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 
 				rn2 = compile(&tmp[p + 1], tmp3, vp);
@@ -17172,13 +17357,13 @@ _functions_test:
 
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s = atan( %s , %s )",output,rn,rn2);
+			_sprintf(c.str,"%s = atan( %s , %s )",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==0)&&(shadermodel3))
 		{
-			sprintf(c.str,"%s = atan2( %s, %s )",output,rn,rn2);
+			_sprintf(c.str,"%s = atan2( %s, %s )",output,rn,rn2);
 			AddInst(vp,c);
 		}
 		return output;
@@ -17194,20 +17379,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17221,61 +17406,61 @@ _functions_test:
 			if ((api==1)&&(shadermodel))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str,"%s = atan( %s , 1.0 )",tmp4,rn);
+				_sprintf(c.str,"%s = atan( %s , 1.0 )",tmp4,rn);
 				AddInst(vp,c);
 				return tmp4;
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str,"%s = atan( %s )",output,rn);
+				_sprintf(c.str,"%s = atan( %s )",output,rn);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(r0,"r%d",new_temp_register());
+				_sprintf(r0,"r%d",new_temp_register());
 
 				if (str_char(rn,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 
 				}
 				else
 				{
-					sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 				}
 
-				sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 				// r0.z = t*t*t  r0.y=t*t r0.x=t
 
-				sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
 				// y= t^7 w=t^5 x=t z=t^3
 
-				sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst4"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst4"),r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst4"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst4"),r0,r0);
 				AddInst(vp,c);
 
 				if (str_char(output,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst4"),r0,r0);
+					_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst4"),r0,r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+					_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 					AddInst(vp,c);
 				}
 				else
 				{
-					sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst4"),r0,r0);
+					_sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst4"),r0,r0);
 					AddInst(vp,c);
 				}
 			}
@@ -17292,20 +17477,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17315,7 +17500,7 @@ _functions_test:
             if ((api==1)&&(shadermodel))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = (exp( %s ) - exp(-%s))/(exp( %s ) + exp(-%s))",tmp4,rn,rn,rn,rn);
+                _sprintf(c.str,"%s = (exp( %s ) - exp(-%s))/(exp( %s ) + exp(-%s))",tmp4,rn,rn,rn,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17323,7 +17508,7 @@ _functions_test:
             if ((api==0)&&(shadermodel3))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = tanh( %s )",tmp4,rn);
+                _sprintf(c.str,"%s = tanh( %s )",tmp4,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17340,20 +17525,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17367,66 +17552,66 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str,"%s = tan( %s )",tmp4,rn);
+				_sprintf(c.str,"%s = tan( %s )",tmp4,rn);
 				AddInst(vp,c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(r0,"r%d",new_temp_register());
+				_sprintf(r0,"r%d",new_temp_register());
 
 				if (str_char(rn,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_add][api],r0,rn,var("trigo_mod"));
+					_sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_add][api],r0,rn,var("trigo_mod"));
 					AddInst(vp,c);
 				}
 				else
 				{
-					sprintf(c.str,"%s %s.x,%s,%s.x",Inst[_add][api],r0,rn,var("trigo_mod"));
+					_sprintf(c.str,"%s %s.x,%s,%s.x",Inst[_add][api],r0,rn,var("trigo_mod"));
 					AddInst(vp,c);
 				}
 
-				sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r0,r0,var("trigo_mod"));
+				_sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r0,r0,var("trigo_mod"));
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.y,%s.z,-%s.x",Inst[_mad][api],r0,r0,var("trigo_mod"),var("trigo_mod"));
+				_sprintf(c.str,"%s %s.x,%s.y,%s.z,-%s.x",Inst[_mad][api],r0,r0,var("trigo_mod"),var("trigo_mod"));
 				AddInst(vp,c);
 
 				// [-PI,PI]
 
 
-				sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 				// r0.z = t*t*t  r0.y=t*t r0.x=t
 
-				sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
 				// y= t^7 w=t^5 x=t z=t^3
 
-				sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst3"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst3"),r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst3"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst3"),r0,r0);
 				AddInst(vp,c);
 
 				if (str_char(output,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst3"),r0,r0);
+					_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst3"),r0,r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+					_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 					AddInst(vp,c);
 
 				}
 				else
 				{
-					sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst3"),r0,r0);
+					_sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst3"),r0,r0);
 					AddInst(vp,c);
 				}
 			}
@@ -17443,20 +17628,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
         
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
@@ -17471,56 +17656,56 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = asin( %s )",tmp4,rn);
+                _sprintf(c.str,"%s = asin( %s )",tmp4,rn);
                 AddInst(vp,c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(r0,"r%d",new_temp_register());
+				_sprintf(r0,"r%d",new_temp_register());
 
 				if (str_char(rn,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 
 				}
 				else
 				{
-					sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 				}
 
-				sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 				// r0.z = t*t*t  r0.y=t*t r0.x=t
 
-				sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
 				// y= t^7 w=t^5 x=t z=t^3
 
-				sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
 				AddInst(vp,c);
 
 				if (str_char(output,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst2"),r0,r0);
+					_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst2"),r0,r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+					_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 					AddInst(vp,c);
 
 				}
 				else
 				{
-					sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst2"),r0,r0);
+					_sprintf(c.str,"%s %s,%s.z,%s.y,%s.x",Inst[_mad][api],output,var("trigo_cst2"),r0,r0);
 					AddInst(vp,c);
 				}
 			}
@@ -17538,20 +17723,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
@@ -17563,7 +17748,7 @@ _functions_test:
             if ((api==1)&&(shadermodel))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = (exp( %s ) - exp(-%s))/2.0",tmp4,rn,rn);
+                _sprintf(c.str,"%s = (exp( %s ) - exp(-%s))/2.0",tmp4,rn,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17571,7 +17756,7 @@ _functions_test:
             if ((api==0)&&(shadermodel3))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = sinh( %s )",tmp4,rn);
+                _sprintf(c.str,"%s = sinh( %s )",tmp4,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17589,20 +17774,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
@@ -17618,7 +17803,7 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str,"%s = sin( %s )",tmp4,rn);
+				_sprintf(c.str,"%s = sin( %s )",tmp4,rn);
 				AddInst(vp,c);
 				return tmp4;
 			}
@@ -17626,97 +17811,97 @@ _functions_test:
 			{
 				if ((shadermodel)&&(pixelshader))
 				{
-					sprintf(r0,"r%d",new_temp_register());
-					if (str_char(rn,'.')==-1) sprintf(c.str,"sincos %s.y,%s.x,%s,%s",r0,rn,var("sc1"),var("sc2"));
-					else sprintf(c.str,"sincos %s.y,%s,%s,%s",r0,rn,var("sc1"),var("sc2"));
+					_sprintf(r0,"r%d",new_temp_register());
+					if (str_char(rn,'.')==-1) _sprintf(c.str,"sincos %s.y,%s.x,%s,%s",r0,rn,var("sc1"),var("sc2"));
+					else _sprintf(c.str,"sincos %s.y,%s,%s,%s",r0,rn,var("sc1"),var("sc2"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s,%s.y",Inst[_mov][api],output,r0);
+					_sprintf(c.str,"%s %s,%s.y",Inst[_mov][api],output,r0);
 					AddInst(vp,c);
 				}
 				else
 				{
 
-					sprintf(r0,"r%d",new_temp_register());
-					sprintf(r1,"r%d",new_temp_register());
+					_sprintf(r0,"r%d",new_temp_register());
+					_sprintf(r1,"r%d",new_temp_register());
 
 					if (str_char(rn,'.')==-1)
 					{
-						sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_add][api],r1,rn,var("trigo_mod"));
+						_sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_add][api],r1,rn,var("trigo_mod"));
 						AddInst(vp,c);
 					}
 					else
 					{
-						sprintf(c.str,"%s %s.x,%s,%s.x",Inst[_add][api],r1,rn,var("trigo_mod"));
+						_sprintf(c.str,"%s %s.x,%s,%s.x",Inst[_add][api],r1,rn,var("trigo_mod"));
 						AddInst(vp,c);
 					}
 
 
-					sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r1,r1,var("trigo_mod"));
+					_sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r1,r1,var("trigo_mod"));
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r1);
+					_sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.w,%s.y,%s.z,-%s.x",Inst[_mad][api],r1,r0,var("trigo_mod"),var("trigo_mod"));
+					_sprintf(c.str,"%s %s.w,%s.y,%s.z,-%s.x",Inst[_mad][api],r1,r0,var("trigo_mod"),var("trigo_mod"));
 					AddInst(vp,c);
 
 					// trigo_cst = 0,PI/2,1,PI
 					// trigo_cst2 = 1/6,1/120
 
-					sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_sge][api],r1,r1,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_sge][api],r1,r1,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.z,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r1);
-					AddInst(vp,c);
-
-					sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_mul][api],r0,r1,r1);
-					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,-%s.w,%s.y,%s.x",Inst[_mad][api],r0,r1,r0,r0);
+					_sprintf(c.str,"%s %s.y,%s.z,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r1);
 					AddInst(vp,c);
 
-
-					sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_sge][api],r0,r0,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_mul][api],r0,r1,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.z,%s.w,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s.x,-%s.w,%s.y,%s.x",Inst[_mad][api],r0,r1,r0,r0);
 					AddInst(vp,c);
 
 
-					sprintf(c.str,"%s %s.w,%s.z,-%s.y",Inst[_add][api],r0,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_sge][api],r0,r0,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.x,%s.w",Inst[_mul][api],r1,r0,r0);
+					_sprintf(c.str,"%s %s.z,%s.w,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.z,%s.y,%s.y",Inst[_mad][api],r1,r0,r0,r1);
+
+
+					_sprintf(c.str,"%s %s.w,%s.z,-%s.y",Inst[_add][api],r0,var("trigo_cst"),r0);
+					AddInst(vp,c);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.w",Inst[_mul][api],r1,r0,r0);
+					AddInst(vp,c);
+					_sprintf(c.str,"%s %s.y,%s.z,%s.y,%s.y",Inst[_mad][api],r1,r0,r0,r1);
 					AddInst(vp,c);
 
 
 					// signe
-					sprintf(c.str,"%s %s.z,%s.w,%s.x",Inst[_slt][api],r1,r1,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.z,%s.w,%s.x",Inst[_slt][api],r1,r1,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,%s.x,-%s.z",Inst[_add][api],r1,r1,r1);
+					_sprintf(c.str,"%s %s.x,%s.x,-%s.z",Inst[_add][api],r1,r1,r1);
 					AddInst(vp,c);
 
 					// calculs
-					sprintf(c.str,"%s %s.x,%s.y,%s.y",Inst[_mul][api],r0,r1,r1);
+					_sprintf(c.str,"%s %s.x,%s.y,%s.y",Inst[_mul][api],r0,r1,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_mul][api],r0,r0,r1);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_mul][api],r0,r0,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.z,%s.x,%s.y",Inst[_mul][api],r0,r0,r0);
+					_sprintf(c.str,"%s %s.z,%s.x,%s.y",Inst[_mul][api],r0,r0,r0);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.x,-%s.y,%s.x,%s.y",Inst[_mad][api],r0,r0,var("trigo_cst2"),r1);
+					_sprintf(c.str,"%s %s.x,-%s.y,%s.x,%s.y",Inst[_mad][api],r0,r0,var("trigo_cst2"),r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,r0,var("trigo_cst2"),r0);
+					_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,r0,var("trigo_cst2"),r0);
 					AddInst(vp,c);
 
 					if (str_char(output,'.')==-1)
 					{
-						sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
+						_sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
 						AddInst(vp,c);
-						sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+						_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 						AddInst(vp,c);
 
 					}
 					else
 					{
-						sprintf(c.str,"%s %s,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
+						_sprintf(c.str,"%s %s,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
 						AddInst(vp,c);
 
 					}
@@ -17736,20 +17921,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
@@ -17764,58 +17949,58 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str,"%s = acos( %s )",tmp4,rn);
+				_sprintf(c.str,"%s = acos( %s )",tmp4,rn);
 				AddInst(vp,c);
 				return tmp4;
 			}
 			else
 			{
 
-				sprintf(r0,"r%d",new_temp_register());
+				_sprintf(r0,"r%d",new_temp_register());
 
 				if (str_char(rn,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s.x",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 
 				}
 				else
 				{
-					sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
+					_sprintf(c.str,"%s %s.x,%s",Inst[_mov][api],r0,rn);
 					AddInst(vp,c);
 				}
 
-				sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.x,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.z,%s.y,%s.x",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 				// r0.z = t*t*t  r0.y=t*t r0.x=t
 
-				sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.w,%s.z,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
-				sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
+				_sprintf(c.str,"%s %s.y,%s.w,%s.y",Inst[_mul][api],r0,r0,r0);
 				AddInst(vp,c);
 
 				// y= t^7 w=t^5 x=t z=t^3
 
-				sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.x,%s.z,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.y,%s.w,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
+				_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,var("trigo_cst2"),r0,r0);
 				AddInst(vp,c);
 
 				if (str_char(output,'.')==-1)
 				{
-					sprintf(c.str,"%s %s.x,%s.y,-%s.x",Inst[_add][api],output,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s.x,%s.y,-%s.x",Inst[_add][api],output,var("trigo_cst"),r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+					_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 					AddInst(vp,c);
 				}
 				else
 				{
-					sprintf(c.str,"%s %s,%s.y,-%s.x",Inst[_add][api],output,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s,%s.y,-%s.x",Inst[_add][api],output,var("trigo_cst"),r0);
 					AddInst(vp,c);
 				}
 			}
@@ -17832,20 +18017,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17855,7 +18040,7 @@ _functions_test:
             if ((api==1)&&(shadermodel))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = (exp( %s ) + exp(-%s))/2.0",tmp4,rn,rn);
+                _sprintf(c.str,"%s = (exp( %s ) + exp(-%s))/2.0",tmp4,rn,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17863,7 +18048,7 @@ _functions_test:
             if ((api==0)&&(shadermodel3))
             {
                 outputfield1(tmp4, output, rn);
-                sprintf(c.str,"%s = cosh( %s )",tmp4,rn);
+                _sprintf(c.str,"%s = cosh( %s )",tmp4,rn);
                 AddInst(vp,c);
                 return tmp4;
             }
@@ -17880,20 +18065,20 @@ _functions_test:
 			switch (strlen(&output[sc+1]))
 			{
 			case 1:
-				sprintf(tmp2,"r%d.x",new_temp_register());
+				_sprintf(tmp2,"r%d.x",new_temp_register());
 				break;
 			case 2:
-				sprintf(tmp2,"r%d.xy",new_temp_register());
+				_sprintf(tmp2,"r%d.xy",new_temp_register());
 				break;
 			case 3:
-				sprintf(tmp2,"r%d.xyz",new_temp_register());
+				_sprintf(tmp2,"r%d.xyz",new_temp_register());
 				break;
 			case 4:
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				break;
 			};
 		}
-		else sprintf(tmp2,"r%d",new_temp_register());
+		else _sprintf(tmp2,"r%d",new_temp_register());
 		if (str_simple(str)) rn=var(str);
 		else rn=compile(str,tmp2,vp);
 		if (numberswz(rn)>numberswz(output)) TYPEERROR=true;
@@ -17907,7 +18092,7 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield1(tmp4, output, rn);
-				sprintf(c.str,"%s = cos( %s )",tmp4,rn);
+				_sprintf(c.str,"%s = cos( %s )",tmp4,rn);
 				AddInst(vp,c);
 				return tmp4;
 			}
@@ -17915,93 +18100,93 @@ _functions_test:
 			{
 				if ((shadermodel)&&(pixelshader))
 				{
-					sprintf(r0,"r%d",new_temp_register());
-					if (str_char(rn,'.')==-1) sprintf(c.str,"sincos %s.x,%s.x,%s,%s",r0,rn,var("sc1"),var("sc2"));
-					else sprintf(c.str,"sincos %s.x,%s,%s,%s",r0,rn,var("sc1"),var("sc2"));
+					_sprintf(r0,"r%d",new_temp_register());
+					if (str_char(rn,'.')==-1) _sprintf(c.str,"sincos %s.x,%s.x,%s,%s",r0,rn,var("sc1"),var("sc2"));
+					else _sprintf(c.str,"sincos %s.x,%s,%s,%s",r0,rn,var("sc1"),var("sc2"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s,%s.x",Inst[_mov][api],output,r0);
+					_sprintf(c.str,"%s %s,%s.x",Inst[_mov][api],output,r0);
 					AddInst(vp,c);
 				}
 				else
 				{
 
-					sprintf(r0,"r%d",new_temp_register());
-					sprintf(r1,"r%d",new_temp_register());
+					_sprintf(r0,"r%d",new_temp_register());
+					_sprintf(r1,"r%d",new_temp_register());
 
 					if (str_char(rn,'.')==-1)
 					{
-						sprintf(c.str,"%s %s.x,%s.x,%s.w",Inst[_add][api],r1,rn,var("trigo_mod"));
+						_sprintf(c.str,"%s %s.x,%s.x,%s.w",Inst[_add][api],r1,rn,var("trigo_mod"));
 						AddInst(vp,c);
 					}
 					else
 					{
-						sprintf(c.str,"%s %s.x,%s,%s.w",Inst[_add][api],r1,rn,var("trigo_mod"));
+						_sprintf(c.str,"%s %s.x,%s,%s.w",Inst[_add][api],r1,rn,var("trigo_mod"));
 						AddInst(vp,c);
 					}
 
 
-					sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r1,r1,var("trigo_mod"));
+					_sprintf(c.str,"%s %s.x,%s.x,%s.y",Inst[_mul][api],r1,r1,var("trigo_mod"));
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r1);
+					_sprintf(c.str,"%s %s.y,%s.x",Inst[_scalar_exp][api],r0,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.w,%s.y,%s.z,-%s.x",Inst[_mad][api],r1,r0,var("trigo_mod"),var("trigo_mod"));
+					_sprintf(c.str,"%s %s.w,%s.y,%s.z,-%s.x",Inst[_mad][api],r1,r0,var("trigo_mod"),var("trigo_mod"));
 					AddInst(vp,c);
 
 					// trigo_cst = 0,PI/2,1,PI
 					// trigo_cst2 = 1/6,1/120
 
-					sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_sge][api],r1,r1,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_sge][api],r1,r1,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.z,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r1);
-					AddInst(vp,c);
-
-					sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_mul][api],r0,r1,r1);
-					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,-%s.w,%s.y,%s.x",Inst[_mad][api],r0,r1,r0,r0);
+					_sprintf(c.str,"%s %s.y,%s.z,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r1);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_sge][api],r0,r0,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.x,%s.w,%s.x",Inst[_mul][api],r0,r1,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.z,%s.w,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s.x,-%s.w,%s.y,%s.x",Inst[_mad][api],r0,r1,r0,r0);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.w,%s.z,-%s.y",Inst[_add][api],r0,var("trigo_cst"),r0);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_sge][api],r0,r0,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.x,%s.w",Inst[_mul][api],r1,r0,r0);
+					_sprintf(c.str,"%s %s.z,%s.w,-%s.x",Inst[_add][api],r0,var("trigo_cst"),r0);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.z,%s.y,%s.y",Inst[_mad][api],r1,r0,r0,r1);
+
+					_sprintf(c.str,"%s %s.w,%s.z,-%s.y",Inst[_add][api],r0,var("trigo_cst"),r0);
+					AddInst(vp,c);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.w",Inst[_mul][api],r1,r0,r0);
+					AddInst(vp,c);
+					_sprintf(c.str,"%s %s.y,%s.z,%s.y,%s.y",Inst[_mad][api],r1,r0,r0,r1);
 					AddInst(vp,c);
 
 					// signe
-					sprintf(c.str,"%s %s.z,%s.w,%s.x",Inst[_slt][api],r1,r1,var("trigo_cst"));
+					_sprintf(c.str,"%s %s.z,%s.w,%s.x",Inst[_slt][api],r1,r1,var("trigo_cst"));
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,%s.x,-%s.z",Inst[_add][api],r1,r1,r1);
+					_sprintf(c.str,"%s %s.x,%s.x,-%s.z",Inst[_add][api],r1,r1,r1);
 					AddInst(vp,c);
 
 					// calculs
-					sprintf(c.str,"%s %s.x,%s.y,%s.y",Inst[_mul][api],r0,r1,r1);
+					_sprintf(c.str,"%s %s.x,%s.y,%s.y",Inst[_mul][api],r0,r1,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_mul][api],r0,r0,r1);
+					_sprintf(c.str,"%s %s.y,%s.x,%s.y",Inst[_mul][api],r0,r0,r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.z,%s.x,%s.y",Inst[_mul][api],r0,r0,r0);
+					_sprintf(c.str,"%s %s.z,%s.x,%s.y",Inst[_mul][api],r0,r0,r0);
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s %s.x,-%s.y,%s.x,%s.y",Inst[_mad][api],r0,r0,var("trigo_cst2"),r1);
+					_sprintf(c.str,"%s %s.x,-%s.y,%s.x,%s.y",Inst[_mad][api],r0,r0,var("trigo_cst2"),r1);
 					AddInst(vp,c);
-					sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,r0,var("trigo_cst2"),r0);
+					_sprintf(c.str,"%s %s.x,%s.z,%s.y,%s.x",Inst[_mad][api],r0,r0,var("trigo_cst2"),r0);
 					AddInst(vp,c);
 
 					if (str_char(output,'.')==-1)
 					{
-						sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
+						_sprintf(c.str,"%s %s.x,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
 						AddInst(vp,c);
-						sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
+						_sprintf(c.str,"%s %s.yzw,%s.x",Inst[_mov][api],output,output);
 						AddInst(vp,c);
 					}
 					else
 					{
-						sprintf(c.str,"%s %s,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
+						_sprintf(c.str,"%s %s,%s.x,%s.x",Inst[_mul][api],output,r1,r0);
 						AddInst(vp,c);
 					}
 				}
@@ -18012,7 +18197,7 @@ _functions_test:
 
 	if ((str_match0(chaine,"normal_interpolation"))||(str_match0(chaine,"NormalInterpolation")))
 	{
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -18029,7 +18214,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 rns[0]=var(rns[0]);
                 rns[1]=var(rns[1]);
                 rns[2]=var(rns[2]);
@@ -18050,33 +18235,33 @@ _functions_test:
                         str_translate_format(rns[4],s0,&value);
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
                             
-                            sprintf(c.str,"%s.x = dot( %s[0].xyz , %s.xyz )",output,rns[4],tmp2);
+                            _sprintf(c.str,"%s.x = dot( %s[0].xyz , %s.xyz )",output,rns[4],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.y = dot( %s[1].xyz , %s.xyz )",output,rns[4],tmp2);
+                            _sprintf(c.str,"%s.y = dot( %s[1].xyz , %s.xyz )",output,rns[4],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.z = dot( %s[2].xyz , %s.xyz )",output,rns[4],tmp2);
+                            _sprintf(c.str,"%s.z = dot( %s[2].xyz , %s.xyz )",output,rns[4],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 0.0",output);
+                            _sprintf(c.str,"%s.w = 0.0",output);
                             AddInst(vp,c);
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
+                            _sprintf(c.str,"DP3 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
+                            _sprintf(c.str,"DP3 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
+                            _sprintf(c.str,"DP3 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
                             AddInst(vp,c);
-                            sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18084,34 +18269,34 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
 
-                            sprintf(c.str,"%s.w = 0.0f",tmp2);
+                            _sprintf(c.str,"%s.w = 0.0f",tmp2);
                             AddInst(vp,c);
 
                             if (metal==0)
                             {
-                                sprintf(c.str,"%s = mul( %s , %s )",output,tmp2,rns[4]);
+                                _sprintf(c.str,"%s = mul( %s , %s )",output,tmp2,rns[4]);
                                 AddInst(vp,c);
                             }
                             else
                             {
-                                sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
+                                _sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
                                 AddInst(vp,c);
                             }
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"m3x3 %s.xyz,%s,%s",output,tmp2,rns[4]);
+                            _sprintf(c.str,"m3x3 %s.xyz,%s,%s",output,tmp2,rns[4]);
                             AddInst(vp,c);
-                            sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18123,7 +18308,7 @@ _functions_test:
 	else
 	if ((str_match0(chaine,"interpolation"))||(str_match0(chaine,"Interpolation")))
 	{
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -18140,7 +18325,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 rns[0]=var(rns[0]);
                 rns[1]=var(rns[1]);
                 rns[2]=var(rns[2]);
@@ -18161,30 +18346,30 @@ _functions_test:
                         str_translate_format(rns[4],s0,&value);
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0",tmp2);
+                            _sprintf(c.str,"%s.w = 1.0",tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
+                            _sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
                             AddInst(vp,c);
                         }
                         else
                         {
 
-                            sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
 
-                            sprintf(c.str,"DP4 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
+                            _sprintf(c.str,"DP4 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
+                            _sprintf(c.str,"DP4 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
+                            _sprintf(c.str,"DP4 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.w,%s,%s%d]",output,tmp2,s0,value+3);
+                            _sprintf(c.str,"DP4 %s.w,%s,%s%d]",output,tmp2,s0,value+3);
                             AddInst(vp,c);
                         }
                     }
@@ -18192,30 +18377,30 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz",tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0f",tmp2);
+                            _sprintf(c.str,"%s.w = 1.0f",tmp2);
                             AddInst(vp,c);
                             if (metal==0)
                             {
-                                sprintf(c.str,"%s = mul( %s ,  %s )",output,tmp2,rns[4]);
+                                _sprintf(c.str,"%s = mul( %s ,  %s )",output,tmp2,rns[4]);
                                 AddInst(vp,c);
                             }
                             else
                             {
-                                sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
+                                _sprintf(c.str,"%s = %s * %s",output,rns[4],tmp2);
                                 AddInst(vp,c);
                             }
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
+                            _sprintf(c.str,"%s %s,%s,%s",Inst[_mul][api],tmp2,rns[0],rns[2]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,rns[1],rns[3],tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"m4x4 %s,%s,%s",output,tmp2,rns[4]);
+                            _sprintf(c.str,"m4x4 %s,%s,%s",output,tmp2,rns[4]);
                             AddInst(vp,c);
                         }
                     }
@@ -18227,7 +18412,7 @@ _functions_test:
 
     if ((str_match0(chaine,"normal_interpolate_base"))||(str_match0(chaine,"NormalInterpolateBase")))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -18244,7 +18429,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 rns[0]=var(rns[0]);     // n1
                 rns[1]=var(rns[1]);     // n2
                 rns[2]=var(rns[2]);  // t
@@ -18262,22 +18447,22 @@ _functions_test:
                     {
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 0.0",output);
+                            _sprintf(c.str,"%s.w = 0.0",output);
                             AddInst(vp,c);
                         }
                         else
                         {
                             //str_translate_format(rns[3],s0,&value);
                             
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18285,22 +18470,22 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 0.0f",output);
+                            _sprintf(c.str,"%s.w = 0.0f",output);
                             AddInst(vp,c);
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
+                            _sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18312,7 +18497,7 @@ _functions_test:
     else
 	if ((str_match0(chaine,"normal_interpolate"))||(str_match0(chaine,"NormalInterpolate")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -18329,7 +18514,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 
                 rns[0]=var(rns[0]);	 // n1
                 rns[1]=var(rns[1]);	 // n2
@@ -18349,30 +18534,30 @@ _functions_test:
                     {
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 0.0",tmp2);
+                            _sprintf(c.str,"%s.w = 0.0",tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
+                            _sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
                             AddInst(vp,c);
                         }
                         else
                         {
                             str_translate_format(rns[3],s0,&value);
 
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
+                            _sprintf(c.str,"DP3 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
+                            _sprintf(c.str,"DP3 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP3 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
+                            _sprintf(c.str,"DP3 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
                             AddInst(vp,c);
-                            sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"MOV %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18380,34 +18565,34 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 0.0f",tmp2);
+                            _sprintf(c.str,"%s.w = 0.0f",tmp2);
                             AddInst(vp,c);
                             if (metal==0)
                             {
-                                sprintf(c.str,"%s = mul( %s , %s)",output,tmp2,rns[3]);
+                                _sprintf(c.str,"%s = mul( %s , %s)",output,tmp2,rns[3]);
                                 AddInst(vp,c);
                             }
                             else
                             {
-                                sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
+                                _sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
                                 AddInst(vp,c);
                             }
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
+                            _sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"m3x3 %s.xyz,%s,%s",output,tmp2,rns[3]);
+                            _sprintf(c.str,"m3x3 %s.xyz,%s,%s",output,tmp2,rns[3]);
                             AddInst(vp,c);
-                            sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
+                            _sprintf(c.str,"mov %s.w,%s.x",output,var("trigo_cst"));
                             AddInst(vp,c);
                         }
                     }
@@ -18419,7 +18604,7 @@ _functions_test:
     else
     if ((str_match0(chaine,"interpolate_base"))||(str_match0(chaine,"InterpolateBase")))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -18437,7 +18622,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 rns[0]=var(rns[0]); //p1
                 rns[1]=var(rns[1]); //p2
                 rns[2]=var(rns[2]); // interpolant
@@ -18456,19 +18641,19 @@ _functions_test:
                         //str_translate_format(rns[3],s0,&value);
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,rns[2],tmp2,rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,rns[2],tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0",output);
+                            _sprintf(c.str,"%s.w = 1.0",output);
                             AddInst(vp,c);
                         }
                         else
                         {
                             
-                            sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
                         }
                     }
@@ -18476,21 +18661,21 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,rns[2],tmp2,rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",output,rns[2],tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0f",output);
+                            _sprintf(c.str,"%s.w = 1.0f",output);
                             AddInst(vp,c);
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
+                            _sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
                             AddInst(vp,c);
                             
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],output,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
                         }
                     }
@@ -18502,7 +18687,7 @@ _functions_test:
 	else
 	if ((str_match0(chaine,"interpolate"))||(str_match0(chaine,"Interpolate")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -18519,7 +18704,7 @@ _functions_test:
             }
             else
             {
-                sprintf(tmp2,"r%d",new_temp_register());
+                _sprintf(tmp2,"r%d",new_temp_register());
                 rns[0]=var(rns[0]); //p1
                 rns[1]=var(rns[1]); //p2
                 rns[2]=var(rns[2]); // interpolant
@@ -18539,30 +18724,30 @@ _functions_test:
                         str_translate_format(rns[3],s0,&value);
                         if ((api==1)&&(shadermodel))
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[2],tmp2,rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[2],tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0",tmp2);
+                            _sprintf(c.str,"%s.w = 1.0",tmp2);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
+                            _sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
                             AddInst(vp,c);
                         }
                         else
                         {
 
-                            sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s",Inst[_sub][api],tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
 
-                            sprintf(c.str,"DP4 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
+                            _sprintf(c.str,"DP4 %s.x,%s,%s%d]",output,tmp2,s0,value+0);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
+                            _sprintf(c.str,"DP4 %s.y,%s,%s%d]",output,tmp2,s0,value+1);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
+                            _sprintf(c.str,"DP4 %s.z,%s,%s%d]",output,tmp2,s0,value+2);
                             AddInst(vp,c);
-                            sprintf(c.str,"DP4 %s.w,%s,%s%d]",output,tmp2,s0,value+3);
+                            _sprintf(c.str,"DP4 %s.w,%s,%s%d]",output,tmp2,s0,value+3);
                             AddInst(vp,c);
                         }
                     }
@@ -18570,34 +18755,34 @@ _functions_test:
                     {
                         if (shadermodel3)
                         {
-                            sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz - %s.xyz",tmp2,rns[1],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[2],tmp2,rns[0]);
+                            _sprintf(c.str,"%s.xyz = %s.xyz * %s.xyz + %s.xyz",tmp2,rns[2],tmp2,rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s.w = 1.0f",tmp2);
+                            _sprintf(c.str,"%s.w = 1.0f",tmp2);
                             AddInst(vp,c);
 
                             if (metal==0)
                             {
-                                sprintf(c.str,"%s = mul( %s , %s )",output,tmp2,rns[3]);
+                                _sprintf(c.str,"%s = mul( %s , %s )",output,tmp2,rns[3]);
                                 AddInst(vp,c);
                             }
                             else
                             {
-                                sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
+                                _sprintf(c.str,"%s = %s * %s",output,rns[3],tmp2);
                                 AddInst(vp,c);
                             }
                         }
                         else
                         {
-                            sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
+                            _sprintf(c.str,"%s %s.xyz,%s",Inst[_mov][api],tmp2,rns[1]);
                             AddInst(vp,c);
-                            sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
+                            _sprintf(c.str,"%s %s.xyz,%s,%s",Inst[_sub][api],tmp2,tmp2,rns[0]);
                             AddInst(vp,c);
 
-                            sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
+                            _sprintf(c.str,"%s %s,%s,%s,%s",Inst[_mad][api],tmp2,tmp2,rns[2],rns[0]);
                             AddInst(vp,c);
-                            sprintf(c.str,"m4x4 %s,%s,%s",output,tmp2,rns[3]);
+                            _sprintf(c.str,"m4x4 %s,%s,%s",output,tmp2,rns[3]);
                             AddInst(vp,c);
                         }
                     }
@@ -18614,21 +18799,21 @@ _functions_test:
 
         if ((api==0)&&(shadermodel3))
         {
-			sprintf(c.str,"%s.xy = %s",output,rn);
+			_sprintf(c.str,"%s.xy = %s",output,rn);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.z = %s",output,rn2);
+			_sprintf(c.str,"%s.z = %s",output,rn2);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.w = 1.0f",output);
+			_sprintf(c.str,"%s.w = 1.0f",output);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s.xy = %s",output,rn);
+			_sprintf(c.str,"%s.xy = %s",output,rn);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.z = %s",output,rn2);
+			_sprintf(c.str,"%s.z = %s",output,rn2);
 			AddInst(vp,c);
-			sprintf(c.str,"%s.w = 1.0",output);
+			_sprintf(c.str,"%s.w = 1.0",output);
 			AddInst(vp,c);
 		}
 
@@ -18644,8 +18829,8 @@ _functions_test:
 		if (sc>=0) { SYNTAXERROR=true; return ""; }
 		else
 		{
-            if ((api==0)&&(shadermodel3)) sprintf(c.str,"%s = float4(%s,0.0f,0.0f,0.0f)",output,rn);
-            else sprintf(c.str,"%s = vec4(%s,0.0,0.0,0.0)",output,rn);
+            if ((api==0)&&(shadermodel3)) _sprintf(c.str,"%s = float4(%s,0.0f,0.0f,0.0f)",output,rn);
+            else _sprintf(c.str,"%s = vec4(%s,0.0,0.0,0.0)",output,rn);
 			AddInst(vp,c);
 			return output;
 		}
@@ -18653,7 +18838,7 @@ _functions_test:
 
 	if (str_match0(chaine,"clamp"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p1 = str_char_prt(tmp, ',');
         if (p1<0) { SYNTAXERROR=true; return ""; }
@@ -18666,7 +18851,7 @@ _functions_test:
 		if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(&tmp[0],tmp2,vp);
 		}
@@ -18674,7 +18859,7 @@ _functions_test:
 		if (str_simple(&tmp[p1+1])) rn2=var(&tmp[p1+1]);
 		else
 		{
-			sprintf(tmp3,"r%d",new_temp_register());
+			_sprintf(tmp3,"r%d",new_temp_register());
 			resfield(output, tmp3);
 			rn2=compile(&tmp[p1+1],tmp3,vp);
 		}
@@ -18682,13 +18867,13 @@ _functions_test:
 		if (str_simple(&tmp[p2+1])) rn3=var(&tmp[p2+1]);
 		else
 		{
-			sprintf(tmp4,"r%d",new_temp_register());
+			_sprintf(tmp4,"r%d",new_temp_register());
 			resfield(output, tmp4);
 			rn3=compile(&tmp[p2+1],tmp4,vp);
 		}
 
 		outputfield1(tmp4, output, rn);
-		sprintf(c.str,"%s = clamp( %s , %s , %s )",tmp4,rn,rn2,rn3);
+		_sprintf(c.str,"%s = clamp( %s , %s , %s )",tmp4,rn,rn2,rn3);
 		AddInst(vp,c);
 
 		return tmp4;
@@ -18698,11 +18883,11 @@ _functions_test:
     {
         if ((api==0)&&(shadermodel3))
         {
-            sprintf(c.str,"%s = clamp( %s , 0.0001f, 0.9999f )",output,output);
+            _sprintf(c.str,"%s = clamp( %s , 0.0001f, 0.9999f )",output,output);
         }
         else
         {
-            sprintf(c.str,"%s = clamp( %s , 0.0001, 0.9999 )",output,output);
+            _sprintf(c.str,"%s = clamp( %s , 0.0001, 0.9999 )",output,output);
         }
         AddInst(vp,c);
 
@@ -18711,12 +18896,12 @@ _functions_test:
 
 	if ((str_match0(chaine,"sat"))||(str_match0(chaine,"saturate")))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -18725,13 +18910,13 @@ _functions_test:
 
         if ((api==0)&&(shadermodel3))
         {
-			sprintf(c.str,"%s = saturate( %s )",tmp4,rn);
+			_sprintf(c.str,"%s = saturate( %s )",tmp4,rn);
 			AddInst(vp,c);
 		}
 		else
 		if ((api==1)&&(shadermodel))
 		{
-			sprintf(c.str,"%s = clamp( %s, 0.0, 1.0 )",tmp4,rn);
+			_sprintf(c.str,"%s = clamp( %s, 0.0, 1.0 )",tmp4,rn);
 			AddInst(vp,c);
 		}
 
@@ -18742,12 +18927,12 @@ _functions_test:
 
 	if(str_match0(chaine,"RGBToIntensity"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		if(str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			rn=compile(tmp,tmp2,vp);
 		}
 
@@ -18755,15 +18940,15 @@ _functions_test:
 
 		if((api==1)&&(shadermodel))
 		{
-			if (sc==0) sprintf(c.str,"%s.x = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn,rn,rn);
-			else sprintf(c.str,"%s = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn,rn,rn);
+			if (sc==0) _sprintf(c.str,"%s.x = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn,rn,rn);
+			else _sprintf(c.str,"%s = 0.3 * %s.r + 0.6 * %s.g + 0.1 * %s.b",output,rn,rn,rn);
 			AddInst(vp,c);
 		}
 		else
 			if((api==0)&&(shadermodel3))
 			{
-				if (sc==0) sprintf(c.str,"%s.x = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn,rn,rn);
-				else sprintf(c.str,"%s = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn,rn,rn);
+				if (sc==0) _sprintf(c.str,"%s.x = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn,rn,rn);
+				else _sprintf(c.str,"%s = 0.3f * %s.r + 0.6f * %s.g + 0.1f * %s.b",output,rn,rn,rn);
 				AddInst(vp,c);
 			}
 
@@ -18774,12 +18959,12 @@ _functions_test:
 
 	if (str_match0(chaine,"SignedValue16ToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -18788,20 +18973,20 @@ _functions_test:
 
         char sreg[32];
         
-        if (sc>=0) sprintf(sreg, "%s", rn);
-        else sprintf(sreg, "%s.x", rn);
+        if (sc>=0) _sprintf(sreg, "%s", rn);
+        else _sprintf(sreg, "%s.x", rn);
 
-		sprintf(tmp3,"r%d.x",new_temp_register());
+		_sprintf(tmp3,"r%d.x",new_temp_register());
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s =  0.5 * (1.0 + %s)", tmp3, sreg);
+            _sprintf(c.str, "%s =  0.5 * (1.0 + %s)", tmp3, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, tmp3);
+            _sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, tmp3);
+            _sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+            _sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -18809,24 +18994,24 @@ _functions_test:
         {
 			if (metal==1)
 			{
-	            sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
+	            _sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.x = fract( 255.0f * %s )", output, tmp3);
+				_sprintf(c.str, "%s.x = fract( 255.0f * %s )", output, tmp3);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, tmp3);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, tmp3);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+				_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
 				AddInst(vp, c);
 			}
 			else
 			{
-	            sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
+	            _sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.x = frac( 255.0f * %s )", output, tmp3);
+				_sprintf(c.str, "%s.x = frac( 255.0f * %s )", output, tmp3);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, tmp3);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, tmp3);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+				_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
 				AddInst(vp, c);
 			}
         }
@@ -18836,33 +19021,33 @@ _functions_test:
 
     if (str_match0(chaine,"RGBToSignedValue16"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
         
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+            _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
             AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
             AddInst(vp, c);
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-				sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
+				_sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
 				AddInst(vp, c);
-		        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+		        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 	            AddInst(vp, c);
-				sprintf(c.str, "%s = %s.xxxx", output, output);
+				_sprintf(c.str, "%s = %s.xxxx", output, output);
 				AddInst(vp, c);
             }
         
@@ -18872,41 +19057,41 @@ _functions_test:
 
     if (str_match0(chaine,"RGBToTwoValue16"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
         
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+            _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = (255.0 * %s.a + %s.b)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.y = (255.0 * %s.a + %s.b)/255.0", output, rn, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = 2.0 * %s.y - 1.0", output, output);
+            _sprintf(c.str, "%s.y = 2.0 * %s.y - 1.0", output, output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+            _sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-				sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
+				_sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+				_sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = (255.0f * %s.a + %s.b)/255.0f", output, rn, rn);
+				_sprintf(c.str, "%s.y = (255.0f * %s.a + %s.b)/255.0f", output, rn, rn);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = 2.0f * %s.y - 1.0f", output, output);
+				_sprintf(c.str, "%s.y = 2.0f * %s.y - 1.0f", output, output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+				_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
 				AddInst(vp, c);
 			}
         
@@ -18917,7 +19102,7 @@ _functions_test:
 
 	if (str_match0(chaine,"TwoValue16ToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
@@ -18928,7 +19113,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
@@ -18940,7 +19125,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
@@ -18949,7 +19134,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
 				resfield(output, tmp3);
 				rn2=compile(&tmp[p+1],tmp3,vp);
 				t=1;
@@ -18958,20 +19143,20 @@ _functions_test:
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = 0.5 + 0.5 * (%s)", output,rn);
+            _sprintf(c.str, "%s.x = 0.5 + 0.5 * (%s)", output,rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s.w = 0.5 + 0.5 * (%s)", output,rn2);
+            _sprintf(c.str, "%s.w = 0.5 + 0.5 * (%s)", output,rn2);
             AddInst(vp, c);
 
-            sprintf(c.str, "%s.y = floor( 255.0 * %s.x ) / 255.0", output,output);
+            _sprintf(c.str, "%s.y = floor( 255.0 * %s.x ) / 255.0", output,output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.x = fract( 255.0 * %s.x )", output,output);
+            _sprintf(c.str, "%s.x = fract( 255.0 * %s.x )", output,output);
             AddInst(vp, c);
 
 			
-			sprintf(c.str, "%s.z = fract( 255.0 * %s.w )", output,output);
+			_sprintf(c.str, "%s.z = fract( 255.0 * %s.w )", output,output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.w = floor( 255.0 * %s.w ) / 255.0", output,output);
+            _sprintf(c.str, "%s.w = floor( 255.0 * %s.w ) / 255.0", output,output);
             AddInst(vp, c);
         }
         else
@@ -18979,38 +19164,38 @@ _functions_test:
         {
 			if (metal==1)
 			{
-				sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
+				_sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
+				_sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
 				AddInst(vp, c);
 
-				sprintf(c.str, "%s.y = floor( 255.0f * %s.x ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s.x ) / 255.0f", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.x = fract( 255.0f * %s.x )", output,output);
+				_sprintf(c.str, "%s.x = fract( 255.0f * %s.x )", output,output);
 				AddInst(vp, c);
 
 			
-				sprintf(c.str, "%s.z = fract( 255.0f * %s.w )", output,output);
+				_sprintf(c.str, "%s.z = fract( 255.0f * %s.w )", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = floor( 255.0f * %s.w ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.w = floor( 255.0f * %s.w ) / 255.0f", output,output);
 				AddInst(vp, c);
 			}
 			else
 			{
-				sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
+				_sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
+				_sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
 				AddInst(vp, c);
 
-				sprintf(c.str, "%s.y = floor( 255.0f * %s.x ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s.x ) / 255.0f", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.x = frac( 255.0f * %s.x )", output,output);
+				_sprintf(c.str, "%s.x = frac( 255.0f * %s.x )", output,output);
 				AddInst(vp, c);
 
 			
-				sprintf(c.str, "%s.z = frac( 255.0f * %s.w )", output,output);
+				_sprintf(c.str, "%s.z = frac( 255.0f * %s.w )", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = floor( 255.0f * %s.w ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.w = floor( 255.0f * %s.w ) / 255.0f", output,output);
 				AddInst(vp, c);
 			}
         }
@@ -19020,7 +19205,7 @@ _functions_test:
 	else
 	if (str_match0(chaine,"halfValue16ToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
@@ -19031,7 +19216,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
@@ -19043,7 +19228,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
@@ -19052,7 +19237,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
 				resfield(output, tmp3);
 				rn2=compile(&tmp[p+1],tmp3,vp);
 				t=1;
@@ -19061,15 +19246,15 @@ _functions_test:
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = 0.5 + 0.5 * (%s)", output,rn);
+            _sprintf(c.str, "%s.x = 0.5 + 0.5 * (%s)", output,rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s.w = 0.5 + 0.5 * (%s)", output,rn2);
+            _sprintf(c.str, "%s.w = 0.5 + 0.5 * (%s)", output,rn2);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = fract( 255.0 * %s.w )", output,output);
+            _sprintf(c.str, "%s.y = fract( 255.0 * %s.w )", output,output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.z = floor( 255.0 * %s.w ) / 255.0", output,output);
+            _sprintf(c.str, "%s.z = floor( 255.0 * %s.w ) / 255.0", output,output);
             AddInst(vp, c);
-            sprintf(c.str, "%s.w = 1.0", output);
+            _sprintf(c.str, "%s.w = 1.0", output);
             AddInst(vp, c);
         }
         else
@@ -19077,28 +19262,28 @@ _functions_test:
         {
 			if (metal==1)
 			{
-	            sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
+	            _sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
+				_sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.y = fract( 255.0f * %s.w )", output,output);
+				_sprintf(c.str, "%s.y = fract( 255.0f * %s.w )", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.z = floor( 255.0f * %s.w ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.z = floor( 255.0f * %s.w ) / 255.0f", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 1.0f", output);
+				_sprintf(c.str, "%s.w = 1.0f", output);
 				AddInst(vp, c);
 			}
 			else
 			{
-	            sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
+	            _sprintf(c.str, "%s.x = 0.5f + 0.5f * (%s)", output,rn);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
+				_sprintf(c.str, "%s.w = 0.5f + 0.5f * (%s)", output,rn2);
 		        AddInst(vp, c);
-				sprintf(c.str, "%s.y = frac( 255.0f * %s.w )", output,output);
+				_sprintf(c.str, "%s.y = frac( 255.0f * %s.w )", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.z = floor( 255.0f * %s.w ) / 255.0f", output,output);
+				_sprintf(c.str, "%s.z = floor( 255.0f * %s.w ) / 255.0f", output,output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 1.0f", output);
+				_sprintf(c.str, "%s.w = 1.0f", output);
 				AddInst(vp, c);
 			}
         }
@@ -19108,12 +19293,12 @@ _functions_test:
 	else
 	if (str_match00(chaine,"Value16ToRGB."))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -19122,18 +19307,18 @@ _functions_test:
 
         char sreg[32];
         
-        if (sc>=0) sprintf(sreg, "%s", rn);
-        else sprintf(sreg, "%s.x", rn);
+        if (sc>=0) _sprintf(sreg, "%s", rn);
+        else _sprintf(sreg, "%s.x", rn);
 
 		char ext[1024];
-		sprintf(ext, &chaine[str_char(chaine, '.')]);
+		_sprintf(ext, &chaine[str_char(chaine, '.')]);
 		ext[str_char(ext, '(')] = '\0';
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.%c = fract( 255.0 * %s )", output,ext[1], sreg);
+            _sprintf(c.str, "%s.%c = fract( 255.0 * %s )", output,ext[1], sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.%c = floor( 255.0 * %s) / 255.0", output,ext[2], sreg);
+            _sprintf(c.str, "%s.%c = floor( 255.0 * %s) / 255.0", output,ext[2], sreg);
             AddInst(vp, c);
         }
         else
@@ -19141,16 +19326,16 @@ _functions_test:
         {
 			if (metal==1)
 			{
-				sprintf(c.str, "%s.%c = fract( 255.0f * %s )", output,ext[1], sreg);
+				_sprintf(c.str, "%s.%c = fract( 255.0f * %s )", output,ext[1], sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.%c = floor( 255.0f * %s) / 255.0f", output,ext[2], sreg);
+				_sprintf(c.str, "%s.%c = floor( 255.0f * %s) / 255.0f", output,ext[2], sreg);
 				AddInst(vp, c);
 			}
 			else
 			{
-				sprintf(c.str, "%s.%c = frac( 255.0f * %s )", output,ext[1], sreg);
+				_sprintf(c.str, "%s.%c = frac( 255.0f * %s )", output,ext[1], sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.%c = floor( 255.0f * %s) / 255.0f", output,ext[2], sreg);
+				_sprintf(c.str, "%s.%c = floor( 255.0f * %s) / 255.0f", output,ext[2], sreg);
 				AddInst(vp, c);
 			}
         }
@@ -19160,12 +19345,12 @@ _functions_test:
 	else
 	if (str_match0(chaine,"Value16ToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -19174,16 +19359,16 @@ _functions_test:
 
         char sreg[32];
         
-        if (sc>=0) sprintf(sreg, "%s", rn);
-        else sprintf(sreg, "%s.x", rn);
+        if (sc>=0) _sprintf(sreg, "%s", rn);
+        else _sprintf(sreg, "%s.x", rn);
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, sreg);
+            _sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, sreg);
+            _sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+            _sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
         }
         else
@@ -19191,20 +19376,20 @@ _functions_test:
         {
 			if (metal==1)
 			{
-				sprintf(c.str, "%s.x = fract( 255.0f * %s )", output, sreg);
+				_sprintf(c.str, "%s.x = fract( 255.0f * %s )", output, sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, sreg);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+				_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
 				AddInst(vp, c);
 			}
 			else
 			{
-				sprintf(c.str, "%s.x = frac( 255.0f * %s )", output, sreg);
+				_sprintf(c.str, "%s.x = frac( 255.0f * %s )", output, sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, sreg);
+				_sprintf(c.str, "%s.y = floor( 255.0f * %s) / 255.0f", output, sreg);
 				AddInst(vp, c);
-				sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
+				_sprintf(c.str, "%s.zw = float2(0.0f,0.0f)", output);
 				AddInst(vp, c);
 			}
         }
@@ -19212,35 +19397,121 @@ _functions_test:
         return output;
 	}
 
-    if (str_match00(chaine,"RGBToValue16."))
+    if (str_match00(chaine,"isOpenGL"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
-        
-        if (str_simple(tmp)) rn=var(tmp);
-        else
-        {
-            sprintf(tmp2,"r%d",new_temp_register());
-            resfield(output, tmp2);
-            rn=compile(tmp,tmp2,vp);
-        }
-
-		char ext[1024];
-		sprintf(ext, &chaine[str_char(chaine, '.')]);
-		ext[str_char(ext, '(')] = '\0';
+		int scout = str_last_char(output, '.');
+		if (scout==-1) { SYNTAXERROR=true; return ""; }
         
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = (255.0 * %s.%c + %s.%c)/255.0", output, rn,ext[2], rn,ext[1]);
-            AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = 1.0", output);
             AddInst(vp, c);
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-				sprintf(c.str, "%s.x = (255.0f * %s.%c + %s.%c)/255.0f", output, rn,ext[2], rn,ext[1]);
+				_sprintf(c.str, "%s = 0.0f", output);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = %s.xxxx", output, output);
+            }
+        
+        return output;
+    }
+
+    if (str_match00(chaine,"ZValueToZDepth"))
+    {
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
+        
+        if (str_simple(tmp)) rn=var(tmp);
+        else
+        {
+            _sprintf(tmp2,"r%d",new_temp_register());
+            resfield(output, tmp2);
+            rn=compile(tmp,tmp2,vp);
+        }
+
+		int sc = str_last_char(rn, '.');
+		int scout = str_last_char(output, '.');
+
+		if (sc==-1) { SYNTAXERROR=true; return ""; }
+		if (scout==-1) { SYNTAXERROR=true; return ""; }
+        
+        if ((api==1)&&(shadermodel))
+        {
+            _sprintf(c.str, "%s = (1.0 + %s)*0.5", output, rn);
+            AddInst(vp, c);
+        }
+        else
+            if ((api==0)&&(shadermodel3))
+            {
+				_sprintf(c.str, "%s = %s", output, rn);
+				AddInst(vp, c);
+            }
+        
+        return output;
+    }
+
+    if (str_match00(chaine,"ZDepthToZValue"))
+    {
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
+        
+        if (str_simple(tmp)) rn=var(tmp);
+        else
+        {
+            _sprintf(tmp2,"r%d",new_temp_register());
+            resfield(output, tmp2);
+            rn=compile(tmp,tmp2,vp);
+        }
+
+		int sc = str_last_char(rn, '.');
+		int scout = str_last_char(output, '.');
+
+		if (sc==-1) { SYNTAXERROR=true; return ""; }
+		if (scout==-1) { SYNTAXERROR=true; return ""; }
+        
+        if ((api==1)&&(shadermodel))
+        {
+            _sprintf(c.str, "%s = 2.0 * %s - 1.0", output, rn);
+            AddInst(vp, c);
+        }
+        else
+            if ((api==0)&&(shadermodel3))
+            {
+				_sprintf(c.str, "%s = %s", output, rn);
+				AddInst(vp, c);
+            }
+        
+        return output;
+    }
+
+    if (str_match00(chaine,"RGBToValue16."))
+    {
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
+        
+        if (str_simple(tmp)) rn=var(tmp);
+        else
+        {
+            _sprintf(tmp2,"r%d",new_temp_register());
+            resfield(output, tmp2);
+            rn=compile(tmp,tmp2,vp);
+        }
+
+		char ext[1024];
+		_sprintf(ext, &chaine[str_char(chaine, '.')]);
+		ext[str_char(ext, '(')] = '\0';
+        
+        if ((api==1)&&(shadermodel))
+        {
+            _sprintf(c.str, "%s.x = (255.0 * %s.%c + %s.%c)/255.0", output, rn,ext[2], rn,ext[1]);
+            AddInst(vp, c);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
+            AddInst(vp, c);
+        }
+        else
+            if ((api==0)&&(shadermodel3))
+            {
+				_sprintf(c.str, "%s.x = (255.0f * %s.%c + %s.%c)/255.0f", output, rn,ext[2], rn,ext[1]);
+				AddInst(vp, c);
+				_sprintf(c.str, "%s = %s.xxxx", output, output);
 				AddInst(vp, c);
             }
         
@@ -19249,29 +19520,29 @@ _functions_test:
 	else
     if (str_match0(chaine,"RGBToValue16"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
         
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
             AddInst(vp, c);
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-				sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
+				_sprintf(c.str, "%s.x = (255.0f * %s.g + %s.r)/255.0f", output, rn, rn);
 				AddInst(vp, c);
-				sprintf(c.str, "%s = %s.xxxx", output, output);
+				_sprintf(c.str, "%s = %s.xxxx", output, output);
 				AddInst(vp, c);
             }
         
@@ -19282,12 +19553,12 @@ _functions_test:
 
 	if (str_match0(chaine,"SignedValueToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -19296,41 +19567,41 @@ _functions_test:
 
         char sreg[32];
         
-        if (sc>=0) sprintf(sreg, "%s", rn);
-        else sprintf(sreg, "%s.x", rn);
+        if (sc>=0) _sprintf(sreg, "%s", rn);
+        else _sprintf(sreg, "%s.x", rn);
 
 
-		sprintf(tmp3,"r%d.x",new_temp_register());
+		_sprintf(tmp3,"r%d.x",new_temp_register());
 
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s =  0.5 * (1.0 + %s)", tmp3, sreg);
+            _sprintf(c.str, "%s =  0.5 * (1.0 + %s)", tmp3, sreg);
             AddInst(vp, c);
 
 #ifdef IOS
-            sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, tmp3);
+            _sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, tmp3);
+            _sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+            _sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
 #else
-            sprintf(c.str, "%s = fract(%s * vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0))", output, tmp3);
+            _sprintf(c.str, "%s = fract(%s * vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0))", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.yzw -= %s.xyz * vec3(1.0/256.0, 1.0/256.0, 1.0/256.0)", output, output);
+            _sprintf(c.str, "%s.yzw -= %s.xyz * vec3(1.0/256.0, 1.0/256.0, 1.0/256.0)", output, output);
             AddInst(vp, c);
 #endif
         }
         else
         if ((api==0)&&(shadermodel3))
         {
-            sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
+            _sprintf(c.str, "%s =  0.5f * (1.0f + %s)", tmp3, sreg);
             AddInst(vp, c);
 
-            if (metal==1) sprintf(c.str, "%s = fract(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, tmp3);
-            else sprintf(c.str, "%s = frac(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, tmp3);
+            if (metal==1) _sprintf(c.str, "%s = fract(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, tmp3);
+            else _sprintf(c.str, "%s = frac(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, tmp3);
             AddInst(vp, c);
-            sprintf(c.str, "%s.yzw -= %s.xyz * float3(1.0f/256.0f, 1.0f/256.0f, 1.0f/256.0f)", output, output);
+            _sprintf(c.str, "%s.yzw -= %s.xyz * float3(1.0f/256.0f, 1.0f/256.0f, 1.0f/256.0f)", output, output);
             AddInst(vp, c);
         }
 	
@@ -19339,12 +19610,12 @@ _functions_test:
 
     if (str_match0(chaine,"RGBToSignedValue"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
@@ -19352,25 +19623,25 @@ _functions_test:
         if ((api==1)&&(shadermodel))
         {
 #ifdef IOS
-            sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
             AddInst(vp, c);
 #else
-            sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", output, rn);
+            _sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", output, rn);
             AddInst(vp, c);
 #endif
-            sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
+            _sprintf(c.str, "%s.x = 2.0 * %s.x - 1.0", output, output);
             AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
             AddInst(vp, c);
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-                sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", output, rn);
+                _sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", output, rn);
                 AddInst(vp, c);
-		        sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
+		        _sprintf(c.str, "%s.x = 2.0f * %s.x - 1.0f", output, output);
 	            AddInst(vp, c);
-                sprintf(c.str, "%s = %s.xxxx", output, output);
+                _sprintf(c.str, "%s = %s.xxxx", output, output);
                 AddInst(vp, c);
             }
         
@@ -19382,12 +19653,12 @@ _functions_test:
 
 	if (str_match0(chaine,"ValueToRGB"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		
 		if (str_simple(tmp)) rn=var(tmp);
 		else
 		{
-			sprintf(tmp2,"r%d",new_temp_register());
+			_sprintf(tmp2,"r%d",new_temp_register());
 			resfield(output, tmp2);
 			rn=compile(tmp,tmp2,vp);
 		}
@@ -19396,32 +19667,32 @@ _functions_test:
 
         char sreg[32];
         
-        if (sc>=0) sprintf(sreg, "%s", rn);
-        else sprintf(sreg, "%s.x", rn);
+        if (sc>=0) _sprintf(sreg, "%s", rn);
+        else _sprintf(sreg, "%s.x", rn);
 
         if ((api==1)&&(shadermodel))
         {
 #ifdef IOS
-            sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, sreg);
+            _sprintf(c.str, "%s.x = fract( 255.0 * %s )", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, sreg);
+            _sprintf(c.str, "%s.y = floor( 255.0 * %s) / 255.0", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
+            _sprintf(c.str, "%s.zw = vec2(0.0,0.0)", output);
             AddInst(vp, c);
 #else
-            sprintf(c.str, "%s = fract(%s * vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0))", output, sreg);
+            _sprintf(c.str, "%s = fract(%s * vec4(256.0*256.0*256.0, 256.0*256.0, 256.0, 1.0))", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.yzw -= %s.xyz * vec3(1.0/256.0, 1.0/256.0, 1.0/256.0)", output, output);
+            _sprintf(c.str, "%s.yzw -= %s.xyz * vec3(1.0/256.0, 1.0/256.0, 1.0/256.0)", output, output);
             AddInst(vp, c);
 #endif
         }
         else
         if ((api==0)&&(shadermodel3))
         {
-            if (metal==1) sprintf(c.str, "%s = fract(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, sreg);
-            else sprintf(c.str, "%s = frac(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, sreg);
+            if (metal==1) _sprintf(c.str, "%s = fract(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, sreg);
+            else _sprintf(c.str, "%s = frac(%s * float4(256.0f*256.0f*256.0f, 256.0f*256.0f, 256.0f, 1.0f))", output, sreg);
             AddInst(vp, c);
-            sprintf(c.str, "%s.yzw -= %s.xyz * float3(1.0f/256.0f, 1.0f/256.0f, 1.0f/256.0f)", output, output);
+            _sprintf(c.str, "%s.yzw -= %s.xyz * float3(1.0f/256.0f, 1.0f/256.0f, 1.0f/256.0f)", output, output);
             AddInst(vp, c);
         }
 	
@@ -19430,12 +19701,12 @@ _functions_test:
 
     if (str_match0(chaine,"RGBToValue"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
@@ -19443,23 +19714,23 @@ _functions_test:
         if ((api==1)&&(shadermodel))
         {
 #ifdef IOS
-            sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
+            _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", output, rn, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
             AddInst(vp, c);
 #else
-            sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", output, rn);
+            _sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", output, rn);
             AddInst(vp, c);
-            sprintf(c.str, "%s = %s.xxxx", output, output);
+            _sprintf(c.str, "%s = %s.xxxx", output, output);
             AddInst(vp, c);
 #endif
         }
         else
             if ((api==0)&&(shadermodel3))
             {
-                sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", output, rn);
+                _sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", output, rn);
                 AddInst(vp, c);
-                sprintf(c.str, "%s = %s.xxxx", output, output);
+                _sprintf(c.str, "%s = %s.xxxx", output, output);
                 AddInst(vp, c);
             }
         
@@ -19471,25 +19742,25 @@ _functions_test:
 
     if (str_match0(chaine,"ConvertClipZ"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
         
         if ((api==1)&&(shadermodel))
         {
-            sprintf(c.str, "%s = 0.5 - (0.5 * %s)", output, rn);
+            _sprintf(c.str, "%s = 0.5 - (0.5 * %s)", output, rn);
             AddInst(vp, c);
         }
         else
         if ((api==0)&&(shadermodel3))
         {
-            sprintf(c.str, "%s = %s", output, rn);
+            _sprintf(c.str, "%s = %s", output, rn);
             AddInst(vp, c);
         }
         
@@ -19501,7 +19772,7 @@ _functions_test:
     {
 	    //val.y=QuarterInterpolateSin(val.x,val.z,koef,raw0,raw1,raw2,raw3);
 		
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -19526,7 +19797,7 @@ _functions_test:
             rns[2]=var(rns[5]); //rawy2
             rns[3]=var(rns[6]); //rawy3
             
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
 
             int sc = str_last_char(output, '.');
             if (sc<0)
@@ -19536,240 +19807,240 @@ _functions_test:
             {
                 if ((api==1)&&(shadermodel))
                 {
-                    sprintf(c.str, "if (%s < 0.333)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s)/0.333",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s)/0.333",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-
-
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.333)/0.333",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-                    
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
 
 
-                    sprintf(c.str, "if (%s >= 0.666)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.666)/0.334",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.333)/0.333",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+
+
+                    _sprintf(c.str, "if (%s >= 0.666)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.666)/0.334",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
                 else
                 if ((api==0)&&(shadermodel3))
                 {
-                    sprintf(c.str, "if (%s < 0.333f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s)/0.333f",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s)/0.333f",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-
-
-
-                    
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.333f)/0.333f",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-                    
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
-
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
 
 
 
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.666f)/0.334f",tmp2,rn2); AddInst(vp, c);
-					sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.333f)/0.333f",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-					sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
 
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+
+
+
+                    
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.666f)/0.334f",tmp2,rn2); AddInst(vp, c);
+					_sprintf(c.str, "%s.y = %s.y - %s*sin(%s.y * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+                    
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+					_sprintf(c.str, "%s.x = %s.x - %s*sin(%s.x * 6.2831853f)",tmp2,tmp2,rn3,tmp2); AddInst(vp, c);
+
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
             }
         }
@@ -19780,7 +20051,7 @@ _functions_test:
     {
 	    //val.y=QuarterInterpolate(val.x,val.z,raw0,raw1,raw2,raw3);
 		
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -19804,7 +20075,7 @@ _functions_test:
             rns[2]=var(rns[4]); //rawy2
             rns[3]=var(rns[5]); //rawy3
             
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
 
             int sc = str_last_char(output, '.');
             if (sc<0)
@@ -19814,188 +20085,188 @@ _functions_test:
             {
                 if ((api==1)&&(shadermodel))
                 {
-                    sprintf(c.str, "if (%s < 0.333)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s)/0.333",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s)/0.333",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.333)/0.333",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.333)/0.333",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.666)/0.334",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.666)/0.334",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333)&&(%s < 0.666))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333)/0.333",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666)/0.334",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
                 else
                 if ((api==0)&&(shadermodel3))
                 {
-                    sprintf(c.str, "if (%s < 0.333f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s)/0.333f",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s)/0.333f",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[0],tmp2,rns[1],rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.333f)/0.333f",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.333f)/0.333f",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[1],tmp2,rns[2],rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.y = (%s-0.666f)/0.334f",tmp2,rn2); AddInst(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.y = (%s-0.666f)/0.334f",tmp2,rn2); AddInst(vp, c);
                     
-                    sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.333f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.x + %s.y*(%s.x - %s.x)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.333f)&&(%s < 0.666f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.333f)/0.333f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.y + %s.y*(%s.y - %s.y)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
-                    sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.666f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s.x = (%s-0.666f)/0.334f",tmp2,rn); AddInst(vp, c);
+                    _sprintf(c.str, "%s.z = %s.z + %s.y*(%s.z - %s.z)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s.w = %s.w + %s.y*(%s.w - %s.w)",tmp2,rns[2],tmp2,rns[3],rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "%s = %s.z + %s.x*(%s.w - %s.z)",output,tmp2,tmp2,tmp2,tmp2); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
             }
         }
@@ -20004,7 +20275,7 @@ _functions_test:
     
     if (str_match0(chaine,"Quarter"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -20036,168 +20307,168 @@ _functions_test:
             {
                 if ((api==1)&&(shadermodel))
                 {
-                    sprintf(c.str, "if (%s < 0.25)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.75)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25)&&(%s < 0.5))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5)&&(%s < 0.75))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
                 else
                 if ((api==0)&&(shadermodel3))
                 {
-                    sprintf(c.str, "if (%s < 0.25f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[0]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[0]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[1]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[1]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn2,rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[2]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn2,rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[2]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                     
-                    sprintf(c.str, "if (%s >= 0.75f)",rn2); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.x",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.y",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.z",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
-                    sprintf(c.str, "{"); AddInst2(vp, c);
-                    sprintf(c.str, "%s = %s.w",output,rns[3]); AddInst(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
-                    sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75f)",rn2); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s < 0.25f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.x",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.25f)&&(%s < 0.5f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.y",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if ((%s >= 0.5f)&&(%s < 0.75f))",rn,rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.z",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "if (%s >= 0.75f)",rn); AddInst2(vp, c);
+                    _sprintf(c.str, "{"); AddInst2(vp, c);
+                    _sprintf(c.str, "%s = %s.w",output,rns[3]); AddInst(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
+                    _sprintf(c.str, "}"); AddInst2(vp, c);
                 }
             }
         }
@@ -20207,7 +20478,7 @@ _functions_test:
     
     if (str_match0(chaine,"RelativeToNormal"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -20224,91 +20495,91 @@ _functions_test:
                 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
-                    sprintf(tmp, "r%d", new_temp_register());
-                    sprintf(tmp2, "r%d", new_temp_register());
+                    _sprintf(tmp, "r%d", new_temp_register());
+                    _sprintf(tmp2, "r%d", new_temp_register());
 
-                    sprintf(c.str,"%s.xyz = vec3( %s.z, 0.0, -%s.x)",tmp2,rn2,rn2);
+                    _sprintf(c.str,"%s.xyz = vec3( %s.z, 0.0, -%s.x)",tmp2,rn2,rn2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xyz = vec3( %s.y, -%s.x, 0.0)",tmp,rn2,rn2);
+                    _sprintf(c.str,"%s.xyz = vec3( %s.y, -%s.x, 0.0)",tmp,rn2,rn2);
                     AddInst(vp,c);
 
-//                    sprintf(c.str,"%s.xyz = cross( vec3(0.0,1.0,0.0), %s.xyz )",tmp2,rn2);
+//                    _sprintf(c.str,"%s.xyz = cross( vec3(0.0,1.0,0.0), %s.xyz )",tmp2,rn2);
 //                    AddInst(vp,c);
-//                    sprintf(c.str,"%s.xyz = cross( vec3(0.0,0.0,-1.0), %s.xyz )",tmp,rn2);
+//                    _sprintf(c.str,"%s.xyz = cross( vec3(0.0,0.0,-1.0), %s.xyz )",tmp,rn2);
 //                    AddInst(vp,c);
-                    sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) )",tmp2,tmp);
+                    _sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) )",tmp2,tmp);
                     AddInst(vp,c);
-                    sprintf(c.str,"{");
+                    _sprintf(c.str,"{");
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xyz=%s.xyz",tmp2,tmp);
+                    _sprintf(c.str,"%s.xyz=%s.xyz",tmp2,tmp);
                     AddInst(vp,c);
-                    sprintf(c.str,"}");
+                    _sprintf(c.str,"}");
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0",tmp2);
+                    _sprintf(c.str,"%s.w = 0.0",tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = normalize( %s )",tmp2,tmp2);
+                    _sprintf(c.str,"%s = normalize( %s )",tmp2,tmp2);
                     AddInst(vp,c);
                     
                     // tmp2=T rn2=N
                     
-                    sprintf(c.str,"%s.x = dot(%s,%s)",output,rn,tmp2);
+                    _sprintf(c.str,"%s.x = dot(%s,%s)",output,rn,tmp2);
                     AddInst(vp,c);
                     
-                    sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp,rn2,tmp2);
+                    _sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp,rn2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0",tmp);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.y = dot(%s,%s)",output,rn,tmp);
+                    _sprintf(c.str,"%s.w = 0.0",tmp);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.z = dot(%s,%s)",output,rn,rn2);
+                    _sprintf(c.str,"%s.y = dot(%s,%s)",output,rn,tmp);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.w = 0.0",output);
+                    _sprintf(c.str,"%s.z = dot(%s,%s)",output,rn,rn2);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.w = 0.0",output);
                     AddInst(vp,c);
 
                 }
                 else
                 if ((api == 0) && (shadermodel3))   // D3D METAL 0.0f
                 {
-                    sprintf(tmp, "r%d", new_temp_register());
-                    sprintf(tmp2, "r%d", new_temp_register());
+                    _sprintf(tmp, "r%d", new_temp_register());
+                    _sprintf(tmp2, "r%d", new_temp_register());
                     
-                    sprintf(c.str,"%s.xyz = float3( %s.z, 0.0f, -%s.x)",tmp2,rn2,rn2);
+                    _sprintf(c.str,"%s.xyz = float3( %s.z, 0.0f, -%s.x)",tmp2,rn2,rn2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xyz = float3( %s.y, -%s.x, 0.0f)",tmp,rn2,rn2);
+                    _sprintf(c.str,"%s.xyz = float3( %s.y, -%s.x, 0.0f)",tmp,rn2,rn2);
                     AddInst(vp,c);
 
-//                    sprintf(c.str,"%s.xyz = cross( float3(0.0f,1.0f,0.0f), %s.xyz )",tmp2,rn2);
+//                    _sprintf(c.str,"%s.xyz = cross( float3(0.0f,1.0f,0.0f), %s.xyz )",tmp2,rn2);
 //                    AddInst(vp,c);
-//                    sprintf(c.str,"%s.xyz = cross( float3(0.0f,0.0f,-1.0f), %s.xyz )",tmp,rn2);
+//                    _sprintf(c.str,"%s.xyz = cross( float3(0.0f,0.0f,-1.0f), %s.xyz )",tmp,rn2);
 //                    AddInst(vp,c);
 
-                    sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) ) %s.xyz=%s.xyz",tmp2,tmp,tmp2,tmp);
+                    _sprintf(c.str,"if ( length(%s.xyz) < length(%s.xyz) ) %s.xyz=%s.xyz",tmp2,tmp,tmp2,tmp);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0f",tmp2);
+                    _sprintf(c.str,"%s.w = 0.0f",tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = normalize( %s )",tmp2,tmp2);
+                    _sprintf(c.str,"%s = normalize( %s )",tmp2,tmp2);
                     AddInst(vp,c);
 
                     // tmp2=T rn2=N
                     
-                    sprintf(c.str,"%s.x = dot(%s,%s)",output,rn,tmp2);
+                    _sprintf(c.str,"%s.x = dot(%s,%s)",output,rn,tmp2);
                     AddInst(vp,c);
                     
-                    sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp,rn2,tmp2);
+                    _sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp,rn2,tmp2);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0f",tmp);
-                    AddInst(vp,c);
-
-                    sprintf(c.str,"%s.y = dot(%s,%s)",output,rn,tmp);
+                    _sprintf(c.str,"%s.w = 0.0f",tmp);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.z = dot(%s,%s)",output,rn,rn2);
+                    _sprintf(c.str,"%s.y = dot(%s,%s)",output,rn,tmp);
                     AddInst(vp,c);
 
-                    sprintf(c.str,"%s.w = 0.0f",output);
+                    _sprintf(c.str,"%s.z = dot(%s,%s)",output,rn,rn2);
+                    AddInst(vp,c);
+
+                    _sprintf(c.str,"%s.w = 0.0f",output);
                     AddInst(vp,c);
                 }
                 return output;
@@ -20324,7 +20595,7 @@ _functions_test:
 
     if (str_match0(chaine,"NormalReflection"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -20346,17 +20617,17 @@ _functions_test:
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
-                    sprintf(c.str,"%s = normalize( %s - %s )",output,rn2,rn);
+                    _sprintf(c.str,"%s = normalize( %s - %s )",output,rn2,rn);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = normalize( 2.0 * %s - %s )",output,rn3,output);
+                    _sprintf(c.str,"%s = normalize( 2.0 * %s - %s )",output,rn3,output);
                     AddInst(vp,c);
                 }
                 else
                 if ((api == 0) && (shadermodel3))   // D3D METAL 0.0f
                 {
-                    sprintf(c.str,"%s = normalize( %s - %s )",output,rn2,rn);
+                    _sprintf(c.str,"%s = normalize( %s - %s )",output,rn2,rn);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = normalize( 2.0f * %s - %s )",output,rn3,output);
+                    _sprintf(c.str,"%s = normalize( 2.0f * %s - %s )",output,rn3,output);
                     AddInst(vp,c);
                 }
                 return output;
@@ -20373,7 +20644,7 @@ _functions_test:
 
     if (str_match0(chaine,"ProcessShadowCoord"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -20387,7 +20658,7 @@ _functions_test:
             {
                 rn=var(rns[0]); // posi
                 
-                sprintf(tmp, "r%d", new_temp_register());
+                _sprintf(tmp, "r%d", new_temp_register());
                 
                 //div.w = reciprocal( posi );
                 //posi.xy = posi.xy * div.ww;
@@ -20397,21 +20668,21 @@ _functions_test:
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
-                    sprintf(c.str,"%s.w = 1.0 / %s.w",tmp,rn);
+                    _sprintf(c.str,"%s.w = 1.0 / %s.w",tmp,rn);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xy = %s.xy * %s.ww",output,rn,tmp);
+                    _sprintf(c.str,"%s.xy = %s.xy * %s.ww",output,rn,tmp);
                     AddInst(vp,c);
-                    sprintf(c.str, "%s.xy = vec2(0.5,0.5) + vec2(0.5,0.5) * %s.xy", output, output);
+                    _sprintf(c.str, "%s.xy = vec2(0.5,0.5) + vec2(0.5,0.5) * %s.xy", output, output);
                     AddInst(vp, c);
                 }
                 else
                 if ((api == 0) && (shadermodel3))   // D3D METAL 0.0f
                 {
-                    sprintf(c.str,"%s.w = 1.0f / %s.w",tmp,rn);
+                    _sprintf(c.str,"%s.w = 1.0f / %s.w",tmp,rn);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xy = %s.xy * %s.ww",output,rn,tmp);
+                    _sprintf(c.str,"%s.xy = %s.xy * %s.ww",output,rn,tmp);
                     AddInst(vp,c);
-                    sprintf(c.str, "%s.xy = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s.xy", output, output);
+                    _sprintf(c.str, "%s.xy = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s.xy", output, output);
                     AddInst(vp, c);
                 }
                 return output;
@@ -20427,7 +20698,7 @@ _functions_test:
 
     if (str_match0(chaine,"EyePositionRelative"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -20442,58 +20713,58 @@ _functions_test:
                 rn2=var(rns[1]); // Pos
 				rn3=var(rns[2]); // N
                 
-				sprintf(tmp, "r%d", new_temp_register());
-				sprintf(tmp2, "r%d", new_temp_register());
-				sprintf(tmp3, "r%d", new_temp_register());
+				_sprintf(tmp, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp3, "r%d", new_temp_register());
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
 					//	up=0.0,-1.0,0.0,0.0;
 					//	up2=0.0,0.0,-1.0,0.0;
 
-                    sprintf(c.str,"%s = vec4(-%s.z,0.0,%s.x,0.0)",tmp,rn3,rn3);		// r6 = ( up ^ tN )
+                    _sprintf(c.str,"%s = vec4(-%s.z,0.0,%s.x,0.0)",tmp,rn3,rn3);		// r6 = ( up ^ tN )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = vec4(%s.y,-%s.x,0.0,0.0)",tmp2,rn3,rn3);	// r7 = ( up2 ^ tN )
-                    AddInst(vp,c);
-
-					sprintf(c.str,"%s.xy = vec2(-%s.y,%s.y)",tmp3,rn3,rn3);			// r9.x = dot ( tN, up)  and r9.y = -r9.x
+                    _sprintf(c.str,"%s = vec4(%s.y,-%s.x,0.0,0.0)",tmp2,rn3,rn3);	// r7 = ( up2 ^ tN )
                     AddInst(vp,c);
 
-					sprintf(c.str,"if ( %s.x < 0.0 ) %s.x = %s.y;", tmp3,tmp3,tmp3);
+					_sprintf(c.str,"%s.xy = vec2(-%s.y,%s.y)",tmp3,rn3,rn3);			// r9.x = dot ( tN, up)  and r9.y = -r9.x
+                    AddInst(vp,c);
+
+					_sprintf(c.str,"if ( %s.x < 0.0 ) %s.x = %s.y;", tmp3,tmp3,tmp3);
 					AddInst(vp, c);
 /*
-					sprintf(c.str,"%s.z = ( %s.x < 0.0 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.z = slt(r9.x,0.0)
+					_sprintf(c.str,"%s.z = ( %s.x < 0.0 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.z = slt(r9.x,0.0)
 					AddInst(vp, c);
-					sprintf(c.str,"%s.w = ( %s.x >= 0.0 ) ? 1.0 : 0.0", tmp3, tmp3);	// r9.w = sge(r9.x,0.0)
+					_sprintf(c.str,"%s.w = ( %s.x >= 0.0 ) ? 1.0 : 0.0", tmp3, tmp3);	// r9.w = sge(r9.x,0.0)
 					AddInst(vp, c);
-                    sprintf(c.str,"%s.x = %s.x * %s.w + %s.y * %s.z",tmp3,tmp3,tmp3,tmp3,tmp3);		// r9.x = r9.x*r9.w + r9.y*r9.z
+                    _sprintf(c.str,"%s.x = %s.x * %s.w + %s.y * %s.z",tmp3,tmp3,tmp3,tmp3,tmp3);		// r9.x = r9.x*r9.w + r9.y*r9.z
                     AddInst(vp,c);
 /**/
-                    sprintf(c.str,"%s.x = 1.0 - %s.x",tmp3,tmp3);	// r9.x = 1.0 - r9.x
+                    _sprintf(c.str,"%s.x = 1.0 - %s.x",tmp3,tmp3);	// r9.x = 1.0 - r9.x
                     AddInst(vp,c);
 
-					sprintf(c.str,"if ( %s.x < 0.025 ) %s = %s;", tmp3,tmp,tmp2);
+					_sprintf(c.str,"if ( %s.x < 0.025 ) %s = %s;", tmp3,tmp,tmp2);
 					AddInst(vp, c);
 /*
-					sprintf(c.str,"%s.z = ( %s.x < 0.025 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.z = slt(r9.x,0.025)
+					_sprintf(c.str,"%s.z = ( %s.x < 0.025 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.z = slt(r9.x,0.025)
 					AddInst(vp, c);
-					sprintf(c.str,"%s.w = ( %s.x >= 0.025 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.w = sge(r9.x,0.025)
+					_sprintf(c.str,"%s.w = ( %s.x >= 0.025 ) ? 1.0 : 0.0", tmp3, tmp3);		// r9.w = sge(r9.x,0.025)
 					AddInst(vp, c);
-                    sprintf(c.str,"%s = %s * %s.wwww + %s * %s.zzzz",tmp,tmp,tmp3,tmp2,tmp3);	// r6 = r6 * r9.wwww + r7 * r9.zzzz
+                    _sprintf(c.str,"%s = %s * %s.wwww + %s * %s.zzzz",tmp,tmp,tmp3,tmp2,tmp3);	// r6 = r6 * r9.wwww + r7 * r9.zzzz
                     AddInst(vp,c);
 /**/
-					sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp2,rn3,tmp);		// r7 = tN ^ r6
+					_sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp2,rn3,tmp);		// r7 = tN ^ r6
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s = normalize( %s - %s )",tmp3,rn,rn2);			// r4 = normalise(Eye - tPos)
+					_sprintf(c.str,"%s = normalize( %s - %s )",tmp3,rn,rn2);			// r4 = normalise(Eye - tPos)
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = dot(%s.xyz , %s.xyz)",output,tmp3,rn3);	// u.x = ( r4 | tN )
+                    _sprintf(c.str,"%s.z = dot(%s.xyz , %s.xyz)",output,tmp3,rn3);	// u.x = ( r4 | tN )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = dot(%s.xyz , %s.xyz)",output,tmp3,tmp);	// u.y = ( r4 | r6 )
+                    _sprintf(c.str,"%s.x = dot(%s.xyz , %s.xyz)",output,tmp3,tmp);	// u.y = ( r4 | r6 )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.y = dot(%s.xyz , %s.xyz)",output,tmp3,tmp2);	// u.z = ( r4 | r7 )
+                    _sprintf(c.str,"%s.y = dot(%s.xyz , %s.xyz)",output,tmp3,tmp2);	// u.z = ( r4 | r7 )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0",output);
+                    _sprintf(c.str,"%s.w = 0.0",output);
                     AddInst(vp,c);
                 }
                 else
@@ -20502,50 +20773,50 @@ _functions_test:
 					//	up=0.0,-1.0,0.0,0.0;
 					//	up2=0.0,0.0,-1.0,0.0;
 
-                    sprintf(c.str,"%s = float4(-%s.z,0.0f,%s.x,0.0f)",tmp,rn3,rn3);		// r6 = ( up ^ tN )
+                    _sprintf(c.str,"%s = float4(-%s.z,0.0f,%s.x,0.0f)",tmp,rn3,rn3);		// r6 = ( up ^ tN )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s = float4(%s.y,-%s.x,0.0f,0.0f)",tmp2,rn3,rn3);	// r7 = ( up2 ^ tN )
-                    AddInst(vp,c);
-
-					sprintf(c.str,"%s.xy = float2(-%s.y,%s.y)",tmp3,rn3,rn3);			// r9.x = dot ( tN, up)  and r9.y = -r9.x
+                    _sprintf(c.str,"%s = float4(%s.y,-%s.x,0.0f,0.0f)",tmp2,rn3,rn3);	// r7 = ( up2 ^ tN )
                     AddInst(vp,c);
 
-					sprintf(c.str,"if ( %s.x < 0.0f ) %s.x = %s.y", tmp3,tmp3,tmp3);
+					_sprintf(c.str,"%s.xy = float2(-%s.y,%s.y)",tmp3,rn3,rn3);			// r9.x = dot ( tN, up)  and r9.y = -r9.x
+                    AddInst(vp,c);
+
+					_sprintf(c.str,"if ( %s.x < 0.0f ) %s.x = %s.y", tmp3,tmp3,tmp3);
 					AddInst(vp, c);
 
 /*
-					sprintf(c.str,"%s.z = ( %s.x < 0.0f ) ? 1.0 : 0.0f", tmp3, tmp3);		// r9.z = slt(r9.x,0.0)
+					_sprintf(c.str,"%s.z = ( %s.x < 0.0f ) ? 1.0 : 0.0f", tmp3, tmp3);		// r9.z = slt(r9.x,0.0)
 					AddInst(vp, c);
-					sprintf(c.str,"%s.w = ( %s.x >= 0.0f ) ? 1.0f : 0.0f", tmp3, tmp3);	// r9.w = sge(r9.x,0.0)
+					_sprintf(c.str,"%s.w = ( %s.x >= 0.0f ) ? 1.0f : 0.0f", tmp3, tmp3);	// r9.w = sge(r9.x,0.0)
 					AddInst(vp, c);
-                    sprintf(c.str,"%s.x = %s.x * %s.w + %s.y * %s.z",tmp3,tmp3,tmp3,tmp3,tmp3);		// r9.x = r9.x*r9.w + r9.y*r9.z
+                    _sprintf(c.str,"%s.x = %s.x * %s.w + %s.y * %s.z",tmp3,tmp3,tmp3,tmp3,tmp3);		// r9.x = r9.x*r9.w + r9.y*r9.z
                     AddInst(vp,c);
 /**/
-                    sprintf(c.str,"%s.x = 1.0f - %s.x",tmp3,tmp3);	// r9.x = 1.0 - r9.x
+                    _sprintf(c.str,"%s.x = 1.0f - %s.x",tmp3,tmp3);	// r9.x = 1.0 - r9.x
                     AddInst(vp,c);
 
-					sprintf(c.str,"if ( %s.x < 0.025f ) %s = %s", tmp3,tmp,tmp2);
+					_sprintf(c.str,"if ( %s.x < 0.025f ) %s = %s", tmp3,tmp,tmp2);
 					AddInst(vp, c);
 /*
-					sprintf(c.str,"%s.z = ( %s.x < 0.025f ) ? 1.0f : 0.0f", tmp3, tmp3);		// r9.z = slt(r9.x,0.025)
+					_sprintf(c.str,"%s.z = ( %s.x < 0.025f ) ? 1.0f : 0.0f", tmp3, tmp3);		// r9.z = slt(r9.x,0.025)
 					AddInst(vp, c);
-					sprintf(c.str,"%s.w = ( %s.x >= 0.025f ) ? 1.0f : 0.0f", tmp3, tmp3);		// r9.w = sge(r9.x,0.025)
+					_sprintf(c.str,"%s.w = ( %s.x >= 0.025f ) ? 1.0f : 0.0f", tmp3, tmp3);		// r9.w = sge(r9.x,0.025)
 					AddInst(vp, c);
-                    sprintf(c.str,"%s = %s * %s.wwww + %s * %s.zzzz",tmp,tmp,tmp3,tmp2,tmp3);	// r6 = r6 * r9.wwww + r7 * r9.zzzz
+                    _sprintf(c.str,"%s = %s * %s.wwww + %s * %s.zzzz",tmp,tmp,tmp3,tmp2,tmp3);	// r6 = r6 * r9.wwww + r7 * r9.zzzz
                     AddInst(vp,c);
 /**/
-					sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp2,rn3,tmp);		// r7 = tN ^ r6
+					_sprintf(c.str,"%s.xyz = cross( %s.xyz , %s.xyz )",tmp2,rn3,tmp);		// r7 = tN ^ r6
 					AddInst(vp,c);
 
-					sprintf(c.str,"%s = normalize( %s - %s )",tmp3,rn,rn2);			// r4 = normalise(Eye - tPos)
+					_sprintf(c.str,"%s = normalize( %s - %s )",tmp3,rn,rn2);			// r4 = normalise(Eye - tPos)
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.z = dot(%s.xyz , %s.xyz)",output,tmp3,rn3);	// u.x = ( r4 | tN )
+                    _sprintf(c.str,"%s.z = dot(%s.xyz , %s.xyz)",output,tmp3,rn3);	// u.x = ( r4 | tN )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x = dot(%s.xyz , %s.xyz)",output,tmp3,tmp);	// u.y = ( r4 | r6 )
+                    _sprintf(c.str,"%s.x = dot(%s.xyz , %s.xyz)",output,tmp3,tmp);	// u.y = ( r4 | r6 )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.y = dot(%s.xyz , %s.xyz)",output,tmp3,tmp2);	// u.z = ( r4 | r7 )
+                    _sprintf(c.str,"%s.y = dot(%s.xyz , %s.xyz)",output,tmp3,tmp2);	// u.z = ( r4 | r7 )
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.w = 0.0f",output);
+                    _sprintf(c.str,"%s.w = 0.0f",output);
                     AddInst(vp,c);
                 }
                 return output;
@@ -20561,7 +20832,7 @@ _functions_test:
 
     if (str_match0(chaine,"DisplacementOffset"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -20575,18 +20846,18 @@ _functions_test:
                 rn=var(rns[0]); // Displace.xyzw
                 rn2=var(rns[1]); // Rel.xy
                 
-				sprintf(tmp, "r%d", new_temp_register());
+				_sprintf(tmp, "r%d", new_temp_register());
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
 					//	r8 = Displace
 					//	r4 = Rel
 					//	r5 = UV
-                    sprintf(c.str,"%s.a = 0.08 * (%s.a - 0.5)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
+                    _sprintf(c.str,"%s.a = 0.08 * (%s.a - 0.5)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xy = %s.aa * %s.xy",output,tmp,rn2);  // r5.r += r1.a * r4.r;
+                    _sprintf(c.str,"%s.xy = %s.aa * %s.xy",output,tmp,rn2);  // r5.r += r1.a * r4.r;
                     AddInst(vp,c);
-                    //sprintf(c.str,"%s.y = %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
+                    //_sprintf(c.str,"%s.y = %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
                     //AddInst(vp,c);
                 }
                 else
@@ -20595,11 +20866,11 @@ _functions_test:
 					//	r8 = Displace
 					//	r4 = Rel
 					//	r5 / output = UV
-                    sprintf(c.str,"%s.a = 0.08f * (%s.a - 0.5f)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
+                    _sprintf(c.str,"%s.a = 0.08f * (%s.a - 0.5f)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.xy = %s.aa * %s.xy",output,tmp,rn2);  // r5.r += r1.a * r4.r;
+                    _sprintf(c.str,"%s.xy = %s.aa * %s.xy",output,tmp,rn2);  // r5.r += r1.a * r4.r;
                     AddInst(vp,c);
-                    //sprintf(c.str,"%s.y = %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
+                    //_sprintf(c.str,"%s.y = %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
                     //AddInst(vp,c);
                 }
                 return output;
@@ -20615,7 +20886,7 @@ _functions_test:
 
     if (str_match0(chaine,"AddDisplacementOffset"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -20629,18 +20900,18 @@ _functions_test:
                 rn=var(rns[0]); // Displace.xyzw
                 rn2=var(rns[1]); // Rel.xy
                 
-				sprintf(tmp, "r%d", new_temp_register());
+				_sprintf(tmp, "r%d", new_temp_register());
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
 					//	r8 = Displace
 					//	r4 = Rel
 					//	r5 = UV
-                    sprintf(c.str,"%s.a = 0.08 * (%s.a - 0.5)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
+                    _sprintf(c.str,"%s.a = 0.08 * (%s.a - 0.5)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x += %s.a * %s.x",output,tmp,rn2);  // r5.r += r1.a * r4.r;
+                    _sprintf(c.str,"%s.x += %s.a * %s.x",output,tmp,rn2);  // r5.r += r1.a * r4.r;
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.y -= %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
+                    _sprintf(c.str,"%s.y -= %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
                     AddInst(vp,c);
                 }
                 else
@@ -20649,11 +20920,11 @@ _functions_test:
 					//	r8 = Displace
 					//	r4 = Rel
 					//	r5 / output = UV
-                    sprintf(c.str,"%s.a = 0.08f * (%s.a - 0.5f)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
+                    _sprintf(c.str,"%s.a = 0.08f * (%s.a - 0.5f)",tmp,rn);  // r1.a = 0.04 * bx2(r8.a);
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.x += %s.a * %s.x",output,tmp,rn2);  // r5.r += r1.a * r4.r;
+                    _sprintf(c.str,"%s.x += %s.a * %s.x",output,tmp,rn2);  // r5.r += r1.a * r4.r;
                     AddInst(vp,c);
-                    sprintf(c.str,"%s.y -= %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
+                    _sprintf(c.str,"%s.y -= %s.a * %s.y",output,tmp,rn2);  // r5.g -= r1.a * r4.g;
                     AddInst(vp,c);
                 }
                 return output;
@@ -20669,7 +20940,7 @@ _functions_test:
 
     if (str_match0(chaine,"CalculateShadowMappingIntegrate"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -20687,7 +20958,7 @@ _functions_test:
                 // output.x = 0 or 1
                 //rns[2]=nt
                 
-                sprintf(tmp, "r%d", new_temp_register());
+                _sprintf(tmp, "r%d", new_temp_register());
                 int last_temp=last_temp_register;
         /*
                 float calcshadow1(vec4 pos,float zval)
@@ -20704,72 +20975,72 @@ _functions_test:
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
-                    sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
+                    _sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
                     compile(tmp2,tmp,vp);
                     close_temp_register(last_temp);
 #ifdef IOS
-                    sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
+                    _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
                     AddInst(vp, c);
 #else
-                    sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", tmp,tmp);
+                    _sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", tmp,tmp);
                     AddInst(vp, c);
 #endif
 
-                    //sprintf(tmp2,"RGBToValue(%s)",tmp);
+                    //_sprintf(tmp2,"RGBToValue(%s)",tmp);
                     //compile(tmp2,tmp,vp);
 
-                    sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 0.0 : 1.0", tmp, rn2, tmp);
+                    _sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 0.0 : 1.0", tmp, rn2, tmp);
                     AddInst(vp, c);
 
-                    sprintf(tmp2,"BoundsViewIntegrate(%s)",rn);
-                    sprintf(tmp3,"%s.x",tmp);
+                    _sprintf(tmp2,"BoundsViewIntegrate(%s)",rn);
+                    _sprintf(tmp3,"%s.x",tmp);
                     compile(tmp2,tmp3,vp);
                     close_temp_register(last_temp);
 
                     int sc = str_last_char(output, '.');
                     if (sc<0)
                     {
-                        sprintf(c.str,"%s.x = %s.x",output,tmp);
+                        _sprintf(c.str,"%s.x = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                     else
                     {
-                        sprintf(c.str,"%s = %s.x",output,tmp);
+                        _sprintf(c.str,"%s = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                 }
                 else
                 if ((api == 0) && (shadermodel3))   // D3D METAL 0.0f
                 {
-                    sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
+                    _sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
                     compile(tmp2,tmp,vp);
                     close_temp_register(last_temp);
                     
 //#ifdef IOS
-//                    sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
+//                    _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
 //                    AddInst(vp, c);
 //#else
-                    sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", tmp, tmp);
+                    _sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", tmp, tmp);
                     AddInst(vp, c);
 //#endif
 
-                    sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 0.0f : 1.0f", tmp, rn2, tmp);
+                    _sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 0.0f : 1.0f", tmp, rn2, tmp);
                     AddInst(vp, c);
 
-                    sprintf(tmp2,"BoundsViewIntegrate(%s)",rn);
-                    sprintf(tmp3,"%s.x",tmp);
+                    _sprintf(tmp2,"BoundsViewIntegrate(%s)",rn);
+                    _sprintf(tmp3,"%s.x",tmp);
                     compile(tmp2,tmp3,vp);
                     close_temp_register(last_temp);
 
                     int sc = str_last_char(output, '.');
                     if (sc<0)
                     {
-                        sprintf(c.str,"%s.x = %s.x",output,tmp);
+                        _sprintf(c.str,"%s.x = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                     else
                     {
-                        sprintf(c.str,"%s = %s.x",output,tmp);
+                        _sprintf(c.str,"%s = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                 }
@@ -20787,7 +21058,7 @@ _functions_test:
     else
     if (str_match0(chaine,"CalculateShadowMapping"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         
         if (strlen(tmp)==0)
         {
@@ -20805,7 +21076,7 @@ _functions_test:
                 // output.x = 0 or 1
                 //rns[2]=nt
                 
-                sprintf(tmp, "r%d", new_temp_register());
+                _sprintf(tmp, "r%d", new_temp_register());
                 int last_temp=last_temp_register;
         /*
                 float calcshadow1(vec4 pos,float zval)
@@ -20822,71 +21093,71 @@ _functions_test:
 
                 if ((api == 1) && (shadermodel))  // OPEN GL
                 {
-                    sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
+                    _sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
                     compile(tmp2,tmp,vp);
                     close_temp_register(last_temp);
 #ifdef IOS
-                    sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
+                    _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
                     AddInst(vp, c);
 #else
-                    sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", tmp,tmp);
+                    _sprintf(c.str, "%s.x = dot(%s , vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0))", tmp,tmp);
                     AddInst(vp, c);
 #endif
 
-                    //sprintf(tmp2,"RGBToValue(%s)",tmp);
+                    //_sprintf(tmp2,"RGBToValue(%s)",tmp);
                     //compile(tmp2,tmp,vp);
 
-                    sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 1.0 : 0.0", tmp, rn2, tmp);
+                    _sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 1.0 : 0.0", tmp, rn2, tmp);
                     AddInst(vp, c);
 
-                    sprintf(tmp2,"BoundsViewAffect(%s)",rn);
-                    sprintf(tmp3,"%s.x",tmp);
+                    _sprintf(tmp2,"BoundsViewAffect(%s)",rn);
+                    _sprintf(tmp3,"%s.x",tmp);
                     compile(tmp2,tmp3,vp);
                     close_temp_register(last_temp);
 
                     int sc = str_last_char(output, '.');
                     if (sc<0)
                     {
-                        sprintf(c.str,"%s.x = %s.x",output,tmp);
+                        _sprintf(c.str,"%s.x = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                     else
                     {
-                        sprintf(c.str,"%s = %s.x",output,tmp);
+                        _sprintf(c.str,"%s = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                 }
                 else
                 if ((api == 0) && (shadermodel3))   // D3D METAL 0.0f
                 {
-                    sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
+                    _sprintf(tmp2,"sample(%s,%s.xy)",rns[2],rn);
                     compile(tmp2,tmp,vp);
                     close_temp_register(last_temp);
                     
 //#ifdef IOS
-//                    sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
+//                    _sprintf(c.str, "%s.x = (255.0 * %s.g + %s.r)/255.0", tmp,tmp,tmp);
 //                    AddInst(vp, c);
 //#else
-                    sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", tmp, tmp);
+                    _sprintf(c.str, "%s.x = dot(%s , float4(1.0f/(256.0f*256.0f*256.0f), 1.0f/(256.0f*256.0f), 1.0f/256.0f, 1.0f))", tmp, tmp);
                     AddInst(vp, c);
 //#endif
-                    sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 1.0f : 0.0f", tmp, rn2, tmp);
+                    _sprintf(c.str, "%s.x = ( %s >= %s.x ) ? 1.0f : 0.0f", tmp, rn2, tmp);
                     AddInst(vp, c);
 
-                    sprintf(tmp2,"BoundsViewAffect(%s)",rn);
-                    sprintf(tmp3,"%s.x",tmp);
+                    _sprintf(tmp2,"BoundsViewAffect(%s)",rn);
+                    _sprintf(tmp3,"%s.x",tmp);
                     compile(tmp2,tmp3,vp);
                     close_temp_register(last_temp);
 
                     int sc = str_last_char(output, '.');
                     if (sc<0)
                     {
-                        sprintf(c.str,"%s.x = %s.x",output,tmp);
+                        _sprintf(c.str,"%s.x = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                     else
                     {
-                        sprintf(c.str,"%s = %s.x",output,tmp);
+                        _sprintf(c.str,"%s = %s.x",output,tmp);
                         AddInst(vp,c);
                     }
                 }
@@ -20908,7 +21179,7 @@ _functions_test:
 
     if (str_match0(chaine,"BoundsViewIntegrate"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -20919,7 +21190,7 @@ _functions_test:
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             rn=compile(tmp,tmp2,vp);
         }
         
@@ -20931,63 +21202,63 @@ _functions_test:
         {
             if ((api==1)&&(shadermodel))
             {
-                sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
+                _sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
                 AddInst(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst(vp, c);
-                sprintf(c.str, "%s = 1.0",output);
+                _sprintf(c.str, "%s = 1.0",output);
                 AddInst(vp, c);
-                sprintf(c.str, "}");
-                AddInst(vp, c);
-                
-                sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
-                AddInst(vp, c);
-                sprintf(c.str, "{");
-                AddInst(vp, c);
-                sprintf(c.str, "%s = 1.0",output);
-                AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst(vp, c);
                 
-                sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
+                _sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
                 AddInst(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst(vp, c);
-                sprintf(c.str, "%s = 1.0",output);
+                _sprintf(c.str, "%s = 1.0",output);
                 AddInst(vp, c);
-                sprintf(c.str, "}");
-                AddInst(vp, c);
-                
-                sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
-                AddInst(vp, c);
-                sprintf(c.str, "{");
-                AddInst(vp, c);
-                sprintf(c.str, "%s = 1.0",output);
-                AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
                 AddInst(vp, c);
                 
-                sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+                _sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
                 AddInst(vp, c);
-                sprintf(c.str, "{");
+                _sprintf(c.str, "{");
                 AddInst(vp, c);
-                sprintf(c.str, "%s = 1.0",output);
+                _sprintf(c.str, "%s = 1.0",output);
                 AddInst(vp, c);
-                sprintf(c.str, "}");
+                _sprintf(c.str, "}");
+                AddInst(vp, c);
+                
+                _sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
+                AddInst(vp, c);
+                _sprintf(c.str, "{");
+                AddInst(vp, c);
+                _sprintf(c.str, "%s = 1.0",output);
+                AddInst(vp, c);
+                _sprintf(c.str, "}");
+                AddInst(vp, c);
+                
+                _sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+                AddInst(vp, c);
+                _sprintf(c.str, "{");
+                AddInst(vp, c);
+                _sprintf(c.str, "%s = 1.0",output);
+                AddInst(vp, c);
+                _sprintf(c.str, "}");
                 AddInst(vp, c);
             }
             else
                 if ((api==0)&&(shadermodel3))
                 {
-                    sprintf(c.str, "if (%s.x < %sf) %s = 1.0f", rn, _minimum, output);
+                    _sprintf(c.str, "if (%s.x < %sf) %s = 1.0f", rn, _minimum, output);
                     AddInst(vp, c);
-                    sprintf(c.str, "if (%s.y < %sf) %s = 1.0f", rn, _minimum, output);
+                    _sprintf(c.str, "if (%s.y < %sf) %s = 1.0f", rn, _minimum, output);
                     AddInst(vp, c);
-                    sprintf(c.str, "if (%s.x > %sf) %s = 1.0f", rn, _maximum, output);
+                    _sprintf(c.str, "if (%s.x > %sf) %s = 1.0f", rn, _maximum, output);
                     AddInst(vp, c);
-                    sprintf(c.str, "if (%s.y > %sf) %s = 1.0f", rn, _maximum, output);
+                    _sprintf(c.str, "if (%s.y > %sf) %s = 1.0f", rn, _maximum, output);
                     AddInst(vp, c);
-                    sprintf(c.str, "if (%s.z < %sf) %s = 1.0f", rn, _znear, output);
+                    _sprintf(c.str, "if (%s.z < %sf) %s = 1.0f", rn, _znear, output);
                     AddInst(vp, c);
                 }
         }
@@ -20996,7 +21267,7 @@ _functions_test:
 
     if (str_match0(chaine,"BoundsViewAffect"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -21007,7 +21278,7 @@ _functions_test:
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             rn=compile(tmp,tmp2,vp);
         }
 
@@ -21019,63 +21290,63 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
+				_sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
-				AddInst(vp, c);
-
-				sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
-				AddInst(vp, c);
-				sprintf(c.str, "{");
-				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
-				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
+				_sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
-				AddInst(vp, c);
-
-				sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
-				AddInst(vp, c);
-				sprintf(c.str, "{");
-				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
-				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				_sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
+				AddInst(vp, c);
+
+				_sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
+				AddInst(vp, c);
+				_sprintf(c.str, "{");
+				AddInst(vp, c);
+				_sprintf(c.str, "%s = 0.0",output);
+				AddInst(vp, c);
+				_sprintf(c.str, "}");
+				AddInst(vp, c);
+
+				_sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				AddInst(vp, c);
+				_sprintf(c.str, "{");
+				AddInst(vp, c);
+				_sprintf(c.str, "%s = 0.0",output);
+				AddInst(vp, c);
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str, "if (%s.x < %sf) %s = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.x < %sf) %s = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y < %sf) %s = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.y < %sf) %s = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x > %sf) %s = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.x > %sf) %s = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y > %sf) %s = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.y > %sf) %s = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.z < %sf) %s = 0.0f", rn, _znear, output);
+				_sprintf(c.str, "if (%s.z < %sf) %s = 0.0f", rn, _znear, output);
 				AddInst(vp, c);
 			}
 		}
@@ -21084,7 +21355,7 @@ _functions_test:
 
     if (str_match0(chaine,"BoundsView"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -21095,7 +21366,7 @@ _functions_test:
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             rn=compile(tmp,tmp2,vp);
         }
 
@@ -21104,68 +21375,68 @@ _functions_test:
         {
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str, "%s.w = 1.0", output);
+				_sprintf(c.str, "%s.w = 1.0", output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
+				_sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.0",output);
+				_sprintf(c.str, "%s.w = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
-				AddInst(vp, c);
-
-
-				sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
-				AddInst(vp, c);
-				sprintf(c.str, "{");
-				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.0",output);
-				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
+
+				_sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.0",output);
+				_sprintf(c.str, "%s.w = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
+				_sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.0",output);
+				_sprintf(c.str, "%s.w = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				_sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s.w = 0.0",output);
+				_sprintf(c.str, "%s.w = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
+				AddInst(vp, c);
+
+				_sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				AddInst(vp, c);
+				_sprintf(c.str, "{");
+				AddInst(vp, c);
+				_sprintf(c.str, "%s.w = 0.0",output);
+				AddInst(vp, c);
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str, "%s.w = 1.0f", output);
+				_sprintf(c.str, "%s.w = 1.0f", output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x < %sf) %s.w = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.x < %sf) %s.w = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y < %sf) %s.w = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.y < %sf) %s.w = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x > %sf) %s.w = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.x > %sf) %s.w = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y > %sf) %s.w = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.y > %sf) %s.w = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.z < %sf) %s.w = 0.0f", rn, _znear,output);
+				_sprintf(c.str, "if (%s.z < %sf) %s.w = 0.0f", rn, _znear,output);
 				AddInst(vp, c);
 			}
 		}
@@ -21173,67 +21444,67 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str, "%s = 1.0", output);
+				_sprintf(c.str, "%s = 1.0", output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
+				_sprintf(c.str, "if (%s.x < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
-				AddInst(vp, c);
-
-				sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
-				AddInst(vp, c);
-				sprintf(c.str, "{");
-				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
-				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
+				_sprintf(c.str, "if (%s.y < %s)", rn, _minimum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
-				AddInst(vp, c);
-
-				sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
-				AddInst(vp, c);
-				sprintf(c.str, "{");
-				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
-				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 
-				sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				_sprintf(c.str, "if (%s.x > %s)", rn, _maximum);
 				AddInst(vp, c);
-				sprintf(c.str, "{");
+				_sprintf(c.str, "{");
 				AddInst(vp, c);
-				sprintf(c.str, "%s = 0.0",output);
+				_sprintf(c.str, "%s = 0.0",output);
 				AddInst(vp, c);
-				sprintf(c.str, "}");
+				_sprintf(c.str, "}");
+				AddInst(vp, c);
+
+				_sprintf(c.str, "if (%s.y > %s)", rn, _maximum);
+				AddInst(vp, c);
+				_sprintf(c.str, "{");
+				AddInst(vp, c);
+				_sprintf(c.str, "%s = 0.0",output);
+				AddInst(vp, c);
+				_sprintf(c.str, "}");
+				AddInst(vp, c);
+
+				_sprintf(c.str, "if (%s.z < %s)", rn, _znear);
+				AddInst(vp, c);
+				_sprintf(c.str, "{");
+				AddInst(vp, c);
+				_sprintf(c.str, "%s = 0.0",output);
+				AddInst(vp, c);
+				_sprintf(c.str, "}");
 				AddInst(vp, c);
 			}
 			else
 			if ((api==0)&&(shadermodel3))
 			{
-				sprintf(c.str, "%s = 1.0f", output);
+				_sprintf(c.str, "%s = 1.0f", output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x < %sf) %s = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.x < %sf) %s = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y < %sf) %s = 0.0f", rn, _minimum, output);
+				_sprintf(c.str, "if (%s.y < %sf) %s = 0.0f", rn, _minimum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.x > %sf) %s = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.x > %sf) %s = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.y > %sf) %s = 0.0f", rn, _maximum, output);
+				_sprintf(c.str, "if (%s.y > %sf) %s = 0.0f", rn, _maximum, output);
 				AddInst(vp, c);
-				sprintf(c.str, "if (%s.z < %sf) %s = 0.0f", rn, _znear, output);
+				_sprintf(c.str, "if (%s.z < %sf) %s = 0.0f", rn, _znear, output);
 				AddInst(vp, c);
 			}
 		}
@@ -21242,7 +21513,7 @@ _functions_test:
     
     if (str_match0(chaine,"ScaleToSecondary"))
     {
-        sprintf(tmp,"%s",str_return_parentheses(chaine));
+        _sprintf(tmp,"%s",str_return_parentheses(chaine));
         if (strlen(tmp)==0)
         {
             SYNTAXERROR=PARAMERROR=true;
@@ -21253,7 +21524,7 @@ _functions_test:
         if (str_simple(tmp)) rn=var(tmp);
         else
         {
-            sprintf(tmp2,"r%d",new_temp_register());
+            _sprintf(tmp2,"r%d",new_temp_register());
             resfield(output, tmp2);
             rn=compile(tmp,tmp2,vp);
         }
@@ -21264,13 +21535,13 @@ _functions_test:
         
             if ((api==1)&&(shadermodel))
             {
-                sprintf(c.str, "%s = vec2(0.5,0.5) + vec2(0.5,0.5) * %s", output, rn);
+                _sprintf(c.str, "%s = vec2(0.5,0.5) + vec2(0.5,0.5) * %s", output, rn);
                 AddInst(vp, c);
             }
             else
             if ((api==0)&&(shadermodel3))
             {
-                sprintf(c.str, "%s = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s", output, rn);
+                _sprintf(c.str, "%s = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s", output, rn);
                 AddInst(vp, c);
             }
         }
@@ -21278,13 +21549,13 @@ _functions_test:
         {
             if ((api==1)&&(shadermodel))
             {
-                sprintf(c.str, "%s.xy = vec2(0.5,0.5) + vec2(0.5,0.5) * %s.xy", output, rn);
+                _sprintf(c.str, "%s.xy = vec2(0.5,0.5) + vec2(0.5,0.5) * %s.xy", output, rn);
                 AddInst(vp, c);
             }
             else
             if ((api==0)&&(shadermodel3))
             {
-                sprintf(c.str, "%s.xy = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s.xy", output, rn);
+                _sprintf(c.str, "%s.xy = float2(0.5f,0.5f) + float2(0.5f,-0.5f) * %s.xy", output, rn);
                 AddInst(vp, c);
             }
         }
@@ -21302,20 +21573,20 @@ _functions_test:
 				switch (strlen(&output[sc+1]))
 				{
 				case 1:
-					sprintf(tmp,"1.0");
+					_sprintf(tmp,"1.0");
 					break;
 				case 2:
-					sprintf(tmp,"vec2(1.0,1.0)");
+					_sprintf(tmp,"vec2(1.0,1.0)");
 					break;
 				case 3:
-					sprintf(tmp,"vec3(1.0,1.0,1.0)");
+					_sprintf(tmp,"vec3(1.0,1.0,1.0)");
 					break;
 				case 4:
-					sprintf(tmp,"vec4(1.0,1.0,1.0,1.0)");
+					_sprintf(tmp,"vec4(1.0,1.0,1.0,1.0)");
 					break;
 				};
 			}
-			else sprintf(tmp,"vec4(1.0,1.0,1.0,1.0)");
+			else _sprintf(tmp,"vec4(1.0,1.0,1.0,1.0)");
         }
         else
         if ((api==0)&&(shadermodel3))
@@ -21327,23 +21598,23 @@ _functions_test:
 				switch (strlen(&output[sc+1]))
 				{
 				case 1:
-					sprintf(tmp,"-1.0");
+					_sprintf(tmp,"-1.0");
 					break;
 				case 2:
-					sprintf(tmp,"float2(-1.0,-1.0)");
+					_sprintf(tmp,"float2(-1.0,-1.0)");
 					break;
 				case 3:
-					sprintf(tmp,"float3(-1.0,-1.0,-1.0)");
+					_sprintf(tmp,"float3(-1.0,-1.0,-1.0)");
 					break;
 				case 4:
-					sprintf(tmp,"float4(-1.0,-1.0,-1.0,-1.0)");
+					_sprintf(tmp,"float4(-1.0,-1.0,-1.0,-1.0)");
 					break;
 				};
 			}
-			else sprintf(tmp,"float4(-1.0,-1.0,-1.0,-1.0)");
+			else _sprintf(tmp,"float4(-1.0,-1.0,-1.0,-1.0)");
         }
 
-        sprintf(c.str, "%s = %s", output, tmp);
+        _sprintf(c.str, "%s = %s", output, tmp);
         AddInst(vp, c);
 
 		return output;
@@ -21351,7 +21622,7 @@ _functions_test:
 
 	if (str_match0(chaine,"DecalMappingSecondary"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
@@ -21362,7 +21633,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
@@ -21374,7 +21645,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
@@ -21383,7 +21654,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
 				resfield(output, tmp3);
 				rn2=compile(&tmp[p+1],tmp3,vp);
 				t=1;
@@ -21394,13 +21665,13 @@ _functions_test:
 		{
 			if ((api==1)&&(shadermodel))
 			{
-				sprintf(c.str,"%s = vec2( %s , -%s )",output,rn,rn2);
+				_sprintf(c.str,"%s = vec2( %s , -%s )",output,rn,rn2);
 				AddInst(vp,c);
 				return output;
 			}
 			else
 			{
-				sprintf(c.str,"%s = float2( %s , %s )",output,rn,rn2);
+				_sprintf(c.str,"%s = float2( %s , %s )",output,rn,rn2);
 				AddInst(vp,c);
 				return output;
 			}
@@ -21412,7 +21683,7 @@ _functions_test:
 
 	if (str_match0(chaine,"max"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
@@ -21423,7 +21694,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
@@ -21435,7 +21706,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				resfield(output, tmp2);
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
@@ -21444,7 +21715,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp3,"r%d",new_temp_register());
 				resfield(output, tmp3);
 				rn2=compile(&tmp[p+1],tmp3,vp);
 				t=1;
@@ -21460,13 +21731,13 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield2(tmp4, output, rn, rn2);
-				sprintf(c.str,"%s = max( %s , %s )",tmp4,rn,rn2);
+				_sprintf(c.str,"%s = max( %s , %s )",tmp4,rn,rn2);
 				AddInst(vp,c);
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_max][api],output,rn,rn2);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_max][api],output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21477,20 +21748,20 @@ _functions_test:
 
 	if (str_match0(chaine,"equation"))		// equation(normal,point)
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p=str_char_prt(tmp,',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
 
-		sprintf(tmp2,"%s",output);
+		_sprintf(tmp2,"%s",output);
 		t=0;
 		if (str_simple(&tmp[0]))
 		{
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
 			}
@@ -21501,7 +21772,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
 			}
@@ -21509,7 +21780,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				if (t==0) sprintf(tmp2,"r%d",new_temp_register());
+				if (t==0) _sprintf(tmp2,"r%d",new_temp_register());
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
 			}
@@ -21525,14 +21796,14 @@ _functions_test:
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = -dot( %s , %s )",tmp2,rn,rn2);
+				_sprintf(c.str,"%s = -dot( %s , %s )",tmp2,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
 				// a,b,c = normal
 				// d = -(N|P)
-				sprintf(c.str,"%s %s,%s,-%s",Inst[_dp3][api],output,rn,rn2);
+				_sprintf(c.str,"%s %s,%s,-%s",Inst[_dp3][api],output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21542,20 +21813,20 @@ _functions_test:
 
 	if (str_match0(chaine,"plane"))		// plane(vector,plane_equation)
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p=str_char_prt(tmp,',');
         if (p<0) { SYNTAXERROR=true; return ""; }
 		tmp[p]='\0';
 
-		sprintf(tmp2,"%s",output);
+		_sprintf(tmp2,"%s",output);
 		t=0;
 		if (str_simple(&tmp[0]))
 		{
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
 			}
@@ -21566,7 +21837,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2,"r%d",new_temp_register());
+				_sprintf(tmp2,"r%d",new_temp_register());
 				rn=compile(&tmp[0],tmp2,vp);
 				t=1;
 			}
@@ -21574,7 +21845,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				if (t==0) sprintf(tmp2,"r%d",new_temp_register());
+				if (t==0) _sprintf(tmp2,"r%d",new_temp_register());
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
 			}
@@ -21582,7 +21853,7 @@ _functions_test:
 
 		if (t==0) tmp2=output;
 
-		sprintf(tmp3,"r%d",new_temp_register());
+		_sprintf(tmp3,"r%d",new_temp_register());
 
 		if (api==2)
 		{
@@ -21592,16 +21863,16 @@ _functions_test:
 		{
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
-				sprintf(c.str,"%s = dot( %s , %s )",tmp2,rn,rn2);
+				_sprintf(c.str,"%s = dot( %s , %s )",tmp2,rn,rn2);
 				AddInst(vp,c);
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s",Inst[_mov][api],tmp3,rn);
+				_sprintf(c.str,"%s %s,%s",Inst[_mov][api],tmp3,rn);
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s.w,%s.z",Inst[_mov][api],tmp3,var("trigo_cst"));
+				_sprintf(c.str,"%s %s.w,%s.z",Inst[_mov][api],tmp3,var("trigo_cst"));
 				AddInst(vp,c);
-				sprintf(c.str,"%s %s,%s,%s",Inst[_dp4][api],tmp2,tmp3,rn2);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_dp4][api],tmp2,tmp3,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21611,7 +21882,7 @@ _functions_test:
 
 	if (str_match0(chaine,"min"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p=str_char_prt(tmp,',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -21623,7 +21894,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
 				t=1;
@@ -21635,7 +21906,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 				rn = compile(&tmp[0], tmp2, vp);
 				t=1;
@@ -21644,7 +21915,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp3, "r%d", new_temp_register());
+				_sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 				rn2=compile(&tmp[p+1],tmp2,vp);
 				t=1;
@@ -21660,14 +21931,14 @@ _functions_test:
 			if (((api==1)&&(shadermodel))||((api==0)&&(shadermodel3)))
 			{
 				outputfield2(tmp4, output, rn, rn2);
-				sprintf(c.str,"%s = min( %s , %s )",tmp4,rn,rn2);
+				_sprintf(c.str,"%s = min( %s , %s )",tmp4,rn,rn2);
 				AddInst(vp,c);
 
 				return tmp4;
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_min][api],output,rn,rn2);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_min][api],output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21677,7 +21948,7 @@ _functions_test:
 
 	if (str_match0(chaine,"pow"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p=str_char_prt(tmp,',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -21689,7 +21960,7 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 				rn2 = compile(&tmp[p + 1], tmp2, vp);
 				t=1;
@@ -21701,7 +21972,7 @@ _functions_test:
 			if (str_simple(&tmp[0])) rn=var(&tmp[0]);
 			else
 			{
-				sprintf(tmp2, "r%d", new_temp_register());
+				_sprintf(tmp2, "r%d", new_temp_register());
 				resfield(output, tmp2);
 				rn = compile(&tmp[0], tmp2, vp);
 				t=1;
@@ -21710,8 +21981,8 @@ _functions_test:
 			if (str_simple(&tmp[p+1])) rn2=var(&tmp[p+1]);
 			else
 			{
-				if (t==0) sprintf(tmp3,"r%d",new_temp_register());
-				sprintf(tmp3, "r%d", new_temp_register());
+				if (t==0) _sprintf(tmp3,"r%d",new_temp_register());
+				_sprintf(tmp3, "r%d", new_temp_register());
 				resfield(output, tmp3);
 				rn2 = compile(&tmp[p + 1], tmp3, vp);
 				t=1;
@@ -21729,16 +22000,16 @@ _functions_test:
             {
                 int sc = str_last_char(output, '.');
                 
-                sprintf(tmp3, output);
+                _sprintf(tmp3, output);
                 if (sc>=0) tmp3[sc]='\0';
 
                 sc = str_last_char(rn, '.');
-                sprintf(tmp4, rn);
+                _sprintf(tmp4, rn);
                 tmp4[sc]='\0';
                 
                 for (int ki=0;ki<nbm;ki++)
                 {
-                    sprintf(c.str,"%s.%c = pow( %s.%c , %s )",tmp3,rn[sc+1+ki],tmp4,rn[sc+1+ki],rn2);
+                    _sprintf(c.str,"%s.%c = pow( %s.%c , %s )",tmp3,rn[sc+1+ki],tmp4,rn[sc+1+ki],rn2);
                     AddInst(vp,c);
                 }
                 
@@ -21747,7 +22018,7 @@ _functions_test:
             else
             {                
                 outputfield2(tmp4, output, rn, rn2);
-                sprintf(c.str,"%s = pow( abs(%s) , %s )",tmp4,rn,rn2);
+                _sprintf(c.str,"%s = pow( abs(%s) , %s )",tmp4,rn,rn2);
                 AddInst(vp,c);
             }
 		}
@@ -21757,7 +22028,7 @@ _functions_test:
 
 	if (str_match0(chaine,"sge"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -21783,24 +22054,24 @@ _functions_test:
 					int sc2=str_last_char(rn2,'.');
 					if (sc2==-1)
 					{
-						sprintf(c.str, "%s.x = ( %s.x >= %s.x ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.x = ( %s.x >= %s.x ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.y = ( %s.y >= %s.y ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.y = ( %s.y >= %s.y ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.z = ( %s.z >= %s.z ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.z = ( %s.z >= %s.z ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.w = ( %s.w >= %s.w ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.w = ( %s.w >= %s.w ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
 					}
 					else
 					{
-						sprintf(c.str,"%s = ( %s >= %s ) ? 1.0 : 0.0",output,rn,rn2);
+						_sprintf(c.str,"%s = ( %s >= %s ) ? 1.0 : 0.0",output,rn,rn2);
 						AddInst(vp,c);
 					}
 				}
 				else
 				{
-					sprintf(c.str,"%s = ( %s >= %s ) ? 1.0 : 0.0",output,rn,rn2);
+					_sprintf(c.str,"%s = ( %s >= %s ) ? 1.0 : 0.0",output,rn,rn2);
 					AddInst(vp,c);
 				}
 			}
@@ -21815,36 +22086,36 @@ _functions_test:
 						int sc2=str_last_char(rn2,'.');
 						if (sc2==-1)
 						{
-							sprintf(c.str, "%s.x = ( %s.x >= %s.x ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.x = ( %s.x >= %s.x ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.y = ( %s.y >= %s.y ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.y = ( %s.y >= %s.y ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.z = ( %s.z >= %s.z ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.z = ( %s.z >= %s.z ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.w = ( %s.w >= %s.w ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.w = ( %s.w >= %s.w ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
 						}
 						else
 						{
-							sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
+							_sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
 							AddInst(vp,c);
 						}
 					}
 					else
 					{
-						sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
+						_sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
 						AddInst(vp,c);
 					}
 				}
 				else
 				{
-					sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
+					_sprintf(c.str,"%s = ( %s >= %s ) ? 1.0f : 0.0f",output,rn,rn2);
 					AddInst(vp,c);
 				}
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_sge][api],output,rn,rn2);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_sge][api],output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21855,7 +22126,7 @@ _functions_test:
 
 	if (str_match0(chaine,"slt"))
 	{
-		sprintf(tmp,"%s",str_return_parentheses(chaine));
+		_sprintf(tmp,"%s",str_return_parentheses(chaine));
 
 		p = str_char_prt(tmp, ',');
         if (p<0) { SYNTAXERROR=true; return ""; }
@@ -21881,24 +22152,24 @@ _functions_test:
 					int sc2=str_last_char(rn2,'.');
 					if (sc2==-1)
 					{
-						sprintf(c.str, "%s.x = ( %s.x < %s.x ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.x = ( %s.x < %s.x ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.y = ( %s.y < %s.y ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.y = ( %s.y < %s.y ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.z = ( %s.z < %s.z ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.z = ( %s.z < %s.z ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
-						sprintf(c.str, "%s.w = ( %s.w < %s.w ) ? 1.0 : 0.0", output, rn, rn2);
+						_sprintf(c.str, "%s.w = ( %s.w < %s.w ) ? 1.0 : 0.0", output, rn, rn2);
 						AddInst(vp, c);
 					}
 					else
 					{
-						sprintf(c.str,"%s = ( %s < %s ) ? 1.0 : 0.0",output,rn,rn2);
+						_sprintf(c.str,"%s = ( %s < %s ) ? 1.0 : 0.0",output,rn,rn2);
 						AddInst(vp,c);
 					}
 				}
 				else
 				{
-					sprintf(c.str,"%s = ( %s < %s ) ? 1.0 : 0.0",output,rn,rn2);
+					_sprintf(c.str,"%s = ( %s < %s ) ? 1.0 : 0.0",output,rn,rn2);
 					AddInst(vp,c);
 				}
 			}
@@ -21913,36 +22184,36 @@ _functions_test:
 						int sc2=str_last_char(rn2,'.');
 						if (sc2==-1)
 						{
-							sprintf(c.str, "%s.x = ( %s.x < %s.x ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.x = ( %s.x < %s.x ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.y = ( %s.y < %s.y ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.y = ( %s.y < %s.y ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.z = ( %s.z < %s.z ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.z = ( %s.z < %s.z ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
-							sprintf(c.str, "%s.w = ( %s.w < %s.w ) ? 1.0f : 0.0f", output, rn, rn2);
+							_sprintf(c.str, "%s.w = ( %s.w < %s.w ) ? 1.0f : 0.0f", output, rn, rn2);
 							AddInst(vp, c);
 						}
 						else
 						{
-							sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
+							_sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
 							AddInst(vp,c);
 						}
 					}
 					else
 					{
-						sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
+						_sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
 						AddInst(vp,c);
 					}
 				}
 				else
 				{
-					sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
+					_sprintf(c.str,"%s = ( %s < %s ) ? 1.0f : 0.0f",output,rn,rn2);
 					AddInst(vp,c);
 				}
 			}
 			else
 			{
-				sprintf(c.str,"%s %s,%s,%s",Inst[_slt][api],output,rn,rn2);
+				_sprintf(c.str,"%s %s,%s,%s",Inst[_slt][api],output,rn,rn2);
 				AddInst(vp,c);
 			}
 		}
@@ -21956,7 +22227,7 @@ _functions_test:
 			TYPEERROR=true;
 		}
 	
-    sprintf(tmp,"%s",var(chaine));
+    _sprintf(tmp,"%s",var(chaine));
     return tmp;
 }
 
@@ -21992,7 +22263,7 @@ bool str_get_RS(char * script,int *pos,CVertexProgram *vp)
 
                     while ((n<16)&&(!str))
                     {
-                        sprintf(ss,"TEXTUREVS[%d]",n);
+                        _sprintf(ss,"TEXTUREVS[%d]",n);
                         if (strcmp(tmp,ss)==0)
                         {
                             tmp=str_parse(script,pos);
@@ -22027,7 +22298,7 @@ bool str_get_RS(char * script,int *pos,CVertexProgram *vp)
 
                     while ((n<16)&&(!str))
                     {
-                        sprintf(ss,"TEXTURE[%d]",n);
+                        _sprintf(ss,"TEXTURE[%d]",n);
                         if (strcmp(tmp,ss)==0)
                         {
                             tmp=str_parse(script,pos);
@@ -22149,7 +22420,7 @@ public:
 		if (IF) free(IF);
 
 		IF=(char*) malloc(strlen(str)+1);
-		sprintf(IF,"%s",str);
+		_sprintf(IF,"%s",str);
 	}
 
 	void AddElse(char *str)
@@ -22157,27 +22428,27 @@ public:
 		if (ELSE) free(ELSE);
 
 		ELSE=(char*) malloc(strlen(str)+1);
-		sprintf(ELSE,"%s",str);
+		_sprintf(ELSE,"%s",str);
 	}
 
 	void AddIfSM(char *str)
 	{
 		char ss[512];
-		if (IF) sprintf(ss,"%s%s\n",IF,str);
-		else sprintf(ss,"%s\n",str);
+		if (IF) _sprintf(ss,"%s%s\n",IF,str);
+		else _sprintf(ss,"%s\n",str);
 		if (IF) free(IF);
 		IF=(char*) malloc(strlen(ss)+1);
-		sprintf(IF,"%s",ss);
+		_sprintf(IF,"%s",ss);
 	}
 
 	void AddElseSM(char *str)
 	{
 		char ss[512];
-		if (ELSE) sprintf(ss,"%s%s\n",IF,str);
-		else sprintf(ss,"%s\n",str);
+		if (ELSE) _sprintf(ss,"%s%s\n",IF,str);
+		else _sprintf(ss,"%s\n",str);
 		if (ELSE) free(ELSE);
 		ELSE=(char*) malloc(strlen(ss)+1);
-		sprintf(ELSE,"%s",ss);
+		_sprintf(ELSE,"%s",ss);
 	}
 
 };
@@ -22192,7 +22463,7 @@ bool str_pre_compile_expression(char * str,CMap <Chaine,IfElse> * cm,int tag)
 
 	if (str_match(str,"break"))
 	{
-		sprintf(s.str,"bk%d",cm->Length());
+		_sprintf(s.str,"bk%d",cm->Length());
 		ie=(*cm)[s];
 		ie->AddBreak();
 		ie->tag=tag;
@@ -22200,7 +22471,7 @@ bool str_pre_compile_expression(char * str,CMap <Chaine,IfElse> * cm,int tag)
 	else
 	if (str_match(str,"continue"))
 	{
-		sprintf(s.str,"co%d",cm->Length());
+		_sprintf(s.str,"co%d",cm->Length());
 		ie=(*cm)[s];
 		ie->AddContinue();
 		ie->tag=tag;
@@ -22208,7 +22479,7 @@ bool str_pre_compile_expression(char * str,CMap <Chaine,IfElse> * cm,int tag)
 	else
 	if (str_match(str,"discard"))
 	{
-		sprintf(s.str,"di%d",cm->Length());
+		_sprintf(s.str,"di%d",cm->Length());
 		ie=(*cm)[s];
 		ie->AddDiscard();
 		ie->tag=tag;
@@ -22216,14 +22487,14 @@ bool str_pre_compile_expression(char * str,CMap <Chaine,IfElse> * cm,int tag)
 	else
 	if ((str_char(str,'=')!=-1))
 	{
-		sprintf(chaine,"%s",str);
+		_sprintf(chaine,"%s",str);
 		str_clean(chaine);
 
 		p=str_char(chaine,'=');
         if (p<0) return false;
 		chaine[p]='\0';
 
-		sprintf(s.str,"%s",chaine);
+		_sprintf(s.str,"%s",chaine);
 
 		ie=(*cm)[s];
 
@@ -22600,10 +22871,10 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 				pos=apos;
 				tmp=str_parse_char(script,&pos,'{');
 
-				sprintf(test,"%s",str_return_parentheses(tmp));
+				_sprintf(test,"%s",str_return_parentheses(tmp));
 
 				pos=apos;
-				sprintf(tmp1,"%s",str_parse_char(script,&pos,'}'));
+				_sprintf(tmp1,"%s",str_parse_char(script,&pos,'}'));
 
 				pos1=str_char(tmp1,'{')+1;
 
@@ -22620,7 +22891,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 
 					if ((script[pos+0]=='e')&&(script[pos+1]=='l')&&(script[pos+2]=='s')&&(script[pos+3]=='e'))
 					{
-						sprintf(tmp2,"%s",str_parse_char(script,&pos,'}'));
+						_sprintf(tmp2,"%s",str_parse_char(script,&pos,'}'));
 
 						pos2=str_char(tmp2,'{')+1;
 						tmp=str_parse_virg(tmp2,&pos2);
@@ -22645,7 +22916,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 
 					if ((script[pos+0]=='e')&&(script[pos+1]=='l')&&(script[pos+2]=='s')&&(script[pos+3]=='e'))
 					{
-						sprintf(tmp2,"%s",str_parse_char(script,&pos,'}'));
+						_sprintf(tmp2,"%s",str_parse_char(script,&pos,'}'));
 
 						pos2=str_char(tmp2,'{')+1;
 						tmp=str_parse_virg(tmp2,&pos2);
@@ -22669,16 +22940,16 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 						p=str_char(test,'>');
 						test[p]='\0';
 						if (test[p + 1] == '=') p++;
-						sprintf(tmp, "%s.x=sge(%s,%s)", RIF, test, &test[p + 1]);
-						sprintf(tmp666, "%s.y=slt(%s,%s)", RIF, test, &test[p + 1]);
+						_sprintf(tmp, "%s.x=sge(%s,%s)", RIF, test, &test[p + 1]);
+						_sprintf(tmp666, "%s.y=slt(%s,%s)", RIF, test, &test[p + 1]);
 					}
 					else
 					{
 						p=str_char(test,'<');
 						test[p]='\0';
 						if (test[p + 1] == '=') p++;
-						sprintf(tmp, "%s.x=sge(%s,%s)", RIF, &test[p + 1], test);
-						sprintf(tmp666, "%s.y=slt(%s,%s)", RIF, &test[p + 1], test);
+						_sprintf(tmp, "%s.x=sge(%s,%s)", RIF, &test[p + 1], test);
+						_sprintf(tmp666, "%s.y=slt(%s,%s)", RIF, &test[p + 1], test);
 					}
 
 					memcpy(&buffer_tmp[size],tmp,strlen(tmp));
@@ -22708,9 +22979,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s>=%s)continue;", test, &test[p + 1]);
+								_sprintf(tmp, "if(%s>=%s)continue;", test, &test[p + 1]);
 							}
-							else sprintf(tmp, "if(%s>%s)continue;", test, &test[p + 1]);
+							else _sprintf(tmp, "if(%s>%s)continue;", test, &test[p + 1]);
 						}
 						else
 						{
@@ -22719,9 +22990,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s<=%s)continue;", test, &test[p + 1]);
+								_sprintf(tmp, "if(%s<=%s)continue;", test, &test[p + 1]);
 							}
-							else sprintf(tmp, "if(%s<%s)continue;", test, &test[p + 1]);
+							else _sprintf(tmp, "if(%s<%s)continue;", test, &test[p + 1]);
 						}
 						memcpy(&buffer_tmp[size], tmp, strlen(tmp));
 						size+=(int)strlen(tmp);
@@ -22739,9 +23010,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s>=%s)%s;", test, &test[p + 1],sDiscardAPI);
+								_sprintf(tmp, "if(%s>=%s)%s;", test, &test[p + 1],sDiscardAPI);
 							}
-							else sprintf(tmp, "if(%s>%s)%s;", test, &test[p + 1],sDiscardAPI);
+							else _sprintf(tmp, "if(%s>%s)%s;", test, &test[p + 1],sDiscardAPI);
 						}
 						else
 						{
@@ -22750,9 +23021,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s<=%s)%s;", test, &test[p + 1],sDiscardAPI);
+								_sprintf(tmp, "if(%s<=%s)%s;", test, &test[p + 1],sDiscardAPI);
 							}
-							else sprintf(tmp, "if(%s<%s)%s;", test, &test[p + 1],sDiscardAPI);
+							else _sprintf(tmp, "if(%s<%s)%s;", test, &test[p + 1],sDiscardAPI);
 						}
 						memcpy(&buffer_tmp[size], tmp, (int)strlen(tmp));
 						size+=(int)strlen(tmp);
@@ -22763,8 +23034,8 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 					else
 					if (ie->BREAK)
 					{
-//						if (ie->tag == 0) sprintf(tmp, "if(%s.x<0.5)break;", RIF);
-//						else sprintf(tmp, "if(%s.x>0.5)break;", RIF);
+//						if (ie->tag == 0) _sprintf(tmp, "if(%s.x<0.5)break;", RIF);
+//						else _sprintf(tmp, "if(%s.x>0.5)break;", RIF);
 						if (str_char(test, '>') != -1)
 						{
 							p = str_char(test, '>');
@@ -22772,9 +23043,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s>=%s)break;", test, &test[p + 1]);
+								_sprintf(tmp, "if(%s>=%s)break;", test, &test[p + 1]);
 							}
-							else sprintf(tmp, "if(%s>%s)break;", test, &test[p + 1]);
+							else _sprintf(tmp, "if(%s>%s)break;", test, &test[p + 1]);
 						}
 						else
 						{
@@ -22783,9 +23054,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 							if (test[p + 1] == '=')
 							{
 								p++;
-								sprintf(tmp, "if(%s<=%s)break;", test, &test[p + 1]);
+								_sprintf(tmp, "if(%s<=%s)break;", test, &test[p + 1]);
 							}
-							else sprintf(tmp, "if(%s<%s)break;", test, &test[p + 1]);
+							else _sprintf(tmp, "if(%s<%s)break;", test, &test[p + 1]);
 						}
 
 						memcpy(&buffer_tmp[size],tmp,(int)strlen(tmp));
@@ -22805,9 +23076,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 								if (test[p + 1] == '=')
 								{
 									p++;
-									sprintf(tmp, "#if(%s>=%s)", test, &test[p + 1]);
+									_sprintf(tmp, "#if(%s>=%s)", test, &test[p + 1]);
 								}
-								else sprintf(tmp, "#if(%s>%s)", test, &test[p + 1]);
+								else _sprintf(tmp, "#if(%s>%s)", test, &test[p + 1]);
 								memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 								size+=(int)strlen(tmp);
 								buffer_tmp[size]='\n';
@@ -22821,7 +23092,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 
 								if (ie->ELSE)
 								{
-									sprintf(tmp, "#else");
+									_sprintf(tmp, "#else");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22833,7 +23104,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 									buffer_tmp[size]='\n';
 									size++;
 
-									sprintf(tmp, "#endif");
+									_sprintf(tmp, "#endif");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22841,7 +23112,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 								}
 								else
 								{
-									sprintf(tmp, "#endif");
+									_sprintf(tmp, "#endif");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22855,9 +23126,9 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 								if (test[p + 1] == '=')
 								{
 									p++;
-									sprintf(tmp, "#if(%s<=%s)", test, &test[p + 1]);
+									_sprintf(tmp, "#if(%s<=%s)", test, &test[p + 1]);
 								}
-								else sprintf(tmp, "#if(%s<%s)", test, &test[p + 1]);
+								else _sprintf(tmp, "#if(%s<%s)", test, &test[p + 1]);
 								memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 								size+=(int)strlen(tmp);
 								buffer_tmp[size]='\n';
@@ -22871,7 +23142,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 
 								if (ie->ELSE)
 								{
-									sprintf(tmp, "#else");
+									_sprintf(tmp, "#else");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22883,7 +23154,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 									buffer_tmp[size]='\n';
 									size++;
 
-									sprintf(tmp, "#endif");
+									_sprintf(tmp, "#endif");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22891,7 +23162,7 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 								}
 								else
 								{
-									sprintf(tmp, "#endif");
+									_sprintf(tmp, "#endif");
 									memcpy(&buffer_tmp[size],tmp,strlen(tmp));
 									size+=(int)strlen(tmp);
 									buffer_tmp[size]='\n';
@@ -22912,47 +23183,47 @@ char * CVertexProgram::str_if_else_virg_treatment(char * script00)
 								switch ((int)strlen(&c.str[sc + 1]))
 								{
 								case 1:
-									sprintf(res, "%s.z", RIF);
-									sprintf(res2, "%s.w", RIF);
+									_sprintf(res, "%s.z", RIF);
+									_sprintf(res2, "%s.w", RIF);
 									break;
 								case 2:
-									sprintf(res, "%s.xy", RIFTMP);
-									sprintf(res2, "%s.zw", RIFTMP);
+									_sprintf(res, "%s.xy", RIFTMP);
+									_sprintf(res2, "%s.zw", RIFTMP);
 									break;
 								case 3:
-									sprintf(res, "%s.xyz", RIFTMP);
-									sprintf(res2, "%s.xyz", RIFTMP2);
+									_sprintf(res, "%s.xyz", RIFTMP);
+									_sprintf(res2, "%s.xyz", RIFTMP2);
 									break;
 								case 4:
-									sprintf(res, "%s", RIFTMP);
-									sprintf(res2, "%s", RIFTMP2);
+									_sprintf(res, "%s", RIFTMP);
+									_sprintf(res2, "%s", RIFTMP2);
 									break;
 								};
 							}
 							else
 							{
-								sprintf(res, "%s", RIFTMP);
-								sprintf(res2, "%s", RIFTMP2);
+								_sprintf(res, "%s", RIFTMP);
+								_sprintf(res2, "%s", RIFTMP2);
 							}
 
 							if (ie->ELSE)
 							{
-								//sprintf(tmp, "%s=(%s)*%s.x+(%s)*%s.y", c.str, ie->IF, RIF, ie->ELSE, RIF);
-								sprintf(tmp1, "%s=(%s)*%s.x\n", res, ie->IF, RIF);
+								//_sprintf(tmp, "%s=(%s)*%s.x+(%s)*%s.y", c.str, ie->IF, RIF, ie->ELSE, RIF);
+								_sprintf(tmp1, "%s=(%s)*%s.x\n", res, ie->IF, RIF);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
-								sprintf(tmp1, "%s=(%s)*%s.y\n", res2, ie->ELSE, RIF);
+								_sprintf(tmp1, "%s=(%s)*%s.y\n", res2, ie->ELSE, RIF);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
-								sprintf(tmp1, "%s=%s+%s\n", c.str, res, res2);
+								_sprintf(tmp1, "%s=%s+%s\n", c.str, res, res2);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
 							}
 							else
 							{
-								//sprintf(tmp1, "%s=(%s)*%s.x+(%s)*%s.y\n", res, ie->IF, RIF, c.str, RIF);
-								sprintf(tmp1, "%s=(%s)*%s.x\n", res, ie->IF, RIF);
+								//_sprintf(tmp1, "%s=(%s)*%s.x+(%s)*%s.y\n", res, ie->IF, RIF, c.str, RIF);
+								_sprintf(tmp1, "%s=(%s)*%s.x\n", res, ie->IF, RIF);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
-								sprintf(tmp1, "%s=(%s)*%s.y\n", res2, c.str, RIF);
+								_sprintf(tmp1, "%s=(%s)*%s.y\n", res2, c.str, RIF);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
-								sprintf(tmp1, "%s=%s+%s\n", c.str, res, res2);
+								_sprintf(tmp1, "%s=%s+%s\n", c.str, res, res2);
 								memcpy(&buffer_tmp[size], tmp1, (int)strlen(tmp1)); size += (int)strlen(tmp1);
 							}
 						}
@@ -23062,21 +23333,21 @@ char * CVertexProgram::str_parse_addsub(char * script)
                 
                 if (str_match(tmp, "*="))
                 {
-                    sprintf(res, "%s", tmp);
+                    _sprintf(res, "%s", tmp);
                     str_clean(res);
                     
                     p = str_char(res, '*');
                     res[p] = '\0';
                     
-                    sprintf(body, &res[p + 2]);
+                    _sprintf(body, &res[p + 2]);
                     
                     int tag=0;
                     if (str_char(body,'+')>=0) tag=1;
                     if (str_char(body,'-')>=0) tag=1;
                     if (str_char(body,'*')>=0) tag=1;
                     if (str_char(body,'/')>=0) tag=1;
-                    if (tag) sprintf(tmpnew, "%s=%s*(%s);", res, res, body);
-                    else sprintf(tmpnew, "%s=%s*%s;", res, res, body);
+                    if (tag) _sprintf(tmpnew, "%s=%s*(%s);", res, res, body);
+                    else _sprintf(tmpnew, "%s=%s*%s;", res, res, body);
                     
                     memcpy(&buffer_tmp[size], tmpnew, strlen(tmpnew));
                     size += (int)strlen(tmpnew);
@@ -23086,15 +23357,15 @@ char * CVertexProgram::str_parse_addsub(char * script)
                 else
                 if (str_match(tmp, "/="))
                 {
-                    sprintf(res, "%s", tmp);
+                    _sprintf(res, "%s", tmp);
                     str_clean(res);
                     
                     p = str_char(res, '/');
                     res[p] = '\0';
                     
-                    sprintf(body, &res[p + 2]);
+                    _sprintf(body, &res[p + 2]);
                     
-                    sprintf(tmpnew, "%s=%s/%s;", res, res, body);
+                    _sprintf(tmpnew, "%s=%s/%s;", res, res, body);
                     
                     memcpy(&buffer_tmp[size], tmpnew, strlen(tmpnew));
                     size += (int)strlen(tmpnew);
@@ -23104,15 +23375,15 @@ char * CVertexProgram::str_parse_addsub(char * script)
                 else
 				if (str_match(tmp, "+="))
 				{
-					sprintf(res, "%s", tmp);
+					_sprintf(res, "%s", tmp);
 					str_clean(res);
 
 					p = str_char(res, '+');
 					res[p] = '\0';
 
-					sprintf(body, &res[p + 2]);
+					_sprintf(body, &res[p + 2]);
 
-					sprintf(tmpnew, "%s=%s+%s;", res, res, body);
+					_sprintf(tmpnew, "%s=%s+%s;", res, res, body);
 
 					memcpy(&buffer_tmp[size], tmpnew, strlen(tmpnew));
 					size += (int)strlen(tmpnew);
@@ -23122,15 +23393,15 @@ char * CVertexProgram::str_parse_addsub(char * script)
 				else
 				if (str_match(tmp, "-="))
 				{
-					sprintf(res, "%s", tmp);
+					_sprintf(res, "%s", tmp);
 					str_clean(res);
 
 					p = str_char(res, '-');
 					res[p] = '\0';
 
-					sprintf(body, &res[p + 2]);
+					_sprintf(body, &res[p + 2]);
 
-					sprintf(tmpnew, "%s=%s-%s;", res, res, body);
+					_sprintf(tmpnew, "%s=%s-%s;", res, res, body);
 
 					memcpy(&buffer_tmp[size], tmpnew, strlen(tmpnew));
 					size += (int)strlen(tmpnew);
@@ -23357,8 +23628,8 @@ void CVertexProgram::Translate_Macros(char * macros)
 				str[pp]='\0';
 				str2=&str[pp+1];
 				str2[str_char(str2,')')]='\0';
-				sprintf(m.name,"%s",str);
-				sprintf(m.def,"%s",str2);
+				_sprintf(m.name,"%s",str);
+				_sprintf(m.def,"%s",str2);
 				level++;
 				p=n+1;
 			}
@@ -23391,7 +23662,7 @@ int CVertexProgram::vsfnnum(char *name)
 	int p=str_char(name,'(');
 	if (p>=0)
 	{
-		sprintf(str,name);
+		_sprintf(str,name);
 		str[p]='\0';
 		for (n=0;n<24;n++) if (strcmp(str,vsfn[n].name)==0) return n;
 	}
@@ -23406,7 +23677,7 @@ int CVertexProgram::psfnnum(char *name)
 	int p=str_char(name,'(');
 	if (p>=0)
 	{
-		sprintf(str,name);
+		_sprintf(str,name);
 		str[p]='\0';
 		for (n=0;n<24;n++) if (strcmp(str,psfn[n].name)==0) return n;
 	}
@@ -23423,7 +23694,7 @@ void CVertexProgram::modifiersfn(Macro *fn,char *call,CList <Code> *vp)
 	char *def=fn->def;
 	int k=0;
 
-	sprintf(remap,"");
+	_sprintf(remap,"");
 
 	int p=0;
 	int pp=0;
@@ -23438,7 +23709,7 @@ void CVertexProgram::modifiersfn(Macro *fn,char *call,CList <Code> *vp)
 			{
 				if (isdefined(n)<0)
 				{ 
-					sprintf(ERRORSTRPARAM,"unknown : \"%s\"",n);
+					_sprintf(ERRORSTRPARAM,"unknown : \"%s\"",n);
 					PARAMERROR=true;
 					return; 
 				}
@@ -23446,17 +23717,17 @@ void CVertexProgram::modifiersfn(Macro *fn,char *call,CList <Code> *vp)
 			}
 			else
 			{
-				sprintf(tmp,"r%d",new_temp_register());
+				_sprintf(tmp,"r%d",new_temp_register());
 				rn=compile(n,tmp,vp);
 			}
 			compile_expression=false;
 
-			if (k>0) sprintf(remap,"%s,",remap);
-			sprintf(remap,"%s%s",remap,rn);
+			if (k>0) _sprintf(remap,"%s,",remap);
+			_sprintf(remap,"%s%s",remap,rn);
 		}
 		else
 		{
-			sprintf(ERRORSTRPARAM,"forgetten : \"%s\"",ss);
+			_sprintf(ERRORSTRPARAM,"forgetten : \"%s\"",ss);
 			PARAMERROR=true;
 			return;
 		}
@@ -23464,7 +23735,7 @@ void CVertexProgram::modifiersfn(Macro *fn,char *call,CList <Code> *vp)
 		ss=str_parse_char(def,&p,',');
 	}
 	
-	sprintf(call,remap);
+	_sprintf(call,remap);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23480,7 +23751,7 @@ void CVertexProgram::affectparameters(char *call,Macro *fn,CList <Code> *vp)
 	int p=str_char(call,'(');
 	if (p>=0)
 	{		
-		sprintf(str,&call[p+1]);
+		_sprintf(str,&call[p+1]);
 		int pp=str_char(str,')');
 		str[pp]='\0';
 		p=pp=0;
@@ -23489,7 +23760,7 @@ void CVertexProgram::affectparameters(char *call,Macro *fn,CList <Code> *vp)
 		{
 			char *n=str_parse_char_prt(str,&pp,',');
 			int r=new_temp_register();
-			sprintf(reg,"r%d",r);
+			_sprintf(reg,"r%d",r);
 				
 			fn->registers[k]=r;
 
@@ -23497,10 +23768,10 @@ void CVertexProgram::affectparameters(char *call,Macro *fn,CList <Code> *vp)
 			{
 				if (strcmp(reg,var(n))!=0)
 				{
-					if (fn->defs[k]==CALL_FLOAT) sprintf(c.str,"mov %s.xyzw,%s.x",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR2) sprintf(c.str,"mov %s.xy,%s.xy",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR3) sprintf(c.str,"mov %s.xyz,%s.xyz",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR4) sprintf(c.str,"mov %s,%s",reg,var(n));
+					if (fn->defs[k]==CALL_FLOAT) _sprintf(c.str,"mov %s.xyzw,%s.x",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR2) _sprintf(c.str,"mov %s.xy,%s.xy",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR3) _sprintf(c.str,"mov %s.xyz,%s.xyz",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR4) _sprintf(c.str,"mov %s,%s",reg,var(n));
 					AddInst(vp,c);
 				}
 			}
@@ -23508,10 +23779,10 @@ void CVertexProgram::affectparameters(char *call,Macro *fn,CList <Code> *vp)
 			{
 				if (strcmp(reg,var(n))!=0)
 				{					
-					if (fn->defs[k]==CALL_FLOAT) sprintf(c.str,"mov %s.xyzw,%s",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR2) sprintf(c.str,"mov %s.xy,%s",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR3) sprintf(c.str,"mov %s.xyz,%s",reg,var(n));
-					if (fn->defs[k]==CALL_VECTOR4) sprintf(c.str,"mov %s,%s",reg,var(n));
+					if (fn->defs[k]==CALL_FLOAT) _sprintf(c.str,"mov %s.xyzw,%s",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR2) _sprintf(c.str,"mov %s.xy,%s",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR3) _sprintf(c.str,"mov %s.xyz,%s",reg,var(n));
+					if (fn->defs[k]==CALL_VECTOR4) _sprintf(c.str,"mov %s,%s",reg,var(n));
 					AddInst(vp,c);
 				}
 			}				
@@ -23555,7 +23826,7 @@ void CVP_CnvDef(Macro *fn,char *def)
 	int n=0;
 	char str[1024];
 	int p=0;
-	sprintf(str,"");
+	_sprintf(str,"");
 	char *s=str_parse_char(def,&p,',');
 	while (s)
 	{
@@ -23581,12 +23852,12 @@ void CVP_CnvDef(Macro *fn,char *def)
 		if (str_match(s,"iovec3")) fn->defs[n]=CALL_IOVECTOR3;
 		if (str_match(s,"iovec4")) fn->defs[n]=CALL_IOVECTOR4;
 
-		if (n>0) sprintf(str,"%s,%s",str,&s[startname(s)]); else sprintf(str,"%s",&s[startname(s)]);
+		if (n>0) _sprintf(str,"%s,%s",str,&s[startname(s)]); else _sprintf(str,"%s",&s[startname(s)]);
 		n++;
 		s=str_parse_char(def,&p,',');
 	}
 
-	sprintf(def,str);
+	_sprintf(def,str);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23604,8 +23875,8 @@ void CVP_CnvRet(Macro *fn,char *s)
 		if (str_match(s,"float3")) fn->ret=CALL_VECTOR3;
 		if (str_match(s,"vec2")) fn->ret=CALL_VECTOR2;
 		if (str_match(s,"vec3")) fn->ret=CALL_VECTOR3;
-		sprintf(str,"%s",&s[startname(s)]);
-		sprintf(s,str);
+		_sprintf(str,"%s",&s[startname(s)]);
+		_sprintf(s,str);
 	}
 }
 
@@ -23643,9 +23914,9 @@ void CVertexProgram::parse_script_vs_functions(char *script)
 				str2=&str[pp+1];
 				str2[str_char(str2,')')]='\0';
 				CVP_CnvRet(fn,str);
-				sprintf(fn->name,"%s",str);
+				_sprintf(fn->name,"%s",str);
 				CVP_CnvDef(fn,str2);
-				sprintf(fn->def,"%s",str2);
+				_sprintf(fn->def,"%s",str2);
 				level++;
 				p=n+1;
 			}
@@ -23705,9 +23976,9 @@ void CVertexProgram::parse_script_ps_functions(char *script)
 				str2=&str[pp+1];
 				str2[str_char(str2,')')]='\0';
 				CVP_CnvRet(fn,str);
-				sprintf(fn->name,"%s",str);
+				_sprintf(fn->name,"%s",str);
 				CVP_CnvDef(fn,str2);
-				sprintf(fn->def,"%s",str2);
+				_sprintf(fn->def,"%s",str2);
 				level++;
 				p=n+1;
 			}
@@ -23811,9 +24082,9 @@ char * DeleteCommentsAndWarps(char *str,int warp)
             prm[p]=0;
             char *mat=&prm[p+1];
             
-            if (warp<=0) sprintf(func,"%s = iPos *4 %s;\n",prm,mat);
-            if (warp==1) sprintf(func,"%s = interpolate(iPos,iPos2,Interpolant,%s);\n",prm,mat);
-            if (warp==2) sprintf(func,"%s = iWeights.xxxx*iPos*4PALETTE[iWIndices.x] + iWeights.yyyy*iPos*4PALETTE[iWIndices.y];\n",prm);
+            if (warp<=0) _sprintf(func,"%s = iPos *4 %s;\n",prm,mat);
+            if (warp==1) _sprintf(func,"%s = interpolate(iPos,iPos2,Interpolant,%s);\n",prm,mat);
+            if (warp==2) _sprintf(func,"%s = iWeights.xxxx*iPos*4PALETTE[iWIndices.x] + iWeights.yyyy*iPos*4PALETTE[iWIndices.y];\n",prm);
             
             for (int k=0;k<(int)strlen(func);k++) buffer[size++]=func[k];
             n++;
@@ -23838,11 +24109,11 @@ char * DeleteCommentsAndWarps(char *str,int warp)
             char *mat=&prm[p+1];
 
             if (warp<=0)
-                sprintf(func,"%s = iNorm *3 %s;\n",prm,mat);
+                _sprintf(func,"%s = iNorm *3 %s;\n",prm,mat);
             if (warp==1)
-                sprintf(func,"%s = normal_interpolate(iNorm,iNorm2,Interpolant,%s);\n\t%s = normalise(%s);\n",prm,mat,prm,prm);
+                _sprintf(func,"%s = normal_interpolate(iNorm,iNorm2,Interpolant,%s);\n\t%s = normalise(%s);\n",prm,mat,prm,prm);
             if (warp==2)
-                sprintf(func,"%s = iWeights.xxxx*iNorm*3PALETTE[iWIndices.x]  + iWeights.yyyy*iNorm*3PALETTE[iWIndices.y];\n\t%s = normalise(%s);\n",prm,prm,prm);
+                _sprintf(func,"%s = iWeights.xxxx*iNorm*3PALETTE[iWIndices.x]  + iWeights.yyyy*iNorm*3PALETTE[iWIndices.y];\n\t%s = normalise(%s);\n",prm,prm,prm);
             
             for (int k=0;k<(int)strlen(func);k++) buffer[size++]=func[k];
             n++;
@@ -23861,9 +24132,9 @@ char * DeleteCommentsAndWarps(char *str,int warp)
             char *prm=str_return_parentheses(func);
             if (strlen(prm)==0) return NULL;
             
-            if (warp<=0) sprintf(func,"%s.xyz = iPos.xyz;\n\t%s.w=1.0;\n",prm,prm);
-            if (warp==1) sprintf(func,"%s = interpolate_base(iPos,iPos2,Interpolant);\n",prm);
-            if (warp==2) sprintf(func,"%s = iWeights.xxxx*iPos*4PALETTE[iWIndices.x] + iWeights.yyyy*iPos*4PALETTE[iWIndices.y];\n",prm);
+            if (warp<=0) _sprintf(func,"%s.xyz = iPos.xyz;\n\t%s.w=1.0;\n",prm,prm);
+            if (warp==1) _sprintf(func,"%s = interpolate_base(iPos,iPos2,Interpolant);\n",prm);
+            if (warp==2) _sprintf(func,"%s = iWeights.xxxx*iPos*4PALETTE[iWIndices.x] + iWeights.yyyy*iPos*4PALETTE[iWIndices.y];\n",prm);
             
             for (int k=0;k<(int)strlen(func);k++) buffer[size++]=func[k];
             n++;
@@ -23883,11 +24154,11 @@ char * DeleteCommentsAndWarps(char *str,int warp)
             if (strlen(prm)==0) return NULL;
             
             if (warp<=0)
-                sprintf(func,"%s.xyz = iNorm.xyz;\n\t%s.w=0.0;\n",prm,prm);
+                _sprintf(func,"%s.xyz = iNorm.xyz;\n\t%s.w=0.0;\n",prm,prm);
             if (warp==1)
-                sprintf(func,"%s = normal_interpolate_base(iNorm,iNorm2,Interpolant);\n\t%s = normalise(%s);\n",prm,prm,prm);
+                _sprintf(func,"%s = normal_interpolate_base(iNorm,iNorm2,Interpolant);\n\t%s = normalise(%s);\n",prm,prm,prm);
             if (warp==2)
-                sprintf(func,"%s = iWeights.xxxx*iNorm*3PALETTE[iWIndices.x]  + iWeights.yyyy*iNorm*3PALETTE[iWIndices.y];\n\t%s = normalise(%s);\n",prm,prm,prm);
+                _sprintf(func,"%s = iWeights.xxxx*iNorm*3PALETTE[iWIndices.x]  + iWeights.yyyy*iNorm*3PALETTE[iWIndices.y];\n\t%s = normalise(%s);\n",prm,prm,prm);
             
             for (int k=0;k<(int)strlen(func);k++) buffer[size++]=func[k];
             n++;
@@ -23914,7 +24185,7 @@ bool CVertexProgram::IsRegisterIn(int reg,CList<Code> &vpcode)
 {
     char ss[128];
     char ssreg[128];
-    sprintf(ssreg,"r%d",reg);
+    _sprintf(ssreg,"r%d",reg);
     
     Code * cc=vpcode.GetFirst();
     while (cc)
@@ -23997,7 +24268,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
     if (script==NULL)
     {
         SYNTAXERROR=true;
-        sprintf(ERRORSTR,"Illegal call of function.");
+        _sprintf(ERRORSTR,"Illegal call of function.");
         return false;
     }
     
@@ -24007,9 +24278,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	shadermodel3=false;
 	flow=1;
 
-	sprintf(RIF, "r11");
-	sprintf(RIFTMP, "r10");
-	sprintf(RIFTMP2, "r9");
+	_sprintf(RIF, "r11");
+	_sprintf(RIFTMP, "r10");
+	_sprintf(RIFTMP2, "r9");
 
 	metal=0;
 
@@ -24033,9 +24304,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (shadermodel4)
 	{
 		shadermodel=shadermodel3=var3=true;
-		sprintf(RIF, "r31");
-		sprintf(RIFTMP, "r30");
-		sprintf(RIFTMP2, "r29");
+		_sprintf(RIF, "r31");
+		_sprintf(RIFTMP, "r30");
+		_sprintf(RIFTMP2, "r29");
 
 		tmp=str_parse(script,&pos);
 		while (tmp)
@@ -24085,11 +24356,11 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 							if (strcmp(tmp,"TILED")==0) SizingTexture0=1;
                             
-							if (strcmp(tmp,"MODEL3")==0) { shadermodel3=var3=true;sprintf(RIF, "r31");sprintf(RIFTMP, "r30");sprintf(RIFTMP2, "r29");}
+							if (strcmp(tmp,"MODEL3")==0) { shadermodel3=var3=true;_sprintf(RIF, "r31");_sprintf(RIFTMP, "r30");_sprintf(RIFTMP2, "r29");}
 	#ifdef FORCE_MODEL3
 							if (strcmp(tmp,"MODEL2X")==0) shadermodel3=var3=true;
 	#endif
-							if (strcmp(tmp, "MODEL3NOFLOW") == 0) { shadermodel3 = var3 = true; flow = 0; sprintf(RIF, "r31"); sprintf(RIFTMP, "r30"); sprintf(RIFTMP2, "r29"); }
+							if (strcmp(tmp, "MODEL3NOFLOW") == 0) { shadermodel3 = var3 = true; flow = 0; _sprintf(RIF, "r31"); _sprintf(RIFTMP, "r30"); _sprintf(RIFTMP2, "r29"); }
 							if (strcmp(tmp,"DEPTH")==0) modifyZ=1;
                             if (strcmp(tmp,"VERSION300")==0) version300=1;
                             
@@ -24108,7 +24379,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 #ifdef FORCE_MODEL3
 	shadermodel=true;
 	model3=true;
-	shadermodel3=var3=true;sprintf(RIF, "r31");sprintf(RIFTMP, "r30");sprintf(RIFTMP2, "r29");
+	shadermodel3=var3=true;_sprintf(RIF, "r31");_sprintf(RIFTMP, "r30");_sprintf(RIFTMP2, "r29");
 #endif
 
 	apos=pos=0;
@@ -24167,7 +24438,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 				{
 					tech_spefs[tech]=TECH_SHADERMODEL|TECH_SHADERMODEL3;
 					shadermodel=shadermodel3=var3=true;
-					sprintf(RIF, "r31");sprintf(RIFTMP, "r30");sprintf(RIFTMP2, "r29");
+					_sprintf(RIF, "r31");_sprintf(RIFTMP, "r30");_sprintf(RIFTMP2, "r29");
 				}
 #endif
 
@@ -24316,7 +24587,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									if (var3)
 									{
 										str=(char*) malloc(strlen(tmp)+1);
-										sprintf(str,"%s",tmp);
+										_sprintf(str,"%s",tmp);
 										new_constant(str,_MATRIX,nb);
 									}
 									else
@@ -24324,7 +24595,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										for (n=0;n<nb;n++)
 										{
 											str=(char*) malloc(strlen(tmp)+1+2);
-											sprintf(str,"%s%d",tmp,n);
+											_sprintf(str,"%s%d",tmp,n);
 											new_constant(str,_MATRIX);
 										}
 									}
@@ -24332,7 +24603,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								else
 								{
 									str=(char*) malloc(strlen(tmp)+1);
-									sprintf(str,"%s",tmp);
+									_sprintf(str,"%s",tmp);
 									new_constant(str,_MATRIX,nb);
 								}
 
@@ -24340,7 +24611,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							else
 							{
 								str=(char*) malloc(strlen(tmp)+1);
-								sprintf(str,"%s",tmp);
+								_sprintf(str,"%s",tmp);
 								new_constant(str,_MATRIX);
 							}
 						}
@@ -24366,7 +24637,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									if (var3)
 									{
 										str=(char*) malloc(strlen(tmp)+1);
-										sprintf(str,"%s",tmp);
+										_sprintf(str,"%s",tmp);
 										new_constant(str,_VECTOR,nb);
 									}
 									else
@@ -24374,7 +24645,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										for (n=0;n<nb;n++)
 										{
 											str=(char*) malloc(strlen(tmp)+1+2);
-											sprintf(str,"%s%d",tmp,n);
+											_sprintf(str,"%s%d",tmp,n);
 											new_constant(str,_VECTOR);
 										}
 									}
@@ -24382,7 +24653,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								else
 								{
 									str=(char*) malloc(strlen(tmp)+1);
-									sprintf(str,"%s",tmp);
+									_sprintf(str,"%s",tmp);
 									new_constant(str,_VECTOR,nb);
 								}
 
@@ -24390,7 +24661,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							else
 							{
 								str=(char*) malloc(strlen(tmp)+1);
-								sprintf(str,"%s",tmp);
+								_sprintf(str,"%s",tmp);
 								new_constant(str,_VECTOR);
 							}
 
@@ -24409,7 +24680,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							else
 							{
 								str=(char*) malloc(strlen(tmp)+1);
-								sprintf(str,"%s",tmp);
+								_sprintf(str,"%s",tmp);
 								new_psvector(str);
 							}
 						}
@@ -24427,7 +24698,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							else
 							{
 								str=(char*) malloc(strlen(tmp)+1);
-								sprintf(str,"%s",tmp);
+								_sprintf(str,"%s",tmp);
 								new_psmatrix(str);
 							}
 						}
@@ -24439,7 +24710,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							str_clean(tmp);
 							tmp[str_char(tmp,';')]='\0';
 							str=(char*) malloc(strlen(tmp)+1);
-							sprintf(str,"%s",tmp);
+							_sprintf(str,"%s",tmp);
 							new_constant(str,_DWORD);
 						}
 						else
@@ -24450,14 +24721,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							str_clean(tmp);
 							tmp[str_char(tmp,';')]='\0';
 
-							sprintf(chaine,"%s",tmp);
+							_sprintf(chaine,"%s",tmp);
 
 							p=str_char(chaine,'=');
 
 							if (p!=-1) chaine[p]='\0';
 
 							str=(char*) malloc(strlen(chaine)+1);
-							sprintf(str,"%s",chaine);
+							_sprintf(str,"%s",chaine);
 							new_constant(str,_VECTOR);
 
 							vect=str_get_vector(&chaine[p+1]);
@@ -24467,7 +24738,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								//D3D
 
 								str=(char*) malloc(256);
-								sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+								_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 								set_translate_constant(chaine,str);
 
 							}
@@ -24476,7 +24747,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								//GL
 
 								str=(char*) malloc(256);
-								sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+								_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 
 								int tc=set_translate_constant(chaine,str);
 
@@ -24494,14 +24765,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							str_clean(tmp);
 							tmp[str_char(tmp,';')]='\0';
 
-							sprintf(chaine,"%s",tmp);
+							_sprintf(chaine,"%s",tmp);
 
 							p=str_char(chaine,'=');
 
 							if (p!=-1) chaine[p]='\0';
 
 							str=(char*) malloc(strlen(chaine)+1);
-							sprintf(str,"%s",chaine);
+							_sprintf(str,"%s",chaine);
 							new_ps_constant(str);
 
 							vect=str_get_vector(&chaine[p+1]);
@@ -24511,7 +24782,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								//D3D
 
 								str=(char*) malloc(256);
-								sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+								_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 								set_translate_ps_constant(chaine,str);
 
 							}
@@ -24520,7 +24791,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								//GL
 
 								str=(char*) malloc(256);
-								sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+								_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 
 								int tc=set_translate_ps_constant(chaine,str);
 
@@ -24538,14 +24809,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							str_clean(tmp);
 							tmp[str_char(tmp,';')]='\0';
 
-							sprintf(chaine,"%s",tmp);
+							_sprintf(chaine,"%s",tmp);
 
 							p=str_char(chaine,'=');
 
 							if (p!=-1) chaine[p]='\0';
 
 							str=(char*) malloc(strlen(chaine)+1);
-							sprintf(str,"%s",chaine);
+							_sprintf(str,"%s",chaine);
 							new_ps_matrix(str);
 
 							mat=str_get_matrix(&chaine[p+1]);
@@ -24554,7 +24825,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							{
 								//D3D
 								str=(char*) malloc(1024);
-								sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff"
+								_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff,%3.8ff"
 									,mat[0],mat[1],mat[2],mat[3]
 									,mat[4],mat[5],mat[6],mat[7]
 									,mat[8],mat[9],mat[10],mat[11]
@@ -24568,7 +24839,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								str=(char*) malloc(1024);
                                 if (metal==1)
                                 {
-                                    sprintf(str,"float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f)"
+                                    _sprintf(str,"float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f),float4(%3.8f,%3.8f,%3.8f,%3.8f)"
                                             ,mat[0],mat[1],mat[2],mat[3]
                                             ,mat[4],mat[5],mat[6],mat[7]
                                             ,mat[8],mat[9],mat[10],mat[11]
@@ -24577,7 +24848,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                 }
                                 else
                                 {
-                                    sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f"
+                                    _sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f,%3.8f"
                                             ,mat[0],mat[1],mat[2],mat[3]
                                             ,mat[4],mat[5],mat[6],mat[7]
                                             ,mat[8],mat[9],mat[10],mat[11]
@@ -24598,9 +24869,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 							str_clean(tmp);
 							tmp[str_char(tmp,';')]='\0';
 
-							sprintf(chaine,"%s",tmp);
+							_sprintf(chaine,"%s",tmp);
 							str=(char*) malloc(strlen(chaine)+1);
-							sprintf(str,"%s",chaine);
+							_sprintf(str,"%s",chaine);
 
 							texturevs[ntexturevs]=str;
 							ntexturevs++;
@@ -24613,9 +24884,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                             str_clean(tmp);
                             tmp[str_char(tmp,';')]='\0';
 
-                            sprintf(chaine,"%s",tmp);
+                            _sprintf(chaine,"%s",tmp);
                             str=(char*) malloc(strlen(chaine)+1);
-                            sprintf(str,"%s",chaine);
+                            _sprintf(str,"%s",chaine);
 
                             texture[ntexture]=str;
                             ntexture++;
@@ -24754,7 +25025,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 					memcpy(&RenderState[tech][pass],&RS,sizeof(vpRenderState));
 				else
                 {
-					sprintf(RSERRORSTR,"%s",s_tmp_error);
+					_sprintf(RSERRORSTR,"%s",s_tmp_error);
                     RSERROR=true;
                     return false;                    
                 }
@@ -24779,7 +25050,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 		if (RenderState[0][0].AlphaRef==-666)
 		{
 			str=(char*)malloc(strlen("REFALPHA")+1);
-			sprintf(str,"REFALPHA");
+			_sprintf(str,"REFALPHA");
 			new_psvector(str);
 		}
 	
@@ -24788,14 +25059,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 		if ((SizingTexture0)&&(FSRSample0)&&(RenderState[0][0].Texture[0]))
 		{
 			str=(char*)malloc(strlen("SIZEDESTZ")+1);
-			sprintf(str,"SIZEDESTZ");
+			_sprintf(str,"SIZEDESTZ");
 			new_psvector(str);
 		}
 
 		if ((SizingTexture0)&&(FSRSample0==0)&&(RenderState[0][0].Texture[0]))
 		{
 			str=(char*)malloc(strlen("SIZEDESTZ")+1);
-			sprintf(str,"SIZEDESTZ");
+			_sprintf(str,"SIZEDESTZ");
 			new_psvector(str);
 
 			char psfnbase0[4096];
@@ -24808,14 +25079,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 			if(script_psfunctions[0][0])
 			{
 				char * buftmp=(char*)malloc(strlen(script_psfunctions[0][0])+strlen(psfn0)+4);
-				sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn0);
+				_sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn0);
 				free(script_psfunctions[0][0]);
 				script_psfunctions[0][0]=buftmp;
 			}
 			else
 			{
 				char * buftmp=(char*)malloc(strlen(psfn0)+4);
-				sprintf(buftmp,"%s",psfn0);
+				_sprintf(buftmp,"%s",psfn0);
 				script_psfunctions[0][0]=buftmp;
 			}
 		}
@@ -24823,7 +25094,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 		if ((FSRSample0)&&(RenderState[0][0].Texture[0]))
 		{
 			str=(char*) malloc(strlen("SIZEDEST0")+1);
-			sprintf(str,"SIZEDEST0");
+			_sprintf(str,"SIZEDEST0");
 			new_psvector(str);
 
 			char psfnbase0[4096];
@@ -24836,14 +25107,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 			if (script_psfunctions[0][0])
 			{
 				char * buftmp=(char*)malloc(strlen(script_psfunctions[0][0])+strlen(psfn0)+4);
-				sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn0);
+				_sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn0);
 				free(script_psfunctions[0][0]);
 				script_psfunctions[0][0]=buftmp;
 			}
 			else
 			{
 				char * buftmp=(char*)malloc(strlen(psfn0)+4);
-				sprintf(buftmp,"%s",psfn0);
+				_sprintf(buftmp,"%s",psfn0);
 				script_psfunctions[0][0]=buftmp;
 			}
 		}
@@ -24851,7 +25122,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 		if ((FSRSample1)&&(RenderState[0][0].Texture[1]))
 		{
 			str=(char*) malloc(strlen("SIZEDEST1")+1);
-			sprintf(str,"SIZEDEST1");
+			_sprintf(str,"SIZEDEST1");
 			new_psvector(str);
 
 			char psfnbase1[4096];
@@ -24864,14 +25135,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 			if (script_psfunctions[0][0])
 			{
 				char * buftmp=(char*)malloc(strlen(script_psfunctions[0][0])+strlen(psfn1)+4);
-				sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn1);
+				_sprintf(buftmp,"%s%s",script_psfunctions[0][0],psfn1);
 				free(script_psfunctions[0][0]);
 				script_psfunctions[0][0]=buftmp;
 			}
 			else
 			{
 				char * buftmp=(char*)malloc(strlen(psfn1)+4);
-				sprintf(buftmp,"%s",psfn1);
+				_sprintf(buftmp,"%s",psfn1);
 				script_psfunctions[0][0]=buftmp;
 			}
 		}
@@ -24883,7 +25154,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	vect=tab;
 
 	str_chaine=(char*) malloc(128);
-	sprintf(str_chaine,"trigo_mod");
+	_sprintf(str_chaine,"trigo_mod");
 	new_constant(str_chaine,_VECTOR);
 
 	vect[0]=PI;
@@ -24894,14 +25165,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (flags&DIRECT3D)
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 		set_translate_constant(str_chaine,str);
 
 	}
 	else
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 		int tc=set_translate_constant(str_chaine,str);
 		float_translate_constants[tc][0]=vect[0];
 		float_translate_constants[tc][1]=vect[1];
@@ -24912,7 +25183,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	// trigo_cst = 0,PI/2,1
 
 	str_chaine=(char*) malloc(128);
-	sprintf(str_chaine,"trigo_cst");
+	_sprintf(str_chaine,"trigo_cst");
 	new_constant(str_chaine,_VECTOR);
 
 	vect[0]=0;
@@ -24923,14 +25194,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (flags&DIRECT3D)
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 		set_translate_constant(str_chaine,str);
 
 	}
 	else
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 		int tc=set_translate_constant(str_chaine,str);
 		float_translate_constants[tc][0]=vect[0];
 		float_translate_constants[tc][1]=vect[1];
@@ -24939,7 +25210,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	}
 
 	str_chaine=(char*) malloc(128);
-	sprintf(str_chaine,"trigo_cst2");
+	_sprintf(str_chaine,"trigo_cst2");
 	new_constant(str_chaine,_VECTOR);
 
 	// trigo_cst2 = 1/6,1/120
@@ -24952,14 +25223,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (flags&DIRECT3D)
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 		set_translate_constant(str_chaine,str);
 
 	}
 	else
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 		int tc=set_translate_constant(str_chaine,str);
 		float_translate_constants[tc][0]=vect[0];
 		float_translate_constants[tc][1]=vect[1];
@@ -24969,7 +25240,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 
 	str_chaine=(char*) malloc(128);
-	sprintf(str_chaine,"trigo_cst3");
+	_sprintf(str_chaine,"trigo_cst3");
 	new_constant(str_chaine,_VECTOR);
 
 	// trigo_cst3 = 1/3,2/15,17/315
@@ -24983,14 +25254,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (flags&DIRECT3D)
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 		set_translate_constant(str_chaine,str);
 
 	}
 	else
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 		int tc=set_translate_constant(str_chaine,str);
 		float_translate_constants[tc][0]=vect[0];
 		float_translate_constants[tc][1]=vect[1];
@@ -24999,7 +25270,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	}
 
 	str_chaine=(char*) malloc(128);
-	sprintf(str_chaine,"trigo_cst4");
+	_sprintf(str_chaine,"trigo_cst4");
 	new_constant(str_chaine,_VECTOR);
 
 	// trigo_cst3 = 1/3,2/15,17/315
@@ -25012,14 +25283,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 	if (flags&DIRECT3D)
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8ff,%3.8ff,%3.8ff,%3.8ff",vect[0],vect[1],vect[2],vect[3]);
 		set_translate_constant(str_chaine,str);
 
 	}
 	else
 	{
 		str=(char*) malloc(256);
-		sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
+		_sprintf(str,"%3.8f,%3.8f,%3.8f,%3.8f",vect[0],vect[1],vect[2],vect[3]);
 		int tc=set_translate_constant(str_chaine,str);
 		float_translate_constants[tc][0]=vect[0];
 		float_translate_constants[tc][1]=vect[1];
@@ -25034,7 +25305,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 		{
 			if (texture[n])
 			{
-				sprintf(c.str,"TEXTURE %s;",texture[n]);
+				_sprintf(c.str,"TEXTURE %s;",texture[n]);
 				vp.Add(c);
 			}
 
@@ -25053,15 +25324,15 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 				switch (l_constants[n]&0xffff)
 				{
 				case _MATRIX:
-					sprintf(c.str,"MATRIX %s;",constants[n]);
+					_sprintf(c.str,"MATRIX %s;",constants[n]);
 					vp.Add(c);
 					break;
 				case _VECTOR:
-					sprintf(c.str,"VECTOR %s;",constants[n]);
+					_sprintf(c.str,"VECTOR %s;",constants[n]);
 					vp.Add(c);
 					break;
 				case _DWORD:
-					sprintf(c.str,"DWORD %s;",constants[n]);
+					_sprintf(c.str,"DWORD %s;",constants[n]);
 					vp.Add(c);
 					break;
 				};
@@ -25099,24 +25370,24 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									if (!shadermodel3)
 									{
 										str_chaine=(char*) malloc(128);
-										sprintf(str_chaine,"sc1");
+										_sprintf(str_chaine,"sc1");
 										new_ps_constant(str_chaine);
 										str=(char*) malloc(256);
-										sprintf(str,"-1.5500992e-006f, -2.1701389e-005f,  0.0026041667f, 0.00026041668f");
+										_sprintf(str,"-1.5500992e-006f, -2.1701389e-005f,  0.0026041667f, 0.00026041668f");
 										set_translate_ps_constant(str_chaine,str);
 
 										str_chaine=(char*) malloc(128);
-										sprintf(str_chaine,"sc2");
+										_sprintf(str_chaine,"sc2");
 										new_ps_constant(str_chaine);
 										str=(char*) malloc(256);
-										sprintf(str,"-0.020833334f, -0.12500000f, 1.0f, 0.50000000f");
+										_sprintf(str,"-0.020833334f, -0.12500000f, 1.0f, 0.50000000f");
 										set_translate_ps_constant(str_chaine,str);
 									}
 									str_chaine=(char*) malloc(128);
-									sprintf(str_chaine,"zerocinq");
+									_sprintf(str_chaine,"zerocinq");
 									new_ps_constant(str_chaine);
 									str=(char*) malloc(256);
-									sprintf(str,"0.5f,0.5f,0.5f,0.0f");
+									_sprintf(str,"0.5f,0.5f,0.5f,0.0f");
 									set_translate_ps_constant(str_chaine,str);
 								}
 							}
@@ -25127,7 +25398,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                 {
                                     if (texturevs[n])
                                     {
-                                        sprintf(c.str,"uniform sampler2D %s;",texturevs[n]);
+                                        _sprintf(c.str,"uniform sampler2D %s;",texturevs[n]);
                                         glheader.Add(c);
                                     }
                                 }
@@ -25143,12 +25414,12 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											{
 												nb=l_constants[n]>>16;
 
-												sprintf(c.str,"uniform mat4 %s[%d];",constants[n],nb);
+												_sprintf(c.str,"uniform mat4 %s[%d];",constants[n],nb);
 												glheader.Add(c);
 											}
 											else
 											{
-												sprintf(c.str,"uniform mat4 %s;",constants[n]);
+												_sprintf(c.str,"uniform mat4 %s;",constants[n]);
 												glheader.Add(c);
 											}
 											break;
@@ -25157,24 +25428,24 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                             {
                                                 nb=l_constants[n]>>16;
 
-                                                sprintf(c.str,"uniform vec4 %s[%d];",constants[n],nb);
+                                                _sprintf(c.str,"uniform vec4 %s[%d];",constants[n],nb);
                                                 glheader.Add(c);
                                             }
                                             else
                                             {
-                                                sprintf(c.str,"uniform vec4 %s;",constants[n]);
+                                                _sprintf(c.str,"uniform vec4 %s;",constants[n]);
                                                 glheader.Add(c);
                                             }
 											break;
 										case _DWORD:
-											sprintf(c.str,"uniform uint %s;",constants[n]);
+											_sprintf(c.str,"uniform uint %s;",constants[n]);
 											glheader.Add(c);
 											break;
 										};
 									}
 									else
 									{
-										sprintf(c.str,"const vec4 %s = vec4( %s );",constants[n],translate_constants[n]);
+										_sprintf(c.str,"const vec4 %s = vec4( %s );",constants[n],translate_constants[n]);
 										glheader.Add(c);
 									}
 									
@@ -25192,13 +25463,13 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										if (l_constants[n]>0xffff)
 										{
 											nb=l_constants[n]>>16;
-											sprintf(c.str,"PARAM %s[%d] = { program.env[%d..%d] };",constants[n],nb*4,nv,nv+nb*4-1);
+											_sprintf(c.str,"PARAM %s[%d] = { program.env[%d..%d] };",constants[n],nb*4,nv,nv+nb*4-1);
 											glheader.Add(c);
 											nv+=nb*4;
 										}
 										else
 										{
-											sprintf(c.str,"PARAM %s[4] = { state.matrix.program[%d] };",constants[n],nm);
+											_sprintf(c.str,"PARAM %s[4] = { state.matrix.program[%d] };",constants[n],nm);
 											nm++;
 											glheader.Add(c);
 										}
@@ -25208,23 +25479,23 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										{
 											if (l_constants[n]<0xffff)
 											{
-												sprintf(c.str,"PARAM %s = program.env[%d];",constants[n],nv);
+												_sprintf(c.str,"PARAM %s = program.env[%d];",constants[n],nv);
 												nv++;
 											}
 											else
 											{
 												nb=l_constants[n]>>16;
-												sprintf(c.str,"PARAM %s[%d] = { program.env[%d..%d] };",constants[n],nb,nv,nv+nb-1);
+												_sprintf(c.str,"PARAM %s[%d] = { program.env[%d..%d] };",constants[n],nb,nv,nv+nb-1);
 												nv+=nb;
 											}
 										}
 										else
-											sprintf(c.str,"PARAM %s = { %s };",constants[n],translate_constants[n]);
+											_sprintf(c.str,"PARAM %s = { %s };",constants[n],translate_constants[n]);
 
 										glheader.Add(c);
 										break;
 									case _DWORD:
-										sprintf(c.str,"PARAM %s;",constants[n]);
+										_sprintf(c.str,"PARAM %s;",constants[n]);
 										glheader.Add(c);
 										break;
 									};
@@ -25239,11 +25510,11 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								{
 									for (n=0;n<last_ps_constant;n++)
 									{
-										sprintf(c.str,"PARAM %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+										_sprintf(c.str,"PARAM %s = { %s };",ps_constants[n],translate_ps_constants[n]);
 										glheaderps.Add(c);
 									}
 
-									sprintf(c.str,"PARAM zerocinq = { 0.5,0.5,0.5,0.0 };");
+									_sprintf(c.str,"PARAM zerocinq = { 0.5,0.5,0.5,0.0 };");
 									glheaderps.Add(c);
 								}
 								else
@@ -25252,27 +25523,27 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									{
 										if (texture[n])
 										{
-											sprintf(c.str,"uniform sampler2D %s;",texture[n]);
+											_sprintf(c.str,"uniform sampler2D %s;",texture[n]);
 											glheaderps.Add(c);
 										}
 									}
 
 									for (n=0;n<last_ps_constant;n++)
 									{
-										if (ps_constants_type[n]==1) sprintf(c.str,"vec4 %s = vec4 ( %s );",ps_constants[n],translate_ps_constants[n]);
-										else sprintf(c.str,"mat4 %s = mat4 ( %s );",ps_constants[n],translate_ps_constants[n]);
+										if (ps_constants_type[n]==1) _sprintf(c.str,"vec4 %s = vec4 ( %s );",ps_constants[n],translate_ps_constants[n]);
+										else _sprintf(c.str,"mat4 %s = mat4 ( %s );",ps_constants[n],translate_ps_constants[n]);
 										glheaderps.Add(c);
 									}
 
 									for (n=0;n<npsvectors;n++)
 									{
-										sprintf(c.str,"uniform vec4 %s;",psvectors[n]);
+										_sprintf(c.str,"uniform vec4 %s;",psvectors[n]);
 										glheaderps.Add(c);
 									}
 
 									for (n=0;n<npsmatrices;n++)
 									{
-										sprintf(c.str,"uniform mat4 %s;",psmatrices[n]);
+										_sprintf(c.str,"uniform mat4 %s;",psmatrices[n]);
 										glheaderps.Add(c);
 									}
 
@@ -25293,9 +25564,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 								c.str[0]='\0';
 								vp.Add(c);
 
-								sprintf(c.str,"TECHNIQUE T0");
+								_sprintf(c.str,"TECHNIQUE T0");
 								vp.Add(c);
-								sprintf(c.str,"{");
+								_sprintf(c.str,"{");
 								vp.Add(c);
 								NPASS=1;
 							}
@@ -25394,17 +25665,17 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 									if ((script_vsfunctions[t][p])&&(shadermodel)&&(!shadermodel3))
 									{
-										sprintf(c.str,"ret");
+										_sprintf(c.str,"ret");
 										vp.Add(c);
 										// TODO
 										for (int kk=0;kk<numvsfn;kk++)
 										{
-											sprintf(c.str,"label l%d",kk);
+											_sprintf(c.str,"label l%d",kk);
 											vp.Add(c);
 											ndefs=0;
 											compile_function(&vsfn[kk],&vp);
 											unused_variables();
-											sprintf(c.str,"ret");
+											_sprintf(c.str,"ret");
 											vp.Add(c);
 										}
 									}
@@ -25427,20 +25698,20 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 										if (shadermodel)
 										{
-											sprintf(c.str, "mov oC0,r0");
+											_sprintf(c.str, "mov oC0,r0");
 											vp.Add(c);
 
 											if (script_psfunctions[t][p])
 											{
-												sprintf(c.str,"ret");
+												_sprintf(c.str,"ret");
 												vp.Add(c);
 												for (int kk=0;kk<numpsfn;kk++)
 												{
-													sprintf(c.str,"label l%d",kk);
+													_sprintf(c.str,"label l%d",kk);
 													vp.Add(c);													
 													compile_psfunction(&psfn[kk],&vp);													
 													unused_variables();
-													sprintf(c.str,"ret");
+													_sprintf(c.str,"ret");
 													vp.Add(c);
 												}
 											}
@@ -25483,7 +25754,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 									unused_variables();
 
-									sprintf(c.str,"");
+									_sprintf(c.str,"");
 									s3vp[p].InsertFirst(c);
 
 									if (weightsandindices)
@@ -25507,10 +25778,16 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											
                                             strcpy(c.str,"Weights.w = IWeights.w - (float(WInd.w)*2.0);");s3vp[p].InsertFirst(c);
                                             strcpy(c.str,"WInd.w  = int(IWeights.w/2.0);");s3vp[p].InsertFirst(c);
-
-											if (metal==0) strcpy(c.str,"float4 IWeights = i.v1;");
-											else strcpy(c.str,"float4 IWeights = indexed.v1;");
-
+											if (stream)
+											{
+												if (metal==0) strcpy(c.str,"float4 IWeights = i.v1;");
+												else strcpy(c.str,"float4 IWeights = indexed.v2;");
+											}
+											else
+											{
+												if (metal==0) strcpy(c.str,"float4 IWeights = i.v1;");
+												else strcpy(c.str,"float4 IWeights = indexed.v1;");
+											}											
 											s3vp[p].InsertFirst(c);
 											
                                             strcpy(c.str,"");s3vp[p].InsertFirst(c);
@@ -25523,12 +25800,12 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                             strcpy(c.str,"WInd.y  = ((twi*65536)/16777216);");s3vp[p].InsertFirst(c);
                                             strcpy(c.str,"WInd.x  = ((twi*16777216)/16777216);");s3vp[p].InsertFirst(c);
 
-                                            strcpy(c.str,"uint twi = i.v2;");s3vp[p].InsertFirst(c);
+											strcpy(c.str,"int twi = i.v2;");s3vp[p].InsertFirst(c);
 										}
-										sprintf(c.str,"");s3vp[p].InsertFirst(c);
+										_sprintf(c.str,"");s3vp[p].InsertFirst(c);
 									}
 									
-									sprintf(c.str,"");
+									_sprintf(c.str,"");
 									s3vp[p].InsertFirst(c);
 									if (metal==0)
                                     {
@@ -25549,21 +25826,21 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										{
                                             if (IsRegisterIn(n,s3vp[p]))
                                             {
-                                                sprintf(c.str,"float4 r%d;",n);
+                                                _sprintf(c.str,"float4 r%d;",n);
                                                 s3vp[p].InsertFirst(c);
                                             }
 										}
 									
-									sprintf(c.str,"");
+									_sprintf(c.str,"");
 									s3vp[p].InsertFirst(c);
-									sprintf(c.str,"VS_OUTPUT%d o;",p);
+									_sprintf(c.str,"VS_OUTPUT%d o;",p);
 									s3vp[p].InsertFirst(c);
                                     strcpy(c.str,"{");
 									if ((numvsfn>0)||(metal==0)) s3vp[p].InsertFirst(c);
 
 									if (metal==0)
 									{
-										sprintf(c.str,"VS_OUTPUT%d RenderPassVS%d(VS_INPUT i)",p,p);
+										_sprintf(c.str,"VS_OUTPUT%d RenderPassVS%d(VS_INPUT i)",p,p);
 										s3vp[p].InsertFirst(c);
 									}
 
@@ -25576,7 +25853,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									{
 										if (output&DIFFUSE)
 										{
-											sprintf(c.str,"o.v0 = clamp( o.v0, 0.0f, 1.0f);");
+											_sprintf(c.str,"o.v0 = clamp( o.v0, 0.0f, 1.0f);");
 											s3vp[p].Add(c);
 										}
                                         strcpy(c.str,"return o;");
@@ -25596,7 +25873,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											for (n=0;n<32;n++) tagreg[n]=0;
 											for (n=0;n<32;n++) tagtempreg[n]=0;
 
-											sprintf(&vsfnname[kk][p][0],compile_function(&vsfn[kk],&vptmp));
+											_sprintf(&vsfnname[kk][p][0],compile_function(&vsfn[kk],&vptmp));
 											unused_variables();
 
 											for (n=31;n>=0;n--)
@@ -25604,7 +25881,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
                                                     if (IsRegisterIn(n,vptmp))
                                                     {
-                                                        sprintf(c.str,"float4 r%d;",n);
+                                                        _sprintf(c.str,"float4 r%d;",n);
                                                         vptmp.InsertFirst(c);
                                                     }
 												}
@@ -25613,7 +25890,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											vptmp.InsertFirst(c);
                                             strcpy(c.str,"}");
 											vptmp.Add(c);
-											sprintf(c.str,entete);
+											_sprintf(c.str,entete);
 											vptmp.InsertFirst(c);
 
 											Code *wc=vptmp.GetFirst();
@@ -25644,9 +25921,9 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										{
 											if (fvf&VPMORPH)
 											{
-												sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vpmetal[p].Add(c);
-												sprintf(c.str,"                                const device VS_INPUT2 *vertex_array2[[ buffer(1) ]],"); s3vpmetal[p].Add(c);
-												sprintf(c.str,"                                constant constants_t& constants[[ buffer(2) ]],"); s3vpmetal[p].Add(c);
+												_sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vpmetal[p].Add(c);
+												_sprintf(c.str,"                                const device VS_INPUT2 *vertex_array2[[ buffer(1) ]],"); s3vpmetal[p].Add(c);
+												_sprintf(c.str,"                                constant constants_t& constants[[ buffer(2) ]],"); s3vpmetal[p].Add(c);
                                                 
                                                 
                                                 int nt=0;
@@ -25654,7 +25931,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 {
                                                     if (texturevs[n])
                                                     {
-                                                        sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],nt);
+                                                        _sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],nt);
                                                         s3vpmetal[p].Add(c);
                                                         nt++;
                                                     }
@@ -25670,7 +25947,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											}
 											else
 											{
-												sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vpmetal[p].Add(c);
+												_sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vpmetal[p].Add(c);
                                                 strcpy(c.str,"                                constant constants_t& constants[[ buffer(1) ]],"); s3vpmetal[p].Add(c);
                                                 
                                                 int nt=0;
@@ -25678,7 +25955,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 {
                                                     if (texturevs[n])
                                                     {
-                                                        sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],nt);
+                                                        _sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],nt);
                                                         s3vpmetal[p].Add(c);
                                                         nt++;
                                                     }
@@ -25699,17 +25976,17 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (translate_constants[n]==NULL)
 													{
-														if (LENGTH_VAR[l_constants[n]&0xffff]==1) sprintf(c.str,"#define %s constants.%s",constants[n],constants[n]);
+														if (LENGTH_VAR[l_constants[n]&0xffff]==1) _sprintf(c.str,"#define %s constants.%s",constants[n],constants[n]);
 														if (LENGTH_VAR[l_constants[n]&0xffff]==4)
 														{
-															sprintf(c.str,"#define %s constants.%s",constants[n],constants[n]);
+															_sprintf(c.str,"#define %s constants.%s",constants[n],constants[n]);
 														}
 														s3vpmetal[p].Add(c);
 													}
 												}
 											}
 
-											sprintf(c.str,"");
+											_sprintf(c.str,"");
 											s3vpmetal[p].Add(c);
 
 											if (weightsandindices)
@@ -25737,7 +26014,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										else
 										{
 										
-											sprintf(c.str,"struct VertexShader%d",p);s3vpmetal[p].Add(c);
+											_sprintf(c.str,"struct VertexShader%d",p);s3vpmetal[p].Add(c);
                                             strcpy(c.str,"{");s3vpmetal[p].Add(c);
 
 											int lasti=0;
@@ -25752,7 +26029,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                             {
                                                 if (texturevs[n])
                                                 {
-                                                    sprintf(c.str,"texture2d<float> %s;",texturevs[n]);
+                                                    _sprintf(c.str,"texture2d<float> %s;",texturevs[n]);
                                                     s3vpmetal[p].Add(c);
                                                     nt++;
                                                 }
@@ -25770,10 +26047,10 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 													}
 													else
 													{
-														if (LENGTH_VAR[l_constants[n]&0xffff]==1) sprintf(c.str,"#define %s cb.%s",constants[n],constants[n]);
+														if (LENGTH_VAR[l_constants[n]&0xffff]==1) _sprintf(c.str,"#define %s cb.%s",constants[n],constants[n]);
 														if (LENGTH_VAR[l_constants[n]&0xffff]==4)
 														{
-															sprintf(c.str,"#define %s cb.%s",constants[n],constants[n]);
+															_sprintf(c.str,"#define %s cb.%s",constants[n],constants[n]);
 														}
 														lasti=n;
 														s3vpmetal[p].Add(c);
@@ -25781,7 +26058,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												}
 											}
 
-											sprintf(c.str,"");
+											_sprintf(c.str,"");
 											s3vpmetal[p].Add(c);
 
 											if (weightsandindices)
@@ -25804,22 +26081,22 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
                                             if (ntexturevs==0)
                                             {
-                                                if (fvf&VPMORPH) sprintf(c.str,"VertexShader%d(thread VS_INPUT1 &v,thread VS_INPUT2 &v2,constant constants_t& c) :",p);
-                                                else sprintf(c.str,"VertexShader%d(thread VS_INPUT &v,constant constants_t& c) :",p);
+                                                if (fvf&VPMORPH) _sprintf(c.str,"VertexShader%d(thread VS_INPUT1 &v,thread VS_INPUT2 &v2,constant constants_t& c) :",p);
+                                                else _sprintf(c.str,"VertexShader%d(thread VS_INPUT &v,constant constants_t& c) :",p);
                                                 s3vpmetal[p].Add(c);
                                             }
                                             else
                                             {
                                                 if (fvf&VPMORPH)
                                                 {
-                                                    sprintf(c.str,"VertexShader%d(thread VS_INPUT1 &v,thread VS_INPUT2 &v2,constant constants_t& c,",p);
+                                                    _sprintf(c.str,"VertexShader%d(thread VS_INPUT1 &v,thread VS_INPUT2 &v2,constant constants_t& c,",p);
                                                     s3vpmetal[p].Add(c);
                                                     
                                                     for (n=0;n<16;n++)
                                                     {
                                                         if (texturevs[n])
                                                         {
-                                                            sprintf(c.str,"thread texture2d<float>& tex%d,",n);
+                                                            _sprintf(c.str,"thread texture2d<float>& tex%d,",n);
                                                             s3vpmetal[p].Add(c);
                                                         }
                                                     }
@@ -25829,14 +26106,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 }
                                                 else
                                                 {
-                                                    sprintf(c.str,"VertexShader%d(thread VS_INPUT &v,constant constants_t& c,",p);
+                                                    _sprintf(c.str,"VertexShader%d(thread VS_INPUT &v,constant constants_t& c,",p);
                                                     s3vpmetal[p].Add(c);
 
                                                     for (n=0;n<16;n++)
                                                     {
                                                         if (texturevs[n])
                                                         {
-                                                            sprintf(c.str,"thread texture2d<float>& tex%d,",n);
+                                                            _sprintf(c.str,"thread texture2d<float>& tex%d,",n);
                                                             s3vpmetal[p].Add(c);
                                                         }
                                                     }
@@ -25862,7 +26139,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 {
                                                     if (texturevs[n])
                                                     {
-                                                        sprintf(c.str,"%s(tex%d),",texturevs[n],n);
+                                                        _sprintf(c.str,"%s(tex%d),",texturevs[n],n);
                                                         s3vpmetal[p].Add(c);
                                                     }
                                                 }
@@ -25889,7 +26166,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 											c.str[0]='\0'; s3vpmetal[p].Add(c);
 
-											sprintf(c.str,"VS_OUTPUT%d main()",p);s3vpmetal[p].Add(c);
+											_sprintf(c.str,"VS_OUTPUT%d main()",p);s3vpmetal[p].Add(c);
 
 											// UP
 
@@ -25915,25 +26192,25 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                             {
                                                 if (fvf&VPMORPH)
                                                 {
-                                                    sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                const device VS_INPUT2 *vertex_array2[[ buffer(1) ]],"); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                constant constants_t& constants[[ buffer(2) ]],"); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                unsigned int vid[[ vertex_id ]])"); s3vp[p].Add(c);
                                                     strcpy(c.str,"{"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT1 vert(vertex_array[vid]);"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT2 vert2(vertex_array2[vid]);"); s3vp[p].Add(c);
-                                                    sprintf(c.str,"VertexShader%d vs(vert,vert2,constants);",p); s3vp[p].Add(c);
-                                                    sprintf(c.str,"return vs.main();"); s3vp[p].Add(c);
-                                                    sprintf(c.str,"}"); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"VertexShader%d vs(vert,vert2,constants);",p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"return vs.main();"); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"}"); s3vp[p].Add(c);
                                                 }
                                                 else
                                                 {
-                                                    sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                constant constants_t& constants[[ buffer(1) ]],"); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                unsigned int vid[[ vertex_id ]])"); s3vp[p].Add(c);
                                                     strcpy(c.str,"{"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT vert(vertex_array[vid]);"); s3vp[p].Add(c);
-                                                    sprintf(c.str,"VertexShader%d vs(vert,constants);",p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"VertexShader%d vs(vert,constants);",p); s3vp[p].Add(c);
                                                     strcpy(c.str,"return vs.main();"); s3vp[p].Add(c);
                                                     strcpy(c.str,"}"); s3vp[p].Add(c);
                                                 }
@@ -25942,7 +26219,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                             {
                                                 if (fvf&VPMORPH)
                                                 {
-                                                    sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT1 *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                const device VS_INPUT2 *vertex_array2[[ buffer(1) ]],"); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                constant constants_t& constants[[ buffer(2) ]],"); s3vp[p].Add(c);
                                                     
@@ -25951,7 +26228,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                     {
                                                         if (texturevs[n])
                                                         {
-                                                            sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],n); s3vp[p].Add(c);
+                                                            _sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],n); s3vp[p].Add(c);
                                                         }
                                                     }
 
@@ -25961,10 +26238,10 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                     strcpy(c.str,"{"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT1 vert(vertex_array[vid]);"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT2 vert2(vertex_array2[vid]);"); s3vp[p].Add(c);
-                                                    sprintf(c.str,"VertexShader%d vs(vert,vert2,constants,",p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"VertexShader%d vs(vert,vert2,constants,",p); s3vp[p].Add(c);
                                                     
                                                     for (n=0;n<16;n++)
-                                                        if (texturevs[n]) { sprintf(c.str,"%s,",texturevs[n]); s3vp[p].Add(c); }
+                                                        if (texturevs[n]) { _sprintf(c.str,"%s,",texturevs[n]); s3vp[p].Add(c); }
                                                     
                                                     strcpy(c.str,"texsampler0);"); s3vp[p].Add(c);
                                                     
@@ -25973,14 +26250,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 }
                                                 else
                                                 {
-                                                    sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"vertex VS_OUTPUT%d RenderPassVS%d(const device VS_INPUT *vertex_array[[buffer(0)]],",p,p); s3vp[p].Add(c);
                                                     strcpy(c.str,"                                constant constants_t& constants[[ buffer(1) ]],"); s3vp[p].Add(c);
                                                     
                                                     for (n=0;n<16;n++)
                                                     {
                                                         if (texturevs[n])
                                                         {
-                                                            sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],n); s3vp[p].Add(c);
+                                                            _sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texturevs[n],n); s3vp[p].Add(c);
                                                         }
                                                     }
 
@@ -25989,10 +26266,10 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                     strcpy(c.str,"                                unsigned int vid[[ vertex_id ]])"); s3vp[p].Add(c);
                                                     strcpy(c.str,"{"); s3vp[p].Add(c);
                                                     strcpy(c.str,"VS_INPUT vert(vertex_array[vid]);"); s3vp[p].Add(c);
-                                                    sprintf(c.str,"VertexShader%d vs(vert,constants,",p); s3vp[p].Add(c);
+                                                    _sprintf(c.str,"VertexShader%d vs(vert,constants,",p); s3vp[p].Add(c);
                                                     
                                                     for (n=0;n<16;n++)
-                                                        if (texturevs[n]) { sprintf(c.str,"%s,",texturevs[n]); s3vp[p].Add(c); }
+                                                        if (texturevs[n]) { _sprintf(c.str,"%s,",texturevs[n]); s3vp[p].Add(c); }
 
                                                     strcpy(c.str,"texsampler0);"); s3vp[p].Add(c);
 
@@ -26041,16 +26318,16 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														float valrefalpha=16.0f/255.0f;
 														if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
                                                         
-														sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (o.Out.a>=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (o.Out.a>%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (o.Out.a<=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
+														_sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (o.Out.a>=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (o.Out.a>%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (o.Out.a<=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
                                                         
 														s3psvp[p].Add(c);
                                                         
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);													
                                                     }
                                                 }
@@ -26061,16 +26338,16 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														float valrefalpha=16.0f/255.0f;
 														if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
                                                         
-														sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (r0.a>=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (r0.a>%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (r0.a<=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
+														_sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (r0.a>=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (r0.a>%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (r0.a<=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
                                                         
 														s3psvp[p].Add(c);
                                                         
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);													
                                                     }                                                    
                                                 }
@@ -26119,7 +26396,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 											if (metal==1)
 											{
-												sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d pixel [[stage_in]],",p,p);
+												_sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d pixel [[stage_in]],",p,p);
 												s3psvpmetal[p].Add(c);
 												if ((npsvectors>0)||(npsmatrices>0))
 												{
@@ -26132,7 +26409,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texture[n],nt);
+														_sprintf(c.str,"                                texture2d<float> %s[[texture(%d)]],",texture[n],nt);
 														s3psvpmetal[p].Add(c);
 														nt++;
 													}
@@ -26143,7 +26420,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 strcpy(c.str,"                                sampler texsampler1[[sampler(1)]])");
                                                 s3psvpmetal[p].Add(c);
                                                     
-												sprintf(c.str,"{"); s3psvpmetal[p].Add(c);
+												_sprintf(c.str,"{"); s3psvpmetal[p].Add(c);
                                                                                               
                                                 for (n=0;n<MAX_ENTRIES;n++)
                                                 {
@@ -26153,7 +26430,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                         {
                                                             if (ps_constants_type[n]!=1)
                                                             {
-                                                                sprintf(c.str,"float4x4 %s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
+                                                                _sprintf(c.str,"float4x4 %s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
                                                                         ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n]);
                                                                 s3psvpmetal[p].Add(c);
                                                             }
@@ -26184,7 +26461,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												s3psvp[p].InsertFirst(c);
                                                 strcpy(c.str,"{");
 												s3psvp[p].InsertFirst(c);
-												sprintf(c.str,"PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d i)",p,p);
+												_sprintf(c.str,"PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d i)",p,p);
 												s3psvp[p].InsertFirst(c);
                                                 strcpy(c.str,"return o;");
 												s3psvp[p].Add(c);
@@ -26208,14 +26485,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												if (output&DIFFUSE) { strcpy(c.str,"float4 v0;");vpoutput.Add(c); }
 												if (output&SPECULAR) { strcpy(c.str,"float4 v1;");vpoutput.Add(c); }
                                                 /*
-                                                 if (output&_TEX0) { sprintf(c.str,"float4 t0 [[texturecoord0]];");vpoutput.Add(c); }
-                                                 if (output&_TEX1) { sprintf(c.str,"float4 t1 [[texturecoord1]];");vpoutput.Add(c); }
-                                                 if (output&_TEX2) { sprintf(c.str,"float4 t2 [[texturecoord2]];");vpoutput.Add(c); }
-                                                 if (output&_TEX3) { sprintf(c.str,"float4 t3 [[texturecoord3]];");vpoutput.Add(c); }
-                                                 if (output&_TEX4) { sprintf(c.str,"float4 t4 [[texturecoord4]];");vpoutput.Add(c); }
-                                                 if (output&_TEX5) { sprintf(c.str,"float4 t5 [[texturecoord5]];");vpoutput.Add(c); }
-                                                 if (output&_TEX6) { sprintf(c.str,"float4 t6 [[texturecoord6]];");vpoutput.Add(c); }
-                                                 if (output&_TEX7) { sprintf(c.str,"float4 t7 [[texturecoord7]];");vpoutput.Add(c); }
+                                                 if (output&_TEX0) { _sprintf(c.str,"float4 t0 [[texturecoord0]];");vpoutput.Add(c); }
+                                                 if (output&_TEX1) { _sprintf(c.str,"float4 t1 [[texturecoord1]];");vpoutput.Add(c); }
+                                                 if (output&_TEX2) { _sprintf(c.str,"float4 t2 [[texturecoord2]];");vpoutput.Add(c); }
+                                                 if (output&_TEX3) { _sprintf(c.str,"float4 t3 [[texturecoord3]];");vpoutput.Add(c); }
+                                                 if (output&_TEX4) { _sprintf(c.str,"float4 t4 [[texturecoord4]];");vpoutput.Add(c); }
+                                                 if (output&_TEX5) { _sprintf(c.str,"float4 t5 [[texturecoord5]];");vpoutput.Add(c); }
+                                                 if (output&_TEX6) { _sprintf(c.str,"float4 t6 [[texturecoord6]];");vpoutput.Add(c); }
+                                                 if (output&_TEX7) { _sprintf(c.str,"float4 t7 [[texturecoord7]];");vpoutput.Add(c); }
                                                  
                                                  /**/
 		
@@ -26228,13 +26505,13 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 if (output&_TEX6) { strcpy(c.str,"float4 t6;");vpoutput.Add(c); }
                                                 if (output&_TEX7) { strcpy(c.str,"float4 t7;");vpoutput.Add(c); }
                                                 
-                                                sprintf(c.str,"} VS_OUTPUT%d;",p);vpoutput.Add(c);
+                                                _sprintf(c.str,"} VS_OUTPUT%d;",p);vpoutput.Add(c);
 												c.str[0]='\0';
 												vpoutput.Add(c);
 											}
 											else
 											{
-												sprintf(c.str,"struct VS_OUTPUT%d",p);vpoutput.Add(c);
+												_sprintf(c.str,"struct VS_OUTPUT%d",p);vpoutput.Add(c);
                                                 strcpy(c.str,"{");vpoutput.Add(c);
 												if (shadermodel4) { strcpy(c.str,"float4 p0 : SV_POSITION;");vpoutput.Add(c); }
 												else { strcpy(c.str,"float4 p0 : POSITION;");vpoutput.Add(c); }
@@ -26283,16 +26560,16 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 {
 													if (RS.AlphaRef==-666)
 													{
-														sprintf(c.str,"if (o.Out.a<REFALPHA.x)");
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (o.Out.a>=REFALPHA.x)");
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (o.Out.a>REFALPHA.x)");
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (o.Out.a<=REFALPHA.x)");
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (o.Out.a<REFALPHA.x)");
+														_sprintf(c.str,"if (o.Out.a<REFALPHA.x)");
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (o.Out.a>=REFALPHA.x)");
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (o.Out.a>REFALPHA.x)");
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (o.Out.a<=REFALPHA.x)");
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (o.Out.a<REFALPHA.x)");
                                                         
 														s3psvp[p].Add(c);
                                                         
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);
 													}
 													else
@@ -26300,15 +26577,15 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														float valrefalpha=16.0f/255.0f;
 														if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
                                                     
-														sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (o.Out.a>=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (o.Out.a>%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (o.Out.a<=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
+														_sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (o.Out.a>=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (o.Out.a>%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (o.Out.a<=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (o.Out.a<%3.3ff)",valrefalpha);
 														s3psvp[p].Add(c);
                                                     
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);
 													}
                                                 }
@@ -26316,16 +26593,16 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
                                                 {
 													if (RS.AlphaRef==-666)
 													{
-														sprintf(c.str,"if (r0.a<REFALPHA.x)");
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (r0.a>=REFALPHA.x)");
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (r0.a>REFALPHA.x)");
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (r0.a<=REFALPHA.x)");
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (r0.a<REFALPHA.x)");
+														_sprintf(c.str,"if (r0.a<REFALPHA.x)");
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (r0.a>=REFALPHA.x)");
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (r0.a>REFALPHA.x)");
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (r0.a<=REFALPHA.x)");
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (r0.a<REFALPHA.x)");
                                                         
 														s3psvp[p].Add(c);
                                                         
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);
 													}
 													else
@@ -26333,15 +26610,15 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														float valrefalpha=16.0f/255.0f;
 														if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
                                                     
-														sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (r0.a>=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (r0.a>%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (r0.a<=%3.3ff)",valrefalpha);
-														if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
+														_sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (r0.a>=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (r0.a>%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (r0.a<=%3.3ff)",valrefalpha);
+														if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (r0.a<%3.3ff)",valrefalpha);
 														s3psvp[p].Add(c);
                                                     
 														strcpy(c.str,"{"); s3psvp[p].Add(c);
-														sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
+														_sprintf(c.str,"%s;",sDiscardAPI); s3psvp[p].Add(c);
 														strcpy(c.str,"}"); s3psvp[p].Add(c);
 													}
                                                 }
@@ -26354,7 +26631,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											s3psvp[p].Add(c);
 										}
 
-										sprintf(c.str,"");
+										_sprintf(c.str,"");
 										s3psvp[p].InsertFirst(c);
 
 										for (n=31;n>=0;n--)
@@ -26362,12 +26639,12 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											{
                                                 if (IsRegisterIn(n,s3psvp[p]))
                                                 {
-                                                    sprintf(c.str,"float4 r%d;",n);
+                                                    _sprintf(c.str,"float4 r%d;",n);
                                                     s3psvp[p].InsertFirst(c);
                                                 }
 											}
 
-										sprintf(c.str,"");
+										_sprintf(c.str,"");
 										s3psvp[p].InsertFirst(c);
 
 										numberpsfn[p]=numpsfn;
@@ -26381,7 +26658,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												for (n = 0; n<32; n++) tagreg[n] = 0;
 												for (n = 0; n<32; n++) tagtempreg[n] = 0;
 
-												sprintf(&psfnname[kk][p][0],compile_psfunction(&psfn[kk], &vptmp));
+												_sprintf(&psfnname[kk][p][0],compile_psfunction(&psfn[kk], &vptmp));
 												unused_variables();
 
 												for (n=31;n>=0;n--)
@@ -26389,7 +26666,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 													{
                                                         if (IsRegisterIn(n,vptmp))
                                                         {
-                                                            sprintf(c.str,"float4 r%d;",n);
+                                                            _sprintf(c.str,"float4 r%d;",n);
                                                             vptmp.InsertFirst(c);
                                                         }
 													}
@@ -26398,7 +26675,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												vptmp.InsertFirst(c);
                                                 strcpy(c.str,"}");
 												vptmp.Add(c);
-												sprintf(c.str,entete);
+												_sprintf(c.str,entete);
 												vptmp.InsertFirst(c);
 
 												Code *wc=vptmp.GetFirst();
@@ -26487,7 +26764,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												if ((SizingTexture0)&&(FSRSample0)&&(RenderState[0][0].Texture[0]))
 												{
 													char tempss[1024];
-													sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
+													_sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
 													sfsr=tempss;
 													ps=0;
 													pstmp=str_parse_rln2(sfsr,&ps);
@@ -26557,8 +26834,8 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										{
 											if ((numpsfn==0)&&(!isFSR))
 											{
-                                                sprintf(c.str,"fragment float4 RenderPassPS%d(VS_OUTPUT%d pixel[[stage_in]],",p,p);
-												if (modifyZ) sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d pixel[[stage_in]],",p,p);
+                                                _sprintf(c.str,"fragment float4 RenderPassPS%d(VS_OUTPUT%d pixel[[stage_in]],",p,p);
+												if (modifyZ) _sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d pixel[[stage_in]],",p,p);
 												s3psvpmetal[p].Add(c);
 												if ((npsvectors>0)||(npsmatrices>0))
 												{
@@ -26571,7 +26848,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"                             texture2d<float> %s[[texture(%d)]],",texture[n],nt);
+														_sprintf(c.str,"                             texture2d<float> %s[[texture(%d)]],",texture[n],nt);
 														s3psvpmetal[p].Add(c);
 														nt++;
 													}
@@ -26586,12 +26863,12 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													for (n=0;n<npsvectors;n++)
 													{
-														sprintf(c.str,"#define %s constants.%s",psvectors[n],psvectors[n]);
+														_sprintf(c.str,"#define %s constants.%s",psvectors[n],psvectors[n]);
 														s3psvpmetal[p].Add(c);
 													}
 													for (n=0;n<npsmatrices;n++)
 													{
-														sprintf(c.str,"#define %s constants.%s",psmatrices[n],psmatrices[n]);
+														_sprintf(c.str,"#define %s constants.%s",psmatrices[n],psmatrices[n]);
 														s3psvpmetal[p].Add(c);
 													}
 												}
@@ -26609,7 +26886,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														{
 															if (ps_constants_type[n]!=1)
 															{
-																sprintf(c.str,"%s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
+																_sprintf(c.str,"%s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
 																		ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n]);
 																s3psvpmetal[p].Add(c);
 															}
@@ -26635,10 +26912,10 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											}
 											else
 											{
-												sprintf(c.str,"struct PixelShader%d",p);s3psvpmetal[p].Add(c);
+												_sprintf(c.str,"struct PixelShader%d",p);s3psvpmetal[p].Add(c);
                                                 strcpy(c.str,"{");s3psvpmetal[p].Add(c);
 
-												sprintf(c.str,"thread VS_OUTPUT%d &pixel;",p);s3psvpmetal[p].Add(c);
+												_sprintf(c.str,"thread VS_OUTPUT%d &pixel;",p);s3psvpmetal[p].Add(c);
 
 												if ((npsvectors>0)||(npsmatrices>0))
 												{
@@ -26650,7 +26927,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"texture2d<float> %s;",texture[n]);
+														_sprintf(c.str,"texture2d<float> %s;",texture[n]);
 														s3psvpmetal[p].Add(c);
 														lastnt=n;
 													}
@@ -26658,13 +26935,13 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 												for (n=0;n<npsvectors;n++)
 												{
-													sprintf(c.str,"#define %s ps.%s",psvectors[n],psvectors[n]);
+													_sprintf(c.str,"#define %s ps.%s",psvectors[n],psvectors[n]);
 													s3psvpmetal[p].Add(c);
 												}
 
 												for (n=0;n<npsmatrices;n++)
 												{
-													sprintf(c.str,"#define %s ps.%s",psmatrices[n],psmatrices[n]);
+													_sprintf(c.str,"#define %s ps.%s",psmatrices[n],psmatrices[n]);
 													s3psvpmetal[p].Add(c);
 												}
 
@@ -26681,7 +26958,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														{
 															if (ps_constants_type[n]!=1)
 															{
-																sprintf(c.str,"float4x4  %s;",ps_constants[n]);
+																_sprintf(c.str,"float4x4  %s;",ps_constants[n]);
 																s3psvpmetal[p].Add(c);
 															}
 														}
@@ -26690,7 +26967,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 												c.str[0]='\0'; s3psvpmetal[p].Add(c);
 
-												sprintf(c.str,"PixelShader%d(thread VS_OUTPUT%d& in,",p,p);
+												_sprintf(c.str,"PixelShader%d(thread VS_OUTPUT%d& in,",p,p);
 												s3psvpmetal[p].Add(c);
 
 												if ((npsvectors>0)||(npsmatrices>0))
@@ -26703,7 +26980,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"thread texture2d<float>& tex%d,",n);
+														_sprintf(c.str,"thread texture2d<float>& tex%d,",n);
 														s3psvpmetal[p].Add(c);
 													}
 												}
@@ -26726,7 +27003,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"%s(tex%d),",texture[n],n);
+														_sprintf(c.str,"%s(tex%d),",texture[n],n);
 														s3psvpmetal[p].Add(c);
 													}
 												}
@@ -26746,7 +27023,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 														{
 															if (ps_constants_type[n]!=1)
 															{
-																sprintf(c.str,"%s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
+																_sprintf(c.str,"%s=float4x4(%sA,%sB,%sC,%sD);",ps_constants[n],
 																		ps_constants[n],ps_constants[n],ps_constants[n],ps_constants[n]);
 																s3psvpmetal[p].Add(c);
 															}
@@ -26836,7 +27113,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 													if ((SizingTexture0)&&(FSRSample0)&&(RenderState[0][0].Texture[0]))
 													{
 														char tempss[1024];
-														sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
+														_sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
 														sfsr=tempss;
 														ps=0;
 														pstmp=str_parse_rln2(sfsr,&ps);
@@ -26890,8 +27167,8 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 												c.str[0]='\0'; s3psvp[p].Add(c);
 
-                                                sprintf(c.str,"fragment float4 RenderPassPS%d(VS_OUTPUT%d in [[stage_in]],",p,p);
-                                                if (modifyZ) sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d in [[stage_in]],",p,p);
+                                                _sprintf(c.str,"fragment float4 RenderPassPS%d(VS_OUTPUT%d in [[stage_in]],",p,p);
+                                                if (modifyZ) _sprintf(c.str,"fragment PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d in [[stage_in]],",p,p);
                                                 s3psvp[p].Add(c);
 												if ((npsvectors>0)||(npsmatrices>0))
 												{
@@ -26904,7 +27181,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 												{
 													if (texture[n])
 													{
-														sprintf(c.str,"                             texture2d<float> %s[[texture(%d)]],",texture[n],nt);
+														_sprintf(c.str,"                             texture2d<float> %s[[texture(%d)]],",texture[n],nt);
 														s3psvp[p].Add(c);
 														nt++;
 													}
@@ -26917,7 +27194,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
                                                 strcpy(c.str,"{"); s3psvp[p].Add(c);
 
-												sprintf(c.str,"PixelShader%d ps(in,",p); s3psvp[p].Add(c);
+												_sprintf(c.str,"PixelShader%d ps(in,",p); s3psvp[p].Add(c);
 
 												if ((npsvectors>0)||(npsmatrices>0))
 												{
@@ -26930,7 +27207,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 													{
 														if (texture[n])
 														{
-															sprintf(c.str,"%s,",texture[n]);
+															_sprintf(c.str,"%s,",texture[n]);
 															s3psvp[p].Add(c);
 														}
 													}
@@ -26967,7 +27244,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											s3psvp[p].InsertFirst(c);
                                             strcpy(c.str,"{");
 											s3psvp[p].InsertFirst(c);
-											sprintf(c.str,"PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d i)",p,p);
+											_sprintf(c.str,"PS_OUTPUT RenderPassPS%d(VS_OUTPUT%d i)",p,p);
 											s3psvp[p].InsertFirst(c);
 										}
 									}
@@ -26991,13 +27268,13 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											if (output&_TEX6) { strcpy(c.str,"float4 t6;");vpoutput.Add(c); }
 											if (output&_TEX7) { strcpy(c.str,"float4 t7;");vpoutput.Add(c); }
 
-											sprintf(c.str,"} VS_OUTPUT%d;",p);vpoutput.Add(c);
+											_sprintf(c.str,"} VS_OUTPUT%d;",p);vpoutput.Add(c);
 											c.str[0]='\0';
 											vpoutput.Add(c);
 										}
 										else
 										{
-											sprintf(c.str,"struct VS_OUTPUT%d",p);vpoutput.Add(c);
+											_sprintf(c.str,"struct VS_OUTPUT%d",p);vpoutput.Add(c);
                                             strcpy(c.str,"{");vpoutput.Add(c);
 											if (shadermodel4) { strcpy(c.str,"float4 p0 : SV_POSITION;");vpoutput.Add(c); }
 											else { strcpy(c.str,"float4 p0 : POSITION;");vpoutput.Add(c); }
@@ -27098,7 +27375,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									for (n=0;n<32;n++)
 									if (tagregsave[n])
 									{
-										sprintf(c.str,"vec4 r%d;",n);
+										_sprintf(c.str,"vec4 r%d;",n);
 										glvar[p].Add(c);
 									}
 
@@ -27124,7 +27401,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 									{
 										if (!shadermodel)
 										{
-											sprintf(c.str,"TEMP r%d",n);
+											_sprintf(c.str,"TEMP r%d",n);
 											gltemp[p].Add(c);
 										}
 									}
@@ -27162,38 +27439,38 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											{
 												if (RS.AlphaRef==-666)
 												{
-													sprintf(c.str,"if (%s.a<REFALPHA.x)",var("Out"));
-													if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (%s.a>=REFALPHA.x)",var("Out"));
-													if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (%s.a>REFALPHA.x)",var("Out"));
-													if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (%s.a<=REFALPHA.x)",var("Out"));
-													if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (%s.a<REFALPHA.x)",var("Out"));
+													_sprintf(c.str,"if (%s.a<REFALPHA.x)",var("Out"));
+													if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (%s.a>=REFALPHA.x)",var("Out"));
+													if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (%s.a>REFALPHA.x)",var("Out"));
+													if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (%s.a<=REFALPHA.x)",var("Out"));
+													if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (%s.a<REFALPHA.x)",var("Out"));
 												
 													glps[p].Add(c);
 
-													sprintf(c.str,"{"); glps[p].Add(c);
-													sprintf(c.str,sDiscardAPI); glps[p].Add(c);
-													sprintf(c.str,"}"); glps[p].Add(c);
+													_sprintf(c.str,"{"); glps[p].Add(c);
+													_sprintf(c.str,sDiscardAPI); glps[p].Add(c);
+													_sprintf(c.str,"}"); glps[p].Add(c);
 												}
 												else
 												{
 													float valrefalpha=16.0f/255.0f;
 													if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
 
-													sprintf(c.str,"if (%s.a<%3.3f)",var("Out"),valrefalpha);
-													if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (%s.a>=%3.3f)",var("Out"),valrefalpha);
-													if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (%s.a>%3.3f)",var("Out"),valrefalpha);
-													if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (%s.a<=%3.3f)",var("Out"),valrefalpha);
-													if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (%s.a<%3.3f)",var("Out"),valrefalpha);
+													_sprintf(c.str,"if (%s.a<%3.3f)",var("Out"),valrefalpha);
+													if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (%s.a>=%3.3f)",var("Out"),valrefalpha);
+													if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (%s.a>%3.3f)",var("Out"),valrefalpha);
+													if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (%s.a<=%3.3f)",var("Out"),valrefalpha);
+													if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (%s.a<%3.3f)",var("Out"),valrefalpha);
 												
 													glps[p].Add(c);
 
-													sprintf(c.str,"{"); glps[p].Add(c);
-													sprintf(c.str,sDiscardAPI); glps[p].Add(c);
-													sprintf(c.str,"}"); glps[p].Add(c);
+													_sprintf(c.str,"{"); glps[p].Add(c);
+													_sprintf(c.str,sDiscardAPI); glps[p].Add(c);
+													_sprintf(c.str,"}"); glps[p].Add(c);
 												}
 											}
 
-											sprintf(c.str,"gl_FragColor = %s",var("Out"));
+											_sprintf(c.str,"gl_FragColor = %s",var("Out"));
 											glps[p].Add(c);
 										}
 	
@@ -27201,7 +27478,7 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 
 										if (last_register>max_temporary_register) max_temporary_register=last_register;
 
-										sprintf(c.str,"");
+										_sprintf(c.str,"");
 										glps[p].InsertFirst(c);
 
 										for (n=32-1;n>=0;n--)
@@ -27209,14 +27486,14 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 										{
 											if (shadermodel)
 											{
-												sprintf(c.str,"vec4 r%d",n);
+												_sprintf(c.str,"vec4 r%d",n);
 												glps[p].InsertFirst(c);
 											}
 											else
 											{
 												if (n < 12)
 												{
-													sprintf(c.str, "TEMP r%d", n);
+													_sprintf(c.str, "TEMP r%d", n);
 													glps[p].InsertFirst(c);
 												}
 											}
@@ -27259,11 +27536,11 @@ bool CVertexProgram::read_shader(char *script0,unsigned int flags)
 											float valrefalpha=16.0f/255.0f;
 											if (RS.AlphaRef!=_UNDEFINED) valrefalpha=(float)RS.AlphaRef/255.0f;
 
-											sprintf(c.str,"if (%s.a<%3.3f)","r0",valrefalpha);
-											if (RS.AlphaFunc==_LESS) sprintf(c.str,"if (%s.a>=%3.3f)","r0",valrefalpha);
-											if (RS.AlphaFunc==_LEQUAL) sprintf(c.str,"if (%s.a>%3.3f)","r0",valrefalpha);
-											if (RS.AlphaFunc==_GREATER) sprintf(c.str,"if (%s.a<=%3.3f)","r0",valrefalpha);
-											if (RS.AlphaFunc==_GEQUAL) sprintf(c.str,"if (%s.a<%3.3f)","r0",valrefalpha);
+											_sprintf(c.str,"if (%s.a<%3.3f)","r0",valrefalpha);
+											if (RS.AlphaFunc==_LESS) _sprintf(c.str,"if (%s.a>=%3.3f)","r0",valrefalpha);
+											if (RS.AlphaFunc==_LEQUAL) _sprintf(c.str,"if (%s.a>%3.3f)","r0",valrefalpha);
+											if (RS.AlphaFunc==_GREATER) _sprintf(c.str,"if (%s.a<=%3.3f)","r0",valrefalpha);
+											if (RS.AlphaFunc==_GEQUAL) _sprintf(c.str,"if (%s.a<%3.3f)","r0",valrefalpha);
 												
 											glps[p].Add(c);
 
@@ -27463,10 +27740,10 @@ char* CVertexProgram::get_string_vsh(int pass)
 
 		if (metal==0)
 		{
-			if (shadermodel4) sprintf(cc.str,"technique10 T0");
-			else sprintf(cc.str,"TECHNIQUE T0");
+			if (shadermodel4) _sprintf(cc.str,"technique10 T0");
+			else _sprintf(cc.str,"TECHNIQUE T0");
 			vp.Add(cc);
-			sprintf(cc.str,"{");
+			_sprintf(cc.str,"{");
 			vp.Add(cc);
 		}
 
@@ -27475,36 +27752,36 @@ char* CVertexProgram::get_string_vsh(int pass)
 			for (p=0;p<get_pass_count();p++)
 			{
 				vp.Add(blank);
-				if (shadermodel4) sprintf(cc.str,"pass P%d",p);
-				else sprintf(cc.str,"PASS P%d",p);
+				if (shadermodel4) _sprintf(cc.str,"pass P%d",p);
+				else _sprintf(cc.str,"PASS P%d",p);
 				vp.Add(cc);
-				sprintf(cc.str,"{");
+				_sprintf(cc.str,"{");
 				vp.Add(cc);
 				vp.Add(blank);
 
 				if (shadermodel4)
 				{
-					sprintf(cc.str,"SetVertexShader(CompileShader(vs_4_0, RenderPassVS%d()));",p);
+					_sprintf(cc.str,"SetVertexShader(CompileShader(vs_4_0, RenderPassVS%d()));",p);
 					vp.Add(cc);
 					vp.Add(blank);
 					if (s3psvp[p].Length()>0)
 					{
-						sprintf(cc.str,"SetPixelShader(CompileShader(ps_4_0, RenderPassPS%d()));",p);
+						_sprintf(cc.str,"SetPixelShader(CompileShader(ps_4_0, RenderPassPS%d()));",p);
 						vp.Add(cc);
 						vp.Add(blank);
 					}
-					sprintf(cc.str,"SetGeometryShader(NULL);");
+					_sprintf(cc.str,"SetGeometryShader(NULL);");
 					vp.Add(cc);
 					vp.Add(blank);
 				}
 				else
 				{
-					sprintf(cc.str,"VertexShader = compile vs_3_0 RenderPassVS%d();",p);
+					_sprintf(cc.str,"VertexShader = compile vs_3_0 RenderPassVS%d();",p);
 					vp.Add(cc);
 					vp.Add(blank);
 					if (s3psvp[p].Length()>0)
 					{
-						sprintf(cc.str,"PixelShader  = compile ps_3_0 RenderPassPS%d();",p);
+						_sprintf(cc.str,"PixelShader  = compile ps_3_0 RenderPassPS%d();",p);
 						vp.Add(cc);
 						vp.Add(blank);
 					}
@@ -27517,11 +27794,11 @@ char* CVertexProgram::get_string_vsh(int pass)
 				}
 
 				vp.Add(blank);
-				sprintf(cc.str,"}");
+				_sprintf(cc.str,"}");
 				vp.Add(cc);
 			
 			}
-			sprintf(cc.str,"}");
+			_sprintf(cc.str,"}");
 			vp.Add(cc);
 
 			vp.Add(blank);
@@ -27620,8 +27897,8 @@ char* CVertexProgram::get_string_mega_vs(int p)
 	int NB=96;
 	if (shadermodel) NB=MAX_ENTRIES;
 
-	sprintf(cc.str,"cbuffer vs_constants : register(b0)");vp.Add(cc);
-	sprintf(cc.str,"{");vp.Add(cc);
+	_sprintf(cc.str,"cbuffer vs_constants : register(b0)");vp.Add(cc);
+	_sprintf(cc.str,"{");vp.Add(cc);
 
 	for (n=0;n<NB;n++)
 	{
@@ -27635,21 +27912,21 @@ char* CVertexProgram::get_string_mega_vs(int p)
 				if (LENGTH_VAR[l_constants[n]&0xffff]==1)
 				{
 					int nb=l_constants[n]>>16;
-					if (nb==0) sprintf(cc.str,"float4 %s;",constants[n]);
-					else sprintf(cc.str,"float4 %s[%d];",constants[n],nb);
+					if (nb==0) _sprintf(cc.str,"float4 %s;",constants[n]);
+					else _sprintf(cc.str,"float4 %s[%d];",constants[n],nb);
 				}
 				if (LENGTH_VAR[l_constants[n]&0xffff]==4)
 				{
 					int nb=l_constants[n]>>16;
-					if (nb==0) sprintf(cc.str,"float4x4 %s;",constants[n]);
-					else sprintf(cc.str,"float4x4 %s[%d];",constants[n],nb);
+					if (nb==0) _sprintf(cc.str,"float4x4 %s;",constants[n]);
+					else _sprintf(cc.str,"float4x4 %s[%d];",constants[n],nb);
 				}
 				vp.Add(cc);
 			}
 		}
 	}
 
-	sprintf(cc.str,"};");vp.Add(cc);
+	_sprintf(cc.str,"};");vp.Add(cc);
 
 	vp.Add(blank);
 
@@ -27669,7 +27946,7 @@ char* CVertexProgram::get_string_mega_vs(int p)
 				if ((strcmp(constants[n],"trigo_cst3")==0)&&(trigocst[p][3]==0)) tt=0;
 				if ((strcmp(constants[n],"trigo_cst4")==0)&&(trigocst[p][4]==0)) tt=0;
 					
-				sprintf(cc.str,"static const float4 %s = { %s };",constants[n],translate_constants[n]);
+				_sprintf(cc.str,"static const float4 %s = { %s };",constants[n],translate_constants[n]);
 			}
 			else
 			{
@@ -27688,7 +27965,7 @@ char* CVertexProgram::get_string_mega_vs(int p)
 	{
 		if (texturevs[n])
 		{
-			sprintf(cc.str,"Texture2D %s : register(t%d);",texturevs[n],n);
+			_sprintf(cc.str,"Texture2D %s : register(t%d);",texturevs[n],n);
 			vp.Add(cc);
 			smp++;
 		}
@@ -27698,7 +27975,7 @@ char* CVertexProgram::get_string_mega_vs(int p)
 
 	if (smp)
 	{
-		sprintf(cc.str,"SamplerState smpvs : register(s0);");vp.Add(cc);			
+		_sprintf(cc.str,"SamplerState smpvs : register(s0);");vp.Add(cc);			
 		vp.Add(blank);
 	}
 
@@ -27707,8 +27984,8 @@ char* CVertexProgram::get_string_mega_vs(int p)
 
 	if (weightsandindices)
 	{
-		sprintf(cc.str,"static int4 WInd;");vp.Add(cc);
-		sprintf(cc.str,"static float4 Weights;");vp.Add(cc);
+		_sprintf(cc.str,"static int4 WInd;");vp.Add(cc);
+		_sprintf(cc.str,"static float4 Weights;");vp.Add(cc);
 		vp.Add(blank);
 	}
 
@@ -27716,61 +27993,81 @@ char* CVertexProgram::get_string_mega_vs(int p)
 
 	if (flags&VPMORPH)
 	{
-		//TODO
-		sprintf(cc.str,"struct VS_INPUT");vp.Add(cc);
-		sprintf(cc.str,"{");vp.Add(cc);
-		sprintf(cc.str,"float4 v0 : POSITION0;");vp.Add(cc);
-		sprintf(cc.str,"float3 v3 : NORMAL0;");vp.Add(cc);
-		sprintf(cc.str,"float2 v7 : TEXCOORD0;");vp.Add(cc);
-		sprintf(cc.str,"float4 v1 : POSITION1;");vp.Add(cc);
-		sprintf(cc.str,"float3 v4 : NORMAL1;");vp.Add(cc);
-		sprintf(cc.str,"float2 v8 : TEXCOORD1;");vp.Add(cc);
-		sprintf(cc.str,"};");vp.Add(cc);
+
+		if (weightsandindices)
+		{
+			_sprintf(cc.str,"struct VS_INPUT");vp.Add(cc);
+			_sprintf(cc.str,"{");vp.Add(cc);
+			_sprintf(cc.str,"float4 v0 : POSITION0;");vp.Add(cc);
+			_sprintf(cc.str,"float4 v1 : BLENDWEIGHT0;");vp.Add(cc);
+			_sprintf(cc.str,"float3 v3 : NORMAL0;");vp.Add(cc);
+			_sprintf(cc.str,"float2 v7 : TEXCOORD0;");vp.Add(cc);
+
+			_sprintf(cc.str,"float4 v2 : POSITION1;");vp.Add(cc);
+			_sprintf(cc.str,"float4 v4 : BLENDWEIGHT1;");vp.Add(cc);
+			_sprintf(cc.str,"float3 v5 : NORMAL1;");vp.Add(cc);
+			_sprintf(cc.str,"float2 v8 : TEXCOORD1;");vp.Add(cc);
+			_sprintf(cc.str,"};");vp.Add(cc);
+
+		}
+		else
+		{
+			//TODO
+			_sprintf(cc.str,"struct VS_INPUT");vp.Add(cc);
+			_sprintf(cc.str,"{");vp.Add(cc);
+			_sprintf(cc.str,"float4 v0 : POSITION0;");vp.Add(cc);
+			_sprintf(cc.str,"float3 v3 : NORMAL0;");vp.Add(cc);
+			_sprintf(cc.str,"float2 v7 : TEXCOORD0;");vp.Add(cc);
+			_sprintf(cc.str,"float4 v1 : POSITION1;");vp.Add(cc);
+			_sprintf(cc.str,"float3 v4 : NORMAL1;");vp.Add(cc);
+			_sprintf(cc.str,"float2 v8 : TEXCOORD1;");vp.Add(cc);
+			_sprintf(cc.str,"};");vp.Add(cc);
+		}
 	}
 	else
 	{
-		sprintf(cc.str,"struct VS_INPUT");vp.Add(cc);
-		sprintf(cc.str,"{");vp.Add(cc);
+		_sprintf(cc.str,"struct VS_INPUT");vp.Add(cc);
+		_sprintf(cc.str,"{");vp.Add(cc);
 		// vertex format
-		if (flags&XYZ) { sprintf(cc.str,"float4 v0 : POSITION;");vp.Add(cc); }
+		if (flags&XYZ) { _sprintf(cc.str,"float4 v0 : POSITION;");vp.Add(cc); }
 		if (flags&BLEND)
 		{
-			sprintf(cc.str,"float4 v1 : BLENDWEIGHT;");vp.Add(cc);
-			if (!shadermodel4) { sprintf(cc.str,"DWORD v2 : BLENDINDICES;");vp.Add(cc); }
+			_sprintf(cc.str,"float4 v1 : BLENDWEIGHT;");vp.Add(cc);
+			if (!shadermodel4) { _sprintf(cc.str,"DWORD v2 : BLENDINDICES;");vp.Add(cc); }
 		}
-		if (flags&NORMAL) { sprintf(cc.str,"float3 v3 : NORMAL;");vp.Add(cc); }
-		if (flags&DIFFUSE) { sprintf(cc.str,"float4 v5 : COLOR0;");vp.Add(cc); }
-		if (flags&SPECULAR) { sprintf(cc.str,"float4 v6 : COLOR1;");vp.Add(cc); }
+		if (flags&NORMAL) { _sprintf(cc.str,"float3 v3 : NORMAL;");vp.Add(cc); }
+		if (flags&DIFFUSE) { _sprintf(cc.str,"float4 v5 : COLOR0;");vp.Add(cc); }
+		if (flags&SPECULAR) { _sprintf(cc.str,"float4 v6 : COLOR1;");vp.Add(cc); }
 
-		if (flags&_TEX0) { sprintf(cc.str,"float2 v7 : TEXCOORD0;");vp.Add(cc); }
-		if (flags&_TEX1) { sprintf(cc.str,"float2 v8 : TEXCOORD1;");vp.Add(cc); }
-		if (flags&_TEX2) { sprintf(cc.str,"float2 v9 : TEXCOORD2;");vp.Add(cc); }
-		if (flags&_TEX3) { sprintf(cc.str,"float2 v10 : TEXCOORD3;");vp.Add(cc); }
+		if (flags&_TEX0) { _sprintf(cc.str,"float2 v7 : TEXCOORD0;");vp.Add(cc); }
+		if (flags&_TEX1) { _sprintf(cc.str,"float2 v8 : TEXCOORD1;");vp.Add(cc); }
+		if (flags&_TEX2) { _sprintf(cc.str,"float2 v9 : TEXCOORD2;");vp.Add(cc); }
+		if (flags&_TEX3) { _sprintf(cc.str,"float2 v10 : TEXCOORD3;");vp.Add(cc); }
 
-		sprintf(cc.str,"};");vp.Add(cc);
+		_sprintf(cc.str,"};");vp.Add(cc);
 	}
 
 	vp.Add(blank);
 
 	unsigned int output=fvf_output[p];
 
-	sprintf(cc.str,"struct VS_OUTPUT%d",p);vp.Add(cc);
-	sprintf(cc.str,"{");vp.Add(cc);
+	_sprintf(cc.str,"struct VS_OUTPUT%d",p);vp.Add(cc);
+	_sprintf(cc.str,"{");vp.Add(cc);
 
-	if (shadermodel4) { sprintf(cc.str,"float4 p0 : SV_POSITION;");vp.Add(cc); }
-	else { sprintf(cc.str,"float4 p0 : POSITION;");vp.Add(cc); }
-	if (output&DIFFUSE) { sprintf(cc.str,"float4 v0 : COLOR0;");vp.Add(cc); }
-	if (output&SPECULAR) { sprintf(cc.str,"float4 v1 : COLOR1;");vp.Add(cc); }
-	if (output&_TEX0) { sprintf(cc.str,"float4 t0 : TEXCOORD0;");vp.Add(cc); }
-	if (output&_TEX1) { sprintf(cc.str,"float4 t1 : TEXCOORD1;");vp.Add(cc); }
-	if (output&_TEX2) { sprintf(cc.str,"float4 t2 : TEXCOORD2;");vp.Add(cc); }
-	if (output&_TEX3) { sprintf(cc.str,"float4 t3 : TEXCOORD3;");vp.Add(cc); }
-	if (output&_TEX4) { sprintf(cc.str,"float4 t4 : TEXCOORD4;");vp.Add(cc); }
-	if (output&_TEX5) { sprintf(cc.str,"float4 t5 : TEXCOORD5;");vp.Add(cc); }
-	if (output&_TEX6) { sprintf(cc.str,"float4 t6 : TEXCOORD6;");vp.Add(cc); }
-	if (output&_TEX7) { sprintf(cc.str,"float4 t7 : TEXCOORD7;");vp.Add(cc); }
+	if (shadermodel4) { _sprintf(cc.str,"float4 p0 : SV_POSITION;");vp.Add(cc); }
+	else { _sprintf(cc.str,"float4 p0 : POSITION;");vp.Add(cc); }
+	if (output&DIFFUSE) { _sprintf(cc.str,"float4 v0 : COLOR0;");vp.Add(cc); }
+	if (output&SPECULAR) { _sprintf(cc.str,"float4 v1 : COLOR1;");vp.Add(cc); }
+	if (output&_TEX0) { _sprintf(cc.str,"float4 t0 : TEXCOORD0;");vp.Add(cc); }
+	if (output&_TEX1) { _sprintf(cc.str,"float4 t1 : TEXCOORD1;");vp.Add(cc); }
+	if (output&_TEX2) { _sprintf(cc.str,"float4 t2 : TEXCOORD2;");vp.Add(cc); }
+	if (output&_TEX3) { _sprintf(cc.str,"float4 t3 : TEXCOORD3;");vp.Add(cc); }
+	if (output&_TEX4) { _sprintf(cc.str,"float4 t4 : TEXCOORD4;");vp.Add(cc); }
+	if (output&_TEX5) { _sprintf(cc.str,"float4 t5 : TEXCOORD5;");vp.Add(cc); }
+	if (output&_TEX6) { _sprintf(cc.str,"float4 t6 : TEXCOORD6;");vp.Add(cc); }
+	if (output&_TEX7) { _sprintf(cc.str,"float4 t7 : TEXCOORD7;");vp.Add(cc); }
 
-	sprintf(cc.str,"};");vp.Add(cc);
+	_sprintf(cc.str,"};");vp.Add(cc);
 
 	vp.Add(blank);
 
@@ -27883,20 +28180,20 @@ char* CVertexProgram::get_string_mega_ps(int p)
 
 	if ((npsvectors>0)||(npsmatrices>0))
 	{
-		sprintf(cc.str,"cbuffer ps_constants : register(b0)");vp.Add(cc);
-		sprintf(cc.str,"{");vp.Add(cc);
+		_sprintf(cc.str,"cbuffer ps_constants : register(b0)");vp.Add(cc);
+		_sprintf(cc.str,"{");vp.Add(cc);
 
 		for (n=0;n<npsvectors;n++)
 		{
-			sprintf(cc.str,"float4 %s;",psvectors[n]);vp.Add(cc);
+			_sprintf(cc.str,"float4 %s;",psvectors[n]);vp.Add(cc);
 		}
 
 		for (n=0;n<npsmatrices;n++)
 		{
-			sprintf(cc.str,"float4x4 %s;",psmatrices[n]);vp.Add(cc);
+			_sprintf(cc.str,"float4x4 %s;",psmatrices[n]);vp.Add(cc);
 		}
 
-		sprintf(cc.str,"};");vp.Add(cc);
+		_sprintf(cc.str,"};");vp.Add(cc);
 		cc.str[0]='\0'; vp.Add(cc);
 	}
 
@@ -27906,7 +28203,7 @@ char* CVertexProgram::get_string_mega_ps(int p)
 	{
 		if (texture[n])
 		{
-			sprintf(cc.str,"Texture2D %s : register(t%d);",texture[n],n);
+			_sprintf(cc.str,"Texture2D %s : register(t%d);",texture[n],n);
 			vp.Add(cc);
 			smp++;
 		}
@@ -27914,39 +28211,39 @@ char* CVertexProgram::get_string_mega_ps(int p)
 
 	vp.Add(blank);
 
-	sprintf(cc.str,"struct PS_OUTPUT");vp.Add(cc);
-	sprintf(cc.str,"{");vp.Add(cc);
-	sprintf(cc.str,"float4 Out : SV_Target;");vp.Add(cc);	
-	if (modifyZ) { sprintf(cc.str,"float Depth : SV_Depth;");vp.Add(cc); }			
-	sprintf(cc.str,"};");vp.Add(cc);
+	_sprintf(cc.str,"struct PS_OUTPUT");vp.Add(cc);
+	_sprintf(cc.str,"{");vp.Add(cc);
+	_sprintf(cc.str,"float4 Out : SV_Target;");vp.Add(cc);	
+	if (modifyZ) { _sprintf(cc.str,"float Depth : SV_Depth;");vp.Add(cc); }			
+	_sprintf(cc.str,"};");vp.Add(cc);
 
 	vp.Add(blank);
 
 	unsigned int output=fvf_output[p];
 
-	sprintf(cc.str,"struct VS_OUTPUT%d",p);vp.Add(cc);
-	sprintf(cc.str,"{");vp.Add(cc);
+	_sprintf(cc.str,"struct VS_OUTPUT%d",p);vp.Add(cc);
+	_sprintf(cc.str,"{");vp.Add(cc);
 
-	if (shadermodel4) { sprintf(cc.str,"float4 p0 : SV_POSITION;");vp.Add(cc); }
-	else { sprintf(cc.str,"float4 p0 : POSITION;");vp.Add(cc); }
-	if (output&DIFFUSE) { sprintf(cc.str,"float4 v0 : COLOR0;");vp.Add(cc); }
-	if (output&SPECULAR) { sprintf(cc.str,"float4 v1 : COLOR1;");vp.Add(cc); }
-	if (output&_TEX0) { sprintf(cc.str,"float4 t0 : TEXCOORD0;");vp.Add(cc); }
-	if (output&_TEX1) { sprintf(cc.str,"float4 t1 : TEXCOORD1;");vp.Add(cc); }
-	if (output&_TEX2) { sprintf(cc.str,"float4 t2 : TEXCOORD2;");vp.Add(cc); }
-	if (output&_TEX3) { sprintf(cc.str,"float4 t3 : TEXCOORD3;");vp.Add(cc); }
-	if (output&_TEX4) { sprintf(cc.str,"float4 t4 : TEXCOORD4;");vp.Add(cc); }
-	if (output&_TEX5) { sprintf(cc.str,"float4 t5 : TEXCOORD5;");vp.Add(cc); }
-	if (output&_TEX6) { sprintf(cc.str,"float4 t6 : TEXCOORD6;");vp.Add(cc); }
-	if (output&_TEX7) { sprintf(cc.str,"float4 t7 : TEXCOORD7;");vp.Add(cc); }
+	if (shadermodel4) { _sprintf(cc.str,"float4 p0 : SV_POSITION;");vp.Add(cc); }
+	else { _sprintf(cc.str,"float4 p0 : POSITION;");vp.Add(cc); }
+	if (output&DIFFUSE) { _sprintf(cc.str,"float4 v0 : COLOR0;");vp.Add(cc); }
+	if (output&SPECULAR) { _sprintf(cc.str,"float4 v1 : COLOR1;");vp.Add(cc); }
+	if (output&_TEX0) { _sprintf(cc.str,"float4 t0 : TEXCOORD0;");vp.Add(cc); }
+	if (output&_TEX1) { _sprintf(cc.str,"float4 t1 : TEXCOORD1;");vp.Add(cc); }
+	if (output&_TEX2) { _sprintf(cc.str,"float4 t2 : TEXCOORD2;");vp.Add(cc); }
+	if (output&_TEX3) { _sprintf(cc.str,"float4 t3 : TEXCOORD3;");vp.Add(cc); }
+	if (output&_TEX4) { _sprintf(cc.str,"float4 t4 : TEXCOORD4;");vp.Add(cc); }
+	if (output&_TEX5) { _sprintf(cc.str,"float4 t5 : TEXCOORD5;");vp.Add(cc); }
+	if (output&_TEX6) { _sprintf(cc.str,"float4 t6 : TEXCOORD6;");vp.Add(cc); }
+	if (output&_TEX7) { _sprintf(cc.str,"float4 t7 : TEXCOORD7;");vp.Add(cc); }
 
-	sprintf(cc.str,"};");vp.Add(cc);
+	_sprintf(cc.str,"};");vp.Add(cc);
 
 	vp.Add(blank);
 
 	if (smp)
 	{
-		sprintf(cc.str,"SamplerState smp : register(s0);");vp.Add(cc);			
+		_sprintf(cc.str,"SamplerState smp : register(s0);");vp.Add(cc);			
 		vp.Add(blank);
 	}
 
@@ -27962,8 +28259,8 @@ char* CVertexProgram::get_string_mega_ps(int p)
 				if ((strcmp(ps_constants[n],"zerocinq")==0)&&(trigocst[p][5]==0)) tt=0;
 				if (tt)
 				{
-					if (ps_constants_type[n]==1) sprintf(cc.str,"static const float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
-					else sprintf(cc.str,"static const float4x4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+					if (ps_constants_type[n]==1) _sprintf(cc.str,"static const float4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
+					else _sprintf(cc.str,"static const float4x4  %s = { %s };",ps_constants[n],translate_ps_constants[n]);
 					vp.Add(cc);
 					add=1;
 				}
@@ -27977,18 +28274,18 @@ char* CVertexProgram::get_string_mega_ps(int p)
 
 	if (globalvar)
 	{
-		if (output&_TEX7) { sprintf(cc.str,"static float4 it7;"); vp.Add(cc); add=1; }
-		if (output&_TEX6) { sprintf(cc.str,"static float4 it6;"); vp.Add(cc); add=1; }
-		if (output&_TEX5) { sprintf(cc.str,"static float4 it5;"); vp.Add(cc); add=1; }
-		if (output&_TEX4) { sprintf(cc.str,"static float4 it4;"); vp.Add(cc); add=1; }
-		if (output&_TEX3) { sprintf(cc.str,"static float4 it3;"); vp.Add(cc); add=1; }
-		if (output&_TEX2) { sprintf(cc.str,"static float4 it2;"); vp.Add(cc); add=1; }
-		if (output&_TEX1) { sprintf(cc.str,"static float4 it1;"); vp.Add(cc); add=1; }
-		if (output&_TEX0) { sprintf(cc.str,"static float4 it0;"); vp.Add(cc); add=1; }
-		if (output&SPECULAR) { sprintf(cc.str,"static float4 iv1;"); vp.Add(cc); add=1; }
-		if (output&DIFFUSE) { sprintf(cc.str,"static float4 iv0;"); vp.Add(cc); add=1; }
+		if (output&_TEX7) { _sprintf(cc.str,"static float4 it7;"); vp.Add(cc); add=1; }
+		if (output&_TEX6) { _sprintf(cc.str,"static float4 it6;"); vp.Add(cc); add=1; }
+		if (output&_TEX5) { _sprintf(cc.str,"static float4 it5;"); vp.Add(cc); add=1; }
+		if (output&_TEX4) { _sprintf(cc.str,"static float4 it4;"); vp.Add(cc); add=1; }
+		if (output&_TEX3) { _sprintf(cc.str,"static float4 it3;"); vp.Add(cc); add=1; }
+		if (output&_TEX2) { _sprintf(cc.str,"static float4 it2;"); vp.Add(cc); add=1; }
+		if (output&_TEX1) { _sprintf(cc.str,"static float4 it1;"); vp.Add(cc); add=1; }
+		if (output&_TEX0) { _sprintf(cc.str,"static float4 it0;"); vp.Add(cc); add=1; }
+		if (output&SPECULAR) { _sprintf(cc.str,"static float4 iv1;"); vp.Add(cc); add=1; }
+		if (output&DIFFUSE) { _sprintf(cc.str,"static float4 iv0;"); vp.Add(cc); add=1; }
 	}
-	if (modifyZ) { sprintf(cc.str,"static float4 ip0;"); vp.Add(cc); add=1; }
+	if (modifyZ) { _sprintf(cc.str,"static float4 ip0;"); vp.Add(cc); add=1; }
 
 	if (add) vp.Add(blank);
 
@@ -28203,16 +28500,16 @@ void CVertexProgram::get_vp(int pass)
 
 		if (!shadermodel)
 		{
-			sprintf(rc.str,"!!ARBvp1.0");
+			_sprintf(rc.str,"!!ARBvp1.0");
 			vp.Add(rc);
 		}
 		else
 		{
-//			sprintf(rc.str,"#version 140");
+//			_sprintf(rc.str,"#version 140");
 //			vp.Add(rc);
 
 #if defined(GLES20)||defined(GLESFULL)
-			sprintf(rc.str,"precision highp float;");
+			_sprintf(rc.str,"precision highp float;");
 			vp.Add(rc);
 #endif
 		}
@@ -28226,95 +28523,95 @@ void CVertexProgram::get_vp(int pass)
 		
 		if (shadermodel)
 		{
-			sprintf(rc.str,"attribute vec4 VertexPosition;");
+			_sprintf(rc.str,"attribute vec4 VertexPosition;");
 			vp.Add(rc);
 			if ((fvf_sm&NORMAL)||(stream))
 			{
-				sprintf(rc.str,"attribute vec3 VertexNormal;");
+				_sprintf(rc.str,"attribute vec3 VertexNormal;");
 				vp.Add(rc);
 			}
 
 			if (stream)
 			{
-				sprintf(rc.str,"attribute vec4 VertexPosition2;");
+				_sprintf(rc.str,"attribute vec4 VertexPosition2;");
 				vp.Add(rc);
-				sprintf(rc.str,"attribute vec3 VertexNormal2;");
+				_sprintf(rc.str,"attribute vec3 VertexNormal2;");
 				vp.Add(rc);
 			}
 
 			if (fvf_sm&DIFFUSE)
 			{
-				sprintf(rc.str,"attribute vec4 VertexColor;");
+				_sprintf(rc.str,"attribute vec4 VertexColor;");
 				vp.Add(rc);
 			}
 
 			if (fvf_sm&SPECULAR)
 			{
-				sprintf(rc.str,"attribute vec4 VertexSecondaryColor;");
+				_sprintf(rc.str,"attribute vec4 VertexSecondaryColor;");
 				vp.Add(rc);
 			}
 
 			if ((fvf_sm&_TEX0)||(stream))
 			{
-				sprintf(rc.str,"attribute vec2 MultiTexCoord0;");
+				_sprintf(rc.str,"attribute vec2 MultiTexCoord0;");
 				vp.Add(rc);
 			}
 
 			if (fvf_sm&_TEX1)
 			{
-				sprintf(rc.str,"attribute vec2 MultiTexCoord1;");
+				_sprintf(rc.str,"attribute vec2 MultiTexCoord1;");
 				vp.Add(rc);
 			}
 
 			if (fvf_sm&_TEX2)
 			{
-				sprintf(rc.str,"attribute vec2 MultiTexCoord2;");
+				_sprintf(rc.str,"attribute vec2 MultiTexCoord2;");
 				vp.Add(rc);
 			}
 
 			if (fvf_sm&_TEX3)
 			{
-				sprintf(rc.str,"attribute vec2 MultiTexCoord3;");
+				_sprintf(rc.str,"attribute vec2 MultiTexCoord3;");
 				vp.Add(rc);
 			}
 
 			if (weightsandindices)
 			{
-				sprintf(rc.str,"attribute vec4 IWeights;");
+				_sprintf(rc.str,"attribute vec4 IWeights;");
 				vp.Add(rc);
 			}
 
-			sprintf(rc.str,"");
+			_sprintf(rc.str,"");
 			vp.Add(rc);
 
 			if (weightsandindices)
 			{
-				sprintf(rc.str,"vec4 Weights;");
+				_sprintf(rc.str,"vec4 Weights;");
 				vp.Add(rc);
-				sprintf(rc.str,"ivec4 WIndices;");
+				_sprintf(rc.str,"ivec4 WIndices;");
 				vp.Add(rc);
-				sprintf(rc.str,"");
+				_sprintf(rc.str,"");
 				vp.Add(rc);
 			}
 
 #ifdef GLES20
-			sprintf(rc.str,"");
+			_sprintf(rc.str,"");
 			vp.Add(rc);
-			sprintf(rc.str,"varying vec4 myColor;");
+			_sprintf(rc.str,"varying vec4 myColor;");
 			vp.Add(rc);
 			if (fvf_output[pass]&SPECULAR)
 			{
-				sprintf(rc.str,"varying vec4 mySecondaryColor;");
+				_sprintf(rc.str,"varying vec4 mySecondaryColor;");
 				vp.Add(rc);
 			}
-			if (fvf_output[pass]&_TEX7) { sprintf(rc.str,"varying vec4 myTexCoord[8];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX6) { sprintf(rc.str,"varying vec4 myTexCoord[7];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX5) { sprintf(rc.str,"varying vec4 myTexCoord[6];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX4) { sprintf(rc.str,"varying vec4 myTexCoord[5];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX3) { sprintf(rc.str,"varying vec4 myTexCoord[4];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX2) { sprintf(rc.str,"varying vec4 myTexCoord[3];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX1) { sprintf(rc.str,"varying vec4 myTexCoord[2];"); vp.Add(rc); }
-			else if (fvf_output[pass]&_TEX0) { sprintf(rc.str,"varying vec4 myTexCoord[1];"); vp.Add(rc); }
+			if (fvf_output[pass]&_TEX7) { _sprintf(rc.str,"varying vec4 myTexCoord[8];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX6) { _sprintf(rc.str,"varying vec4 myTexCoord[7];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX5) { _sprintf(rc.str,"varying vec4 myTexCoord[6];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX4) { _sprintf(rc.str,"varying vec4 myTexCoord[5];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX3) { _sprintf(rc.str,"varying vec4 myTexCoord[4];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX2) { _sprintf(rc.str,"varying vec4 myTexCoord[3];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX1) { _sprintf(rc.str,"varying vec4 myTexCoord[2];"); vp.Add(rc); }
+			else if (fvf_output[pass]&_TEX0) { _sprintf(rc.str,"varying vec4 myTexCoord[1];"); vp.Add(rc); }
 #endif
 
 			c=glfn.GetFirst();
@@ -28324,9 +28621,9 @@ void CVertexProgram::get_vp(int pass)
 				c=glfn.GetNext();
 			}
 
-			sprintf(rc.str,"void main(void)");
+			_sprintf(rc.str,"void main(void)");
 			vp.Add(rc);
-			sprintf(rc.str,"{");
+			_sprintf(rc.str,"{");
 			vp.Add(rc);
 
 			c=glvar[pass].GetFirst();
@@ -28340,34 +28637,34 @@ void CVertexProgram::get_vp(int pass)
 			if (weightsandindices)
 			{
 				
-				sprintf(rc.str,"WIndices.x  = int(IWeights.x/2.0);");vp.Add(rc);
-				sprintf(rc.str,"Weights.x = IWeights.x - (float(WIndices.x)*2.0);");vp.Add(rc);
+				_sprintf(rc.str,"WIndices.x  = int(IWeights.x/2.0);");vp.Add(rc);
+				_sprintf(rc.str,"Weights.x = IWeights.x - (float(WIndices.x)*2.0);");vp.Add(rc);
 				
-				sprintf(rc.str,"WIndices.y  = int(IWeights.y/2.0);");vp.Add(rc);
-				sprintf(rc.str,"Weights.y = IWeights.y - (float(WIndices.y)*2.0);");vp.Add(rc);
+				_sprintf(rc.str,"WIndices.y  = int(IWeights.y/2.0);");vp.Add(rc);
+				_sprintf(rc.str,"Weights.y = IWeights.y - (float(WIndices.y)*2.0);");vp.Add(rc);
 				
-				sprintf(rc.str,"WIndices.z  = int(IWeights.z/2.0);");vp.Add(rc);
-				sprintf(rc.str,"Weights.z = IWeights.z - (float(WIndices.z)*2.0);");vp.Add(rc);
+				_sprintf(rc.str,"WIndices.z  = int(IWeights.z/2.0);");vp.Add(rc);
+				_sprintf(rc.str,"Weights.z = IWeights.z - (float(WIndices.z)*2.0);");vp.Add(rc);
 
-				sprintf(rc.str,"WIndices.w  = int(IWeights.w/2.0);");vp.Add(rc);
-				sprintf(rc.str,"Weights.w = IWeights.w - (float(WIndices.w)*2.0);");vp.Add(rc);
-				sprintf(rc.str,"");vp.Add(rc);
+				_sprintf(rc.str,"WIndices.w  = int(IWeights.w/2.0);");vp.Add(rc);
+				_sprintf(rc.str,"Weights.w = IWeights.w - (float(WIndices.w)*2.0);");vp.Add(rc);
+				_sprintf(rc.str,"");vp.Add(rc);
 				
 			}
 		}
 
-		sprintf(rc.str,"");
+		_sprintf(rc.str,"");
 		vp.Add(rc);
 
 		c=gltemp[pass].GetFirst();
 		while (c)
 		{
 			if (strcmp(c->str,"")==0)
-				sprintf(rc.str,"%s",c->str);
+				_sprintf(rc.str,"%s",c->str);
 			else
 			{
-				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) sprintf(rc.str,"%s",c->str);
-				else sprintf(rc.str,"%s;",c->str);
+				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) _sprintf(rc.str,"%s",c->str);
+				else _sprintf(rc.str,"%s;",c->str);
 			}
 			vp.Add(rc);
 			c=gltemp[pass].GetNext();
@@ -28376,11 +28673,11 @@ void CVertexProgram::get_vp(int pass)
 		c=glvp[pass].GetFirst();
 		while (c)
 		{
-			if (strcmp(c->str,"")==0) sprintf(rc.str,"%s",c->str);
+			if (strcmp(c->str,"")==0) _sprintf(rc.str,"%s",c->str);
 			else
 			{
-				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) sprintf(rc.str,"%s",c->str);
-				else sprintf(rc.str,"%s;",c->str);
+				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) _sprintf(rc.str,"%s",c->str);
+				else _sprintf(rc.str,"%s;",c->str);
 			}
 			vp.Add(rc);
 			c=glvp[pass].GetNext();
@@ -28388,12 +28685,12 @@ void CVertexProgram::get_vp(int pass)
 
 		if (shadermodel)
 		{
-			sprintf(rc.str,"}");
+			_sprintf(rc.str,"}");
 			vp.Add(rc);
 		}
 		else
 		{
-			sprintf(rc.str,"END");
+			_sprintf(rc.str,"END");
 			vp.Add(rc);
 		}
 	}
@@ -28418,7 +28715,7 @@ void CVertexProgram::get_ps(int pass)
 
 		if (!shadermodel)
 		{
-			sprintf(rc.str,"!!ARBfp1.0");
+			_sprintf(rc.str,"!!ARBfp1.0");
 			vp.Add(rc);
 		}
 		else
@@ -28426,12 +28723,12 @@ void CVertexProgram::get_ps(int pass)
 #if defined(GLES20)||defined(GLESFULL)
 			if (modifyZ)
 			{
-				sprintf(rc.str,"#extension GL_EXT_frag_depth : enable");
+				_sprintf(rc.str,"#extension GL_EXT_frag_depth : enable");
 				vp.Add(rc);
 			}
 
-			if (OPENGLES30HIGHP) sprintf(rc.str,"precision highp float;");
-			else sprintf(rc.str,"precision mediump float;");
+			if (OPENGLES30HIGHP) _sprintf(rc.str,"precision highp float;");
+			else _sprintf(rc.str,"precision mediump float;");
 			vp.Add(rc);
 #endif
 		}
@@ -28444,24 +28741,24 @@ void CVertexProgram::get_ps(int pass)
 		}
 
 #ifdef GLES20
-		sprintf(rc.str,"");
+		_sprintf(rc.str,"");
 		vp.Add(rc);
 
-		sprintf(rc.str,"varying vec4 myColor;");
+		_sprintf(rc.str,"varying vec4 myColor;");
 		vp.Add(rc);
 		if (fvf_output[pass]&SPECULAR)
 		{
-			sprintf(rc.str,"varying vec4 mySecondaryColor;");
+			_sprintf(rc.str,"varying vec4 mySecondaryColor;");
 			vp.Add(rc);
 		}
-		if (fvf_output[pass]&_TEX7) { sprintf(rc.str,"varying vec4 myTexCoord[8];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX6) { sprintf(rc.str,"varying vec4 myTexCoord[7];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX5) { sprintf(rc.str,"varying vec4 myTexCoord[6];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX4) { sprintf(rc.str,"varying vec4 myTexCoord[5];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX3) { sprintf(rc.str,"varying vec4 myTexCoord[4];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX2) { sprintf(rc.str,"varying vec4 myTexCoord[3];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX1) { sprintf(rc.str,"varying vec4 myTexCoord[2];"); vp.Add(rc); }
-		else if (fvf_output[pass]&_TEX0) { sprintf(rc.str,"varying vec4 myTexCoord[1];"); vp.Add(rc); }
+		if (fvf_output[pass]&_TEX7) { _sprintf(rc.str,"varying vec4 myTexCoord[8];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX6) { _sprintf(rc.str,"varying vec4 myTexCoord[7];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX5) { _sprintf(rc.str,"varying vec4 myTexCoord[6];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX4) { _sprintf(rc.str,"varying vec4 myTexCoord[5];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX3) { _sprintf(rc.str,"varying vec4 myTexCoord[4];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX2) { _sprintf(rc.str,"varying vec4 myTexCoord[3];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX1) { _sprintf(rc.str,"varying vec4 myTexCoord[2];"); vp.Add(rc); }
+		else if (fvf_output[pass]&_TEX0) { _sprintf(rc.str,"varying vec4 myTexCoord[1];"); vp.Add(rc); }
 #endif
 
 		c=glfnps.GetFirst();
@@ -28471,7 +28768,7 @@ void CVertexProgram::get_ps(int pass)
 			c=glfnps.GetNext();
 		}
 
-		sprintf(rc.str,"");
+		_sprintf(rc.str,"");
 		vp.Add(rc);
 
 		if (shadermodel)
@@ -28544,7 +28841,7 @@ void CVertexProgram::get_ps(int pass)
 				if ((SizingTexture0)&&(FSRSample0)&&(RenderState[0][0].Texture[0]))
 				{
 					char tempss[1024];
-					sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
+					_sprintf(tempss,shader_functions_FSR_RCAS_0_warp_samplebump,valueFSRRCASSample);
 					sfsr=tempss;
 					ps=0;
 					pstmp=str_parse_rln2(sfsr,&ps);
@@ -28568,22 +28865,22 @@ void CVertexProgram::get_ps(int pass)
 				}
 			}
 
-			sprintf(rc.str,"");
+			_sprintf(rc.str,"");
 			vp.Add(rc);
-			sprintf(rc.str,"void main(void)");
+			_sprintf(rc.str,"void main(void)");
 			vp.Add(rc);
-			sprintf(rc.str,"{");
+			_sprintf(rc.str,"{");
 			vp.Add(rc);
 		}
 
 		c=glps[pass].GetFirst();
 		while (c)
 		{
-			if (strcmp(c->str,"")==0) sprintf(rc.str,"%s",c->str);
+			if (strcmp(c->str,"")==0) _sprintf(rc.str,"%s",c->str);
 			else
 			{
-				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) sprintf(rc.str,"%s",c->str);
-				else sprintf(rc.str,"%s;",c->str);
+				if (((str_match(c->str,"for"))||(str_match(c->str,"while"))||(str_match(c->str,"if"))||(str_match(c->str,"else"))||(str_match(c->str,"{"))||(str_match(c->str,"}")))) _sprintf(rc.str,"%s",c->str);
+				else _sprintf(rc.str,"%s;",c->str);
 			}
 			vp.Add(rc);
 			c=glps[pass].GetNext();
@@ -28591,12 +28888,12 @@ void CVertexProgram::get_ps(int pass)
 
 		if (shadermodel)
 		{
-			sprintf(rc.str,"}");
+			_sprintf(rc.str,"}");
 			vp.Add(rc);
 		}
 		else
 		{
-			sprintf(rc.str,"END");
+			_sprintf(rc.str,"END");
 			vp.Add(rc);
 		}
 	}
@@ -28721,15 +29018,15 @@ void CSVP_GetIdentifier(char *str0)
 
 	CSVP_id=0;
 
-	if (str0[0]=='-') {s=-1;sprintf(str,"%s",&str0[1]);}
-	else {s=1;sprintf(str,"%s",str0);}
+	if (str0[0]=='-') {s=-1;_sprintf(str,"%s",&str0[1]);}
+	else {s=1;_sprintf(str,"%s",str0);}
 
 	pp=str_char(str,']');
 	if (pp!=-1)
 	{
-		sprintf(str2,"%s",&str[pp]);
+		_sprintf(str2,"%s",&str[pp]);
 	}
-	else sprintf(str2,"%s",str);
+	else _sprintf(str2,"%s",str);
 
 	p=str_char(str2,'.');
 	if (p!=-1)
@@ -31508,10 +31805,10 @@ void CEmulatedVertexProgram::Add(int op,char * dst,char *op1,char *op2)
 
 	Code[nCode].addressed=0;
 
-	sprintf(temp,"%s",op1);
+	_sprintf(temp,"%s",op1);
 	if (str_char(temp,'[')!=-1)
 	{
-		sprintf(temp2,"%s",str_return_crochets(op1));
+		_sprintf(temp2,"%s",str_return_crochets(op1));
 
 		CSVP_GetIdentifier(temp);
 
@@ -31535,14 +31832,14 @@ void CEmulatedVertexProgram::Add(int op,char * dst,char *op1,char *op2)
 
 	if (op2)
 	{
-		sprintf(temp,"%s",op2);
+		_sprintf(temp,"%s",op2);
 		if (str_char(temp,'[')!=-1)
 		{
 			Code[nCode].op2=NULL;
 			Code[nCode].m[2]=15;
 
 
-			sprintf(temp2,"%s",str_return_crochets(op2));
+			_sprintf(temp2,"%s",str_return_crochets(op2));
 
 			CSVP_GetIdentifier(temp);
 

@@ -23,6 +23,13 @@
 #ifndef _TEXTURE_H_
 #define _TEXTURE_H_
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if defined(API3D_DIRECT3D)||(API3D_DIRECT3D9)
+#else
+#define BC3_POSSIBLE
+#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 enum
 {
 	NO_ALPHA						=	0,
@@ -38,11 +45,11 @@ enum
 	TC_NO_MIPMAP    				=	0
 };
 
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define TEXTURE565 0
 #define TEXTURE1555 1
 #define TEXTURE4444 2
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class API3D_STUB CLightmap
@@ -203,7 +210,11 @@ public:
 	~CTextureAPI();
 
 		void					create(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith); 
-		void					create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith); 
+		void					create16(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith);
+		void					create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith);
+#ifdef BC3_POSSIBLE
+		void					createBC3(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith);
+#endif
 		void					createBump(char * ptr,int sizex,int sizey,float scale);
 		void					modifyRGB(int x,int y,int sizex,int sizey,char * ptr);
 		void					modifyRGBA(int x,int y,int sizex,int sizey,char * ptr);

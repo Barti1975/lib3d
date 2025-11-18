@@ -1377,6 +1377,7 @@ void READ_PNG(char * nomPNG,struct IMAGE_DATAS * IMDATAS,char TypeAlpha)
                     if (BLOCK==NULL)
                     {
                         BLOCK=(char*) malloc (sizepng);
+						if (BLOCK==NULL) break;
                         memset(BLOCK,0,sizepng);
                     }
 
@@ -1411,7 +1412,7 @@ void READ_PNG(char * nomPNG,struct IMAGE_DATAS * IMDATAS,char TypeAlpha)
     
 	fclose(f);
     
-    if (BLOCK==NULL)
+    if ((BLOCK==NULL)||(ImageDATAtmp==NULL))
     {
         IMDATAS->X=HDR.X=16;
         IMDATAS->Y=HDR.Y=16;

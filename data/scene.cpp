@@ -1607,7 +1607,7 @@ void BASIC3D::Load(char *str)
 			CObject3D *obj;
 			unsigned short int nv;
 			unsigned short int nf;
-			short int x,y,z,nx,ny,nz,uv,w;			
+			short int x,y,z,uv;			
 
 			f=fopen(str,"rb");
 			if(f==NULL) {

@@ -39,13 +39,37 @@ public:
 	int nVertices;
 	int nFaces;
 	CVertex *Vertices;
+	CShortVertex *VerticesKeys[4096];
 	CFace *Faces;
     int maxnv,maxnf;
+	int nkeys;
     int level;
 
-    CGenerator() { level=-1; Vertices=new CVertex[GENERATOR_VERTICES_MAX]; Faces=new CFace[GENERATOR_MAX]; nVertices=0; nFaces=0; maxnv=GENERATOR_VERTICES_MAX; maxnf=GENERATOR_MAX; }
-    CGenerator(int nv,int nf) { level=-1; Vertices=new CVertex[nv]; Faces=new CFace[nf]; nVertices=0; nFaces=0; maxnv=nv; maxnf=nf; }
-	~CGenerator() { delete [] Vertices;delete [] Faces;}
+    CGenerator()
+	{
+		level=-1; Vertices=new CVertex[GENERATOR_VERTICES_MAX]; Faces=new CFace[GENERATOR_MAX]; nVertices=0; nFaces=0; maxnv=GENERATOR_VERTICES_MAX; maxnf=GENERATOR_MAX;
+		for (int n=0;n<4096;n++) VerticesKeys[n]=NULL;
+		nkeys=0;
+	}
+    CGenerator(int nv,int nf)
+	{
+		level=-1; Vertices=new CVertex[nv]; Faces=new CFace[nf]; nVertices=0; nFaces=0; maxnv=nv; maxnf=nf;
+		for (int n=0;n<4096;n++) VerticesKeys[n]=NULL;
+		nkeys=0;
+	}
+	~CGenerator()
+	{
+		delete [] Vertices;
+		delete [] Faces;
+		for (int n=0;n<4096;n++)
+		{
+			if (VerticesKeys[n])
+			{
+				delete [] VerticesKeys[n];
+				VerticesKeys[n]=NULL;
+			}
+		}
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// usefull functions

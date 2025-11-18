@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //	  <3D Librairies developped during 2002-2021>
-//	  Copyright (C) <2021>  <Laurent Cancé Francis, 10/08/1975>
+//	  Copyright (C) <2021>  <Laurent CancÃ© Francis, 10/08/1975>
 //	  laurent.francis.cance@outlook.fr
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,13 @@
 //	@date 2004
 ////////////////////////////////////////////////////////////////////////
 
-
+////////////////////////////////////////////////////////////////////////
+// FORCE TEXTURE 16 bits ==1 or BC3 ==2
+int FORCE_LIB3D_TEXTURES_MODE_CREATE		=	0;
+////////////////////////////////////////////////////////////////////////
+// MINIMAL SIZE TO APPLY DITHERING TO 16bits TEXTURES
+int SIZE_MIN_DITHER_PACK444					=	128;
+////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //	TEXTURE API
@@ -33,6 +39,11 @@
 // 	if (Tile>(int)MAX_TEXTURE_WIDTH) Tile=MAX_TEXTURE_WIDTH;
 
 #include "3d_api_base.h"
+
+#ifdef BC3_POSSIBLE
+#include "../data/bc3.hpp"
+#endif
+
 #include <math.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +51,12 @@
 #if defined(API3D_METAL)
 int MTLAddTexture(void *tex,int w,int h);
 int MTLAddTextureMipMap(void *tex,int w,int h,int levels);
+int MTLAddTexture16(void *tex,int w,int h);
+int MTLAddTextureMipMap16(void *tex,int w,int h,int levels);
+#ifdef BC3_POSSIBLE
+int MTLAddTextureBC3(void *tex,int w,int h);
+int MTLAddTextureMipMapBC3(void *tex,int w,int h,int levels);
+#endif
 void MTLFreeTexture(int n);
 void MTLUpdateTexture(int id,int x,int y,int sizex,int sizey,char *ptr);
 #endif
@@ -290,11 +307,134 @@ char * CreateMipMap(char * ptrtex,int tilex,int tiley,int rgba)
 	return ptr2;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define FMT_565			0
+#define FMT_5551		1
+#define FMT_4444		2
+
+unsigned short int * ConvertRGBAto16bits(char *ptrsrc,int w,int h,int fmt) // 0:565 1:555 2:4444
+{
+	int x,y;
+	int r,g,b,a;
+	unsigned int cc;
+	unsigned short int *ptrdest=(unsigned short int *)malloc(w*h*2);
+	int adr=0;
+	int adr2=0;
+	int r0,g0,b0;
+
+	char * ptrtex=(char*) malloc(w*h*4);
+	
+	for (y=0;y<h;y++)
+	{
+		adr=y*w;
+		for (x=0;x<w;x++)
+		{
+			r=((unsigned char*)ptrsrc)[((x+adr)<<2) + 0];
+			g=((unsigned char*)ptrsrc)[((x+adr)<<2) + 1];
+			b=((unsigned char*)ptrsrc)[((x+adr)<<2) + 2];
+			a=((unsigned char*)ptrsrc)[((x+adr)<<2) + 3];
+
+			if ((w>SIZE_MIN_DITHER_PACK444)&&(h>SIZE_MIN_DITHER_PACK444))
+			{
+				r0=(r>>1)&7;
+				if (r0>4) r0=4;
+				r0=dither[4-r0][x&1][y&1];
+				r=((r>>4)+r0)<<4;
+				if (r>255) r=255;
+
+				g0=(g>>1)&7;
+				if (g0>4) g0=4;
+				g0=dither[4-g0][x&1][y&1];
+				g=((g>>4)+g0)<<4;
+				if (g>255) g=255;
+
+				b0=(b>>1)&7;
+				if (b0>4) b0=4;
+				b0=dither[4-b0][x&1][y&1];
+				b=((b>>4)+b0)<<4;
+				if (b>255) b=255;
+			}
+
+			ptrtex[adr2+ 0]=r;
+			ptrtex[adr2+ 1]=g;
+			ptrtex[adr2+ 2]=b;
+			ptrtex[adr2+ 3]=a;
+
+			adr2+=4;
+		}
+	}
+
+	// METAL : MTLPixelFormatABGR4Unorm, MTLPixelFormatB5G6R5Unorm, MTLPixelFormatA1BGR5Unorm
+	// D3D 10,11,12: DXGI_FORMAT_B4G4R4A4_UNORM, DXGI_FORMAT_B5G6R5_UNORM, DXGI_FORMAT_B5G5R5A1_UNORM
+
+	// BASE : FORMAT_R8G8B8A8
+
+	adr=0;
+	for (y=0;y<h;y++)
+	{
+		for (x=0;x<w;x++)
+		{
+			r=((unsigned char*)ptrtex)[(adr<<2)+0];
+			g=((unsigned char*)ptrtex)[(adr<<2)+1];
+			b=((unsigned char*)ptrtex)[(adr<<2)+2];
+			a=((unsigned char*)ptrtex)[(adr<<2)+3];
+#if defined(API3D_DIRECT3D)||(API3D_DIRECT3D9)			// D3D8, D3D9
+			switch (fmt)
+			{
+			case 0:	//565
+				cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+				break;
+			case 1:	//555
+				cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);
+				break;
+			case 2:	//4444
+				cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+				break;
+			}
+#else
+#if defined(API3D_METAL)||defined(API3D_OPENGL20)		// METAL - OPENGL
+			switch (fmt)
+			{
+			case 0:	//565
+				cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+				break;
+			case 1:	//555
+				cc=(((r>>3)<<10) +((g>>3)<<5) + (b>>3))<<1;
+				if (a>128) cc++;
+				break;
+			case 2:	//4444
+				cc=((r>>4)<<12) + ((g>>4)<<8) +((b>>4)<<4) + (a>>4);
+				break;
+			}
+#else													// D3D 10,11,12
+			switch (fmt)
+			{
+			case 0:	//565
+				cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+				break;
+			case 1:	//555
+				cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);
+				if (a>128) cc+=(1<<15);
+				break;
+			case 2:	//4444
+				cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+				break;
+			}
+#endif
+#endif
+			ptrdest[adr++]=cc;
+		}
+	}
+
+	free(ptrtex);
+
+	return ptrdest;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 void CTextureAPI::create(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith)
 {
-	
 #if defined(API3D_DIRECT3D12) || defined(API3D_DIRECT3D11) || defined(API3D_DIRECT3D10) || defined(API3D_OPENGL20) || defined(API3D_METAL)
 
 	create32(Sizex,Sizey,ptrRGBA,Sizeptrx,Sizeptry,Alpha,Clamp,MipMap,dith);
@@ -967,8 +1107,1410 @@ void CTextureAPI::create(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Siz
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+#ifdef BC3_POSSIBLE
+
+#if defined(API3D_OPENGL) || defined(API3D_OPENGL20)
+void glBuildCompressedTextureBC3(char * ptrtex,int Tilex,int Tiley,int mip)
+{
+	char * ptrtmp=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+	
+#if !defined(GLES)&&!defined(GLES20)
+	glCompressedTexImage2D(GL_TEXTURE_2D,0,GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,Tilex,Tiley,0,Tilex*Tiley,ptrtmp);	
+	if (mip) glGenerateMipmap(GL_TEXTURE_2D);
+#else
+#ifndef GLES20
+	if (mip!=0) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+#endif
+	glCompressedTexImage2D(GL_TEXTURE_2D,0,GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,Tilex,Tiley,0,Tilex*Tiley,ptrtmp);	
+#ifdef GLES20	
+	if (mip) glGenerateMipmap(GL_TEXTURE_2D);
+#endif	
+#endif	
+
+	free(ptrtmp);
+}
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void CTextureAPI::createBC3(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith)
+{
+	data.ClampRepeat=Clamp;
+	data.MipMap=MipMap;
+	if (Sizex>Sizey) data.Tile=Sizex;
+	else data.Tile=Sizey;
+	data.Format=0;
+	data.Material=NULL;
+	data.Tilex=Sizex;
+	data.Tiley=Sizey;
+
+#if defined(API3D_METAL)
+//------------------------------------------------------------------------------------------------ METAL -------------
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	int Tile;
+	char * ptrtex;
+	int LEVELS;
+    int x,y,n1,n2,adr,adr2;
+    int xx,incxx;
+    
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	if (Alpha==1)
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+        
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+
+		if (MipMap==0)
+		{
+			ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+            char * ptrtmp=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+			id=MTLAddTextureBC3(ptrtmp,Tilex,Tiley);
+            free(ptrtmp);
+		}
+		else
+		{
+			ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+            char * ptrtmp=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+			id=MTLAddTextureMipMapBC3(ptrtmp,Tilex,Tiley,LEVELS);
+            free(ptrtmp);
+		}
+	}
+	else
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+            adr2=0;
+            for (n1=0;n1<Tilex*Tiley;n1++)
+            {
+                ptrtex[adr2+3]=255;
+                adr2+=4;
+            }
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=255;
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+        if (MipMap==0)
+        {
+            ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+            char * ptrtmp=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+            id=MTLAddTextureBC3(ptrtmp,Tilex,Tiley);
+            free(ptrtmp);
+        }
+        else
+        {
+            ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+            char * ptrtmp=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+            id=MTLAddTextureMipMapBC3(ptrtmp,Tilex,Tiley,LEVELS);
+            free(ptrtmp);
+        }
+	}
+
+	free(ptrtex);
+#endif
+
+
+#if defined(API3D_OPENGL) || defined(API3D_OPENGL20)
+//------------------------------------------------------------------------------------------------ OPEN GL -----------
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	int Tile;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	int LEVELS;
+	int nn;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	nn=0;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+#if !defined(GLES)&&!defined(GLES20)
+	glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS,0);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS,0);
+#endif
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+#if !defined(GLES)&&!defined(GLES20)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, LEVELS);
+#endif
+
+	if (Alpha==1)
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+        
+		id=0;
+
+		glEnable(GL_TEXTURE_2D);
+		glGenTextures(1,(GLuint*)&id);
+		glBindTexture(GL_TEXTURE_2D,id);
+
+		if (MipMap==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		}
+
+		if (MipMap!=0) ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+		else ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+
+#if defined(GLES)||defined(GLES20)
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+		glBuildCompressedTextureBC3(ptrtex,Tilex,Tiley,MipMap);
+#else
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+		glBuildCompressedTextureBC3(ptrtex,Tilex,Tiley,MipMap);
+#endif
+	}
+	else
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+	
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            adr2=0;
+            adr=0;
+            for (n2=0;n2<Tilex*Tiley;n2++)
+            {
+                ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[adr + 0];
+                ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[adr + 1];
+                ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[adr + 2];
+				ptrtex[adr2+ 3]=255;
+                adr2+=4;
+                adr+=4;                
+            }
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+					ptrtex[adr2+ 3]=255;
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+        
+		glEnable(GL_TEXTURE_2D);
+		glGenTextures(1,(GLuint*) &id);
+		glBindTexture(GL_TEXTURE_2D,id);
+
+		if (MipMap==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+			
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		}
+
+		if (MipMap!=0) ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+		else ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+
+#if defined(GLES)||defined(GLES20)
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+		glBuildCompressedTextureBC3(ptrtex,Tilex,Tiley,MipMap);
+#else
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+		glBuildCompressedTextureBC3(ptrtex,Tilex,Tiley,MipMap);
+#endif
+	}
+
+	free(ptrtex);
+#endif
+
+
+#ifdef API3D_DIRECT3D
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	D3DLOCKED_RECT Locked;
+	int lvl,nn;
+	unsigned int adr0,pitch;
+	DWORD * ptrdest;
+	DWORD cc;
+	int r,g,b,a;
+
+	D3DFORMAT Formats[2]={
+						D3DFMT_X8R8G8B8,
+						D3DFMT_A8R8G8B8,    
+						};
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+	int Tilex2;
+	int Tiley2;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+	
+	adr2=0;
+	for (n2=0;n2<Tiley;n2++)
+	{
+		y=(BASE_TILEy*n2)/Tiley;
+		adr=y*BASE_TILEx;
+		xx=0;
+		incxx=(BASE_TILEx*256)/Tilex;
+		for (n1=0;n1<Tilex;n1++)
+		{
+			x=(xx>>8);
+
+			r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+			g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+			b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+			a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+			ptrtex[adr2+ 0]=r;
+			ptrtex[adr2+ 1]=g;
+			ptrtex[adr2+ 2]=b;
+			ptrtex[adr2+ 3]=a;
+			xx+=incxx;
+			adr2+=4;
+		}
+	}
+
+
+	if (Alpha==0) { nn=0;  }
+	else { nn=1;  }
+
+	while ((nn<2)&&(FAILED(D3DDevice->CreateTexture(Tilex,Tiley,LEVELS,0,Formats[nn],D3DPOOL_MANAGED,&id)))) nn++;
+
+	if (nn<2)
+	{
+		
+		id->LockRect(0,&Locked,NULL,0);	// level 0
+		ptrdest=(DWORD *) Locked.pBits;
+		pitch=Locked.Pitch/4;
+		
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				cc=(a<<24) + (r<<16) + (g<<8) +b;
+			
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+		id->UnlockRect(0);
+
+		if (MipMap==1)
+		{
+			Ptr2=CreateMipMap(ptrtex,Tilex,Tiley,4);
+
+			for (lvl=1;lvl<LEVELS;lvl++)
+			{
+				id->LockRect(lvl,&Locked,NULL,0);
+				ptrdest=(DWORD *) Locked.pBits;
+				pitch=Locked.Pitch/4;
+				Tilex2=Tilex>>1;
+				Tiley2=Tiley>>1;
+
+				adr=0;
+				for (n2=0;n2<Tiley2;n2++)
+				{
+					adr0=n2*pitch;
+					for (n1=0;n1<Tilex2;n1++)
+					{
+						r=((unsigned char*)Ptr2)[adr+0];
+						g=((unsigned char*)Ptr2)[adr+1];
+						b=((unsigned char*)Ptr2)[adr+2];
+						a=((unsigned char*)Ptr2)[adr+3];
+
+						cc=(a<<24) + (r<<16) + (g<<8) +b;
+
+						ptrdest[n1+adr0]=cc;
+						adr+=4;
+					}
+				}
+
+				id->UnlockRect(lvl);
+				Ptr3=CreateMipMap(Ptr2,Tilex>>1,Tiley>>1,4);
+				free(Ptr2);
+				Ptr2=Ptr3;
+				Tilex=Tilex>>1;
+				Tiley=Tiley>>1;
+			}
+			free(Ptr2);
+		}
+	}
+	free(ptrtex);
+
+	data.Format=-1-nn;
+#endif
+
+
+#ifdef API3D_DIRECT3D9
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	D3DLOCKED_RECT Locked;
+	int lvl,nn;
+	unsigned int adr0,pitch;
+	DWORD * ptrdest;
+	DWORD cc;
+	unsigned char r,g,b,a;
+
+	D3DFORMAT Formats[6]={
+						D3DFMT_X8R8G8B8,
+						D3DFMT_A8R8G8B8,    
+						};
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+	int Tilex2;
+	int Tiley2;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	if (Alpha==0) { nn=0; }
+	else { nn=1;  }
+
+	while ((nn<2)&&(FAILED(D3DDevice->CreateTexture(Tilex,Tiley,LEVELS,0,Formats[nn],D3DPOOL_MANAGED,&id,NULL)))) nn++;
+
+	if (nn<2)
+	{
+		id->LockRect(0,&Locked,NULL,0);	// level 0
+		ptrdest=(DWORD *) Locked.pBits;
+		pitch=Locked.Pitch/4;
+		
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				cc=(a<<24) + (r<<16) + (g<<8) +b;
+			
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+		id->UnlockRect(0);
+
+		if (MipMap==1)
+		{
+			Ptr2=CreateMipMap(ptrtex,Tilex,Tiley,4);
+
+			for (lvl=1;lvl<LEVELS;lvl++)
+			{
+				id->LockRect(lvl,&Locked,NULL,0);
+				ptrdest=(DWORD *) Locked.pBits;
+				pitch=Locked.Pitch/4;
+				Tilex2=Tilex>>1;
+				Tiley2=Tiley>>1;
+
+				adr=0;
+				for (n2=0;n2<Tiley2;n2++)
+				{
+					adr0=n2*pitch;
+					for (n1=0;n1<Tilex2;n1++)
+					{
+						r=((unsigned char*)Ptr2)[adr+0];
+						g=((unsigned char*)Ptr2)[adr+1];
+						b=((unsigned char*)Ptr2)[adr+2];
+						a=((unsigned char*)Ptr2)[adr+3];
+
+						cc=(a<<24) + (r<<16) + (g<<8) +b;
+
+						ptrdest[n1+adr0]=cc;
+						adr+=4;
+					}
+				}
+
+				id->UnlockRect(lvl);
+				Ptr3=CreateMipMap(Ptr2,Tilex>>1,Tiley>>1,4);
+				free(Ptr2);
+				Ptr2=Ptr3;
+				Tilex=Tilex>>1;
+				Tiley=Tiley>>1;
+			}
+			free(Ptr2);
+		}
+	}
+	free(ptrtex);
+
+	data.Format=-1-nn;
+
+#endif
+
+#ifdef API3D_DIRECT3D10
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned int adr0,pitch;
+	BYTE * ptrdest;
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	D3D10_TEXTURE2D_DESC desc;
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+
+		ZeroMemory(&desc,sizeof(desc));
+		data.Tilex = desc.Width = Tilex;
+		data.Tiley = desc.Height = Tiley;	
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_BC3_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D10_USAGE_DYNAMIC;
+		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+		device->CreateTexture2D( &desc, NULL, &idtex );
+
+		D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=0;
+
+		D3D10_MAPPED_TEXTURE2D mappedTex;
+
+		idtex->Map( D3D10CalcSubresource(0, 0, LEVELS), D3D10_MAP_WRITE_DISCARD, 0, &mappedTex );
+		ptrdest = (BYTE*)mappedTex.pData;
+		pitch = mappedTex.RowPitch;
+
+		char *ptrbc3=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+		memcpy(ptrdest,ptrbc3,Tilex*Tiley);
+		free(ptrbc3);
+
+		idtex->Unmap( D3D10CalcSubresource(0, 0, LEVELS) );
+
+		free(ptrtex);
+	}
+	else
+	{
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+		
+		int tx=Tilex;
+		int ty=Tiley;
+		bool end=false;
+
+		LEVELS=1;
+		while (!end)
+		{
+			tx/=2;
+			ty/=2;
+			if ((tx>4)&&(ty>4)&&((tx&3)==0)&&((ty&3)==0)) LEVELS++;
+			else end=true;
+		}
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		desc.Width = Tilex;
+		desc.Height = Tiley;	
+		desc.MipLevels = LEVELS;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_BC3_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D10_USAGE_DEFAULT;
+		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+		
+		static D3D10_SUBRESOURCE_DATA InitData[128];
+
+		static char * ptrs[128];
+		static char * ptrsraw[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{				
+				ptrsraw[l]=(char*)ptrtex;
+				InitData[l].pSysMem=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+				InitData[l].SysMemPitch=Tilex*4;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+				ptrsraw[l]=(char*)Ptr2;
+				InitData[l].pSysMem=ConvertRawToBC3(Ptr2,wx,wy);
+				InitData[l].SysMemPitch=wx*4;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=Ptr2;
+			}
+
+			ptrs[l]=(char*)InitData[l].pSysMem;
+		}
+
+		device->CreateTexture2D( &desc, InitData, &idtex );
+
+		D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrsraw[l]);
+	}
+
+	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+#endif
+
+#ifdef API3D_DIRECT3D11
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned int adr0,pitch;
+	BYTE * ptrdest;
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	D3D11_TEXTURE2D_DESC desc;
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+
+		ZeroMemory(&desc,sizeof(desc));
+		data.Tilex = desc.Width = Tilex;
+		data.Tiley = desc.Height = Tiley;	
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_BC3_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		device->CreateTexture2D( &desc, NULL, &idtex );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=0;
+
+		D3D11_MAPPED_SUBRESOURCE mappedTex;
+		devicecontext->Map(idtex, D3D11CalcSubresource(0, 0, LEVELS), D3D11_MAP_WRITE_DISCARD, 0, &mappedTex );
+
+		ptrdest = (BYTE*)mappedTex.pData;
+		pitch = mappedTex.RowPitch;
+
+		char *ptrbc3=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+		memcpy(ptrdest,ptrbc3,Tilex*Tiley);
+		free(ptrbc3);
+				
+		devicecontext->Unmap(idtex, D3D11CalcSubresource(0, 0, LEVELS) );
+
+		free(ptrtex);
+	}
+	else
+	{
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+		
+		int tx=Tilex;
+		int ty=Tiley;
+		bool end=false;
+
+		LEVELS=1;
+		while (!end)
+		{
+			tx/=2;
+			ty/=2;
+			if ((tx>4)&&(ty>4)&&((tx&3)==0)&&((ty&3)==0)) LEVELS++;
+			else end=true;
+		}
+
+		data.LVL=LEVELS;
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		desc.Width = Tilex;
+		desc.Height = Tiley;	
+		desc.MipLevels = LEVELS;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_BC3_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		
+		static D3D11_SUBRESOURCE_DATA InitData[128];
+		static char * ptrs[128];
+		static char * ptrsraw[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{				
+				ptrsraw[l]=(char*)ptrtex;
+				InitData[l].pSysMem=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+				InitData[l].SysMemPitch=Tilex*4;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+				ptrsraw[l]=(char*)Ptr2;
+				InitData[l].pSysMem=ConvertRawToBC3(Ptr2,wx,wy);
+				InitData[l].SysMemPitch=wx*4;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=Ptr2;
+			}
+
+			ptrs[l]=(char*)InitData[l].pSysMem;
+		}
+
+		device->CreateTexture2D( &desc, InitData, &idtex );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrsraw[l]);
+	}
+
+	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+#endif
+
+#ifdef API3D_DIRECT3D12
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	((C3DAPIBASE*)dhhc->render)->CloseOpenedCommandList();
+
+	cmdalloc=((C3DAPIBASE*)dhhc->render)->commandAllocators[((C3DAPIBASE*)dhhc->render)->frameIndex];
+
+	ID3D12GraphicsCommandList* cmd;
+	dhhc->d3ddevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdalloc, nullptr, IID_PPV_ARGS(&cmd));
+
+	D3D12_RESOURCE_DESC textureDesc = {};
+
+	data.Tilex=Tilex;
+	data.Tiley=Tiley;
+#ifdef CLASSNED
+	data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+	memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+
+	D3D12_RESOURCE_BARRIER barrierDesc = {};
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+		data.MipMap=0;
+
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,0);
+
+        textureDesc.MipLevels = 1;
+        textureDesc.Format = DXGI_FORMAT_BC3_UNORM;
+		textureDesc.Width = data.Tilex = Tilex;
+		textureDesc.Height = data.Tiley = Tiley;	
+        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),D3D12_HEAP_FLAG_NONE,&textureDesc,
+										D3D12_RESOURCE_STATE_COMMON,nullptr,IID_PPV_ARGS(&texture));
+	
+        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture, 0, 1);
+
+        // Create the GPU upload buffer.
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),D3D12_HEAP_FLAG_NONE,&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+										D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&textureUpload));
+
+
+
+		D3D12_SUBRESOURCE_DATA textureData = {};
+
+		char *ptrbc3=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+
+        textureData.pData = (void*)ptrbc3;
+        textureData.RowPitch = Tilex * 4;
+        textureData.SlicePitch = textureData.RowPitch * Tiley;
+
+		barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrierDesc.Transition.pResource = texture;
+		barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		cmd->ResourceBarrier(1, &barrierDesc);
+
+        UpdateSubresources(cmd, texture, textureUpload, 0, 0, 1, &textureData);
+
+		free(ptrbc3);
+	}
+	else
+	{
+		ptrtex=convert4x4(ptrtex,Tilex,Tiley,1);
+		
+		int tx=Tilex;
+		int ty=Tiley;
+		bool end=false;
+
+		LEVELS=1;
+		while (!end)
+		{
+			tx/=2;
+			ty/=2;
+			if ((tx>4)&&(ty>4)&&((tx&3)==0)&&((ty&3)==0)) LEVELS++;
+			else end=true;
+		}
+
+		data.LVL=LEVELS;
+
+		data.MipMap=1;
+
+        textureDesc.MipLevels = LEVELS;
+        textureDesc.Format = DXGI_FORMAT_BC3_UNORM;
+		textureDesc.Width = data.Tilex = Tilex;
+		textureDesc.Height = data.Tiley = Tiley;	
+        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),D3D12_HEAP_FLAG_NONE,&textureDesc,
+										D3D12_RESOURCE_STATE_COMMON,nullptr,IID_PPV_ARGS(&texture));
+
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture, 0, LEVELS);
+		
+        // Create the GPU upload buffer.
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),D3D12_HEAP_FLAG_NONE,&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+										D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&textureUpload));
+
+		D3D12_SUBRESOURCE_DATA textureData[128];
+		static char * ptrs[128];
+		static char * ptrsraw[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{
+				ptrsraw[l]=ptrtex;
+				textureData[l].pData=ConvertRawToBC3(ptrtex,Tilex,Tiley);
+
+				textureData[l].RowPitch=Tilex*4;
+				textureData[l].SlicePitch=Tilex*Tiley*4;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+
+				ptrsraw[l]=Ptr2;
+				textureData[l].pData=ConvertRawToBC3(Ptr2,wx,wy);
+
+				textureData[l].RowPitch=wx*4;
+				textureData[l].SlicePitch=wx*wy*4;
+				Ptr3=Ptr2;
+			}
+
+			ptrs[l]=(char*)textureData[l].pData;
+		}
+		
+		barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrierDesc.Transition.pResource = texture;
+		barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		cmd->ResourceBarrier(1, &barrierDesc);
+
+        UpdateSubresources(cmd, texture, textureUpload, 0, 0, LEVELS, textureData);
+
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrsraw[l]);
+	}
+
+	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+	cmd->ResourceBarrier(1, &barrierDesc); 
+
+	cmd->DiscardResource(textureUpload,nullptr);
+
+	cmd->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
+	cmd->Close();
+
+	ID3D12CommandList* list[] = { cmd };
+	queue->ExecuteCommandLists(_countof(list), list);
+	cmd->Release();
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+	/*
+	ID3D12Fence* fnce;
+	dhhc->d3ddevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fnce));
+	//auto nextFence=fnce->GetCompletedValue()+1;
+	queue->Signal(fnce,1);
+
+	queue->Wait(fnce,1);
+
+	//textureUpload->Release();
+	
+	if (fnce->GetCompletedValue() < 1)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);  
+		fnce->SetEventOnCompletion(1, eventHandle);
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+	/**/
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	if (MipMap==0) srvDesc.Texture2D.MipLevels = 1;
+	else srvDesc.Texture2D.MipLevels = LEVELS;
+
+	id=dhhc->GetNewHeapHandleNotRecycle();
+	
+	dhhc->d3ddevice->CreateShaderResourceView(texture, &srvDesc, id.GetCPUHandle());
+
+	//((C3DAPIBASE*)dhhc->render)->TextureToShaders.Add(this);
+
+	data.Format=0;
+#endif
+}
+#endif
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith)
 {
+
+#ifdef BC3_POSSIBLE
+	if (FORCE_LIB3D_TEXTURES_MODE_CREATE==2)
+	{
+		createBC3(Sizex,Sizey,ptrRGBA,Sizeptrx,Sizeptry,Alpha,Clamp,MipMap,1);
+		return;
+	}
+#endif
+
+	if (FORCE_LIB3D_TEXTURES_MODE_CREATE==1)
+	{
+		create16(Sizex,Sizey,ptrRGBA,Sizeptrx,Sizeptry,Alpha,Clamp,MipMap,1);
+		return;
+	}
+
 	data.ClampRepeat=Clamp;
 	data.MipMap=MipMap;
 	if (Sizex>Sizey) data.Tile=Sizex;
@@ -1126,7 +2668,6 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 	if (Alpha==1)
 	{
-
 		ptrtex=(char*) malloc(Tilex*Tiley*4);
 
         if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
@@ -1528,7 +3069,6 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 	}
 	else
 	{
-
 		adr2=0;
 		for (n2=0;n2<Tiley;n2++)
 		{
@@ -1730,8 +3270,10 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 		data.Tilex=Tilex;
 		data.Tiley=Tiley;
+#ifdef CLASSNED
 		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
 		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
 		data.MipMap=0;
 
 		D3D10_MAPPED_TEXTURE2D mappedTex;
@@ -1762,8 +3304,10 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 		data.Tilex=Tilex;
 		data.Tiley=Tiley;
+#ifdef CLASSNED
 		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
 		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
 		data.MipMap=1;
 
 		ZeroMemory(&desc,sizeof(desc));
@@ -1824,8 +3368,12 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
 	}
 
-	
 	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
 
 #endif
 
@@ -1929,8 +3477,10 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 		data.Tilex=Tilex;
 		data.Tiley=Tiley;
+#ifdef CLASSNED
 		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
 		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
 		data.MipMap=0;
 
 		D3D11_MAPPED_SUBRESOURCE mappedTex;
@@ -1961,8 +3511,10 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 		data.Tilex=Tilex;
 		data.Tiley=Tiley;
+#ifdef CLASSNED
 		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
 		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
 		data.MipMap=1;
 
 		ZeroMemory(&desc,sizeof(desc));
@@ -2024,6 +3576,11 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 	}
 
 	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
 
 #endif
 
@@ -2102,8 +3659,10 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
 	data.Tilex=Tilex;
 	data.Tiley=Tiley;
+#ifdef CLASSNED
 	data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
 	memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
 
 	D3D12_RESOURCE_BARRIER barrierDesc = {};
 
@@ -2211,6 +3770,1601 @@ void CTextureAPI::create32(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int S
 
         UpdateSubresources(cmd, texture, textureUpload, 0, 0, LEVELS, textureData);
 		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+	}
+
+	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+	cmd->ResourceBarrier(1, &barrierDesc); 
+
+	cmd->DiscardResource(textureUpload,nullptr);
+
+	cmd->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON));
+	cmd->Close();
+
+	ID3D12CommandList* list[] = { cmd };
+	queue->ExecuteCommandLists(_countof(list), list);
+	cmd->Release();
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+	/*
+	ID3D12Fence* fnce;
+	dhhc->d3ddevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fnce));
+	//auto nextFence=fnce->GetCompletedValue()+1;
+	queue->Signal(fnce,1);
+
+	queue->Wait(fnce,1);
+
+	//textureUpload->Release();
+	
+	if (fnce->GetCompletedValue() < 1)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);  
+		fnce->SetEventOnCompletion(1, eventHandle);
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+	/**/
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	if (MipMap==0) srvDesc.Texture2D.MipLevels = 1;
+	else srvDesc.Texture2D.MipLevels = LEVELS;
+
+	id=dhhc->GetNewHeapHandleNotRecycle();
+	
+	dhhc->d3ddevice->CreateShaderResourceView(texture, &srvDesc, id.GetCPUHandle());
+
+	//((C3DAPIBASE*)dhhc->render)->TextureToShaders.Add(this);
+
+	data.Format=0;
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+void CTextureAPI::create16(int Sizex,int Sizey,char * ptrRGBA,int Sizeptrx,int Sizeptry,int Alpha,int Clamp,int MipMap,int dith)
+{
+	data.ClampRepeat=Clamp;
+	data.MipMap=MipMap;
+	if (Sizex>Sizey) data.Tile=Sizex;
+	else data.Tile=Sizey;
+	data.Format=0;
+	data.Material=NULL;
+	data.Tilex=Sizex;
+	data.Tiley=Sizey;
+
+#if defined(API3D_METAL)
+//------------------------------------------------------------------------------------------------ METAL -------------
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	int Tile;
+	char * ptrtex;
+	int LEVELS;
+    int x,y,n1,n2,adr,adr2;
+    int xx,incxx;
+    
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	if (Alpha==1)
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+        
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_4444);
+
+		if (MipMap==0) id=MTLAddTexture16(ptrtmp,Tilex,Tiley);
+		else id=MTLAddTextureMipMap16(ptrtmp,Tilex,Tiley,LEVELS);
+
+		free(ptrtmp);
+	}
+	else
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+            adr2=0;
+            for (n1=0;n1<Tilex*Tiley;n1++)
+            {
+                ptrtex[adr2+3]=255;
+                adr2+=4;
+            }
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=255;
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_4444);
+
+		if (MipMap==0) id=MTLAddTexture16(ptrtmp,Tilex,Tiley);
+		else id=MTLAddTextureMipMap16(ptrtmp,Tilex,Tiley,LEVELS);
+
+		free(ptrtmp);
+	}
+
+	free(ptrtex);
+#endif
+
+#if defined(API3D_OPENGL) || defined(API3D_OPENGL20)
+//------------------------------------------------------------------------------------------------ OPEN GL -----------
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	int Tile;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	int LEVELS;
+	int nn;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	nn=0;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT,1);
+#if !defined(GLES)&&!defined(GLES20)
+	glPixelStorei(GL_UNPACK_ROW_LENGTH,0);
+	glPixelStorei(GL_UNPACK_SKIP_ROWS,0);
+	glPixelStorei(GL_UNPACK_SKIP_PIXELS,0);
+#endif
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+#if !defined(GLES)&&!defined(GLES20)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, LEVELS);
+#endif
+
+	if (Alpha==1)
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+                    ptrtex[adr2+ 3]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+        
+		id=0;
+
+		glEnable(GL_TEXTURE_2D);
+		glGenTextures(1,(GLuint*)&id);
+		glBindTexture(GL_TEXTURE_2D,id);
+
+		if (MipMap==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		}
+
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_4444);
+
+#if defined(GLES)||defined(GLES20)
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}		
+
+		// UNSIGNED_SHORT_4_4_4_4
+
+#ifndef GLES20
+		if (MipMap!=0) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+#else
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+		if (MipMap!=0) glGenerateMipmap(GL_TEXTURE_2D);
+#endif
+
+#else
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+#ifdef OCULUS
+		if (MipMap==0)
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+		else
+		{
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+#else
+		if (MipMap==0)
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+		else
+		{
+			gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGBA4,Tilex,Tiley,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+		}
+#endif
+#endif
+
+		free(ptrtmp);
+	}
+	else
+	{
+		ptrtex=(char*) malloc(Tilex*Tiley*4);
+	
+        if ((Tilex==BASE_TILEx)&&(Tiley==BASE_TILEy))
+        {
+            adr2=0;
+            adr=0;
+            for (n2=0;n2<Tilex*Tiley;n2++)
+            {
+                ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[adr + 0];
+                ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[adr + 1];
+                ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[adr + 2];
+				ptrtex[adr2+ 3]=255;
+                adr2+=4;
+                adr+=4;                
+            }
+        }
+        else
+        {
+            adr2=0;
+            for (n2=0;n2<Tiley;n2++)
+            {
+                y=(BASE_TILEy*n2)/Tiley;
+                adr=y*BASE_TILEx;
+                xx=0;
+                incxx=(BASE_TILEx*256)/Tilex;
+                for (n1=0;n1<Tilex;n1++)
+                {
+                    x=(xx>>8);
+                    ptrtex[adr2+ 0]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+                    ptrtex[adr2+ 1]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+                    ptrtex[adr2+ 2]=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+					ptrtex[adr2+ 3]=255;
+                    xx+=incxx;
+                    adr2+=4;
+                }
+            }
+        }
+        
+		glEnable(GL_TEXTURE_2D);
+		glGenTextures(1,(GLuint*) &id);
+		glBindTexture(GL_TEXTURE_2D,id);
+
+		if (MipMap==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+			
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+		}		
+
+#if defined(GLES)||defined(GLES20)
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_565);
+
+#ifndef GLES20
+		if (MipMap!=0) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGB565,Tilex,Tiley,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+#else
+		glTexImage2D(GL_TEXTURE_2D,0,GL_RGB565,Tilex,Tiley,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+		if (MipMap!=0) glGenerateMipmap(GL_TEXTURE_2D);
+#endif
+
+		free(ptrtmp);
+
+#else
+		if (Clamp==1)
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+		}
+		else
+		{
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		}
+
+#ifdef OCULUS
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_4444);
+
+		if (MipMap==0)
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+		else
+		{
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA4,Tilex,Tiley,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,ptrtmp);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+
+		free(ptrtmp);
+#else
+		char *ptrtmp=(char*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_565);
+#ifdef __MACOSX__
+		if (MipMap==0)
+			glTexImage2D(GL_TEXTURE_2D,0,GL_RGB5,Tilex,Tiley,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+		else
+		{
+			gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGB5,Tilex,Tiley,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+		}
+#else
+        if (MipMap==0)
+            glTexImage2D(GL_TEXTURE_2D,0,GL_RGB565,Tilex,Tiley,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+        else
+        {
+            gluBuild2DMipmaps(GL_TEXTURE_2D,GL_RGB565,Tilex,Tiley,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,ptrtmp);
+        }
+#endif
+		free(ptrtmp);
+#endif
+
+#endif		
+	}
+
+	free(ptrtex);
+#endif
+
+
+#ifdef API3D_DIRECT3D
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	D3DLOCKED_RECT Locked;
+	int lvl,nn;
+	unsigned int adr0,pitch;
+	WORD * ptrdest;
+	WORD cc;
+	unsigned char r,g,b,a;
+
+	D3DFORMAT Formats[3]={
+					    D3DFMT_R5G6B5,      
+						D3DFMT_X1R5G5B5,    
+						D3DFMT_A4R4G4B4
+						};
+	D3DFORMAT Formats2[6]={
+						D3DFMT_R8G8B8,    
+						D3DFMT_X8R8G8B8,
+					    D3DFMT_R5G6B5,      
+						D3DFMT_X1R5G5B5,    
+						D3DFMT_A8R8G8B8,    
+						D3DFMT_A4R4G4B4
+						};
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	int r0,g0,b0;
+	char * Ptr2;
+	char * Ptr3;
+	int Tilex2;
+	int Tiley2;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while (!((Tile>>LEVELS)&1)) LEVELS++;
+		LEVELS++;
+	}
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	
+	adr2=0;
+	for (n2=0;n2<Tiley;n2++)
+	{
+		y=(BASE_TILEy*n2)/Tiley;
+		adr=y*BASE_TILEx;
+		xx=0;
+		incxx=(BASE_TILEx*256)/Tilex;
+		for (n1=0;n1<Tilex;n1++)
+		{
+			x=(xx>>8);
+
+			r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+			g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+			b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+			a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+
+			if (dith==1)
+			{
+				r0=r&7;
+				if (r0>4) r0=4;
+				r0=dither[4-r0][x&1][y&1];
+				r=((r>>3)+r0)<<3;
+
+				if (r>255) r=255;
+
+
+				g0=g&3;
+				g0=dither[4-g0][x&1][y&1];
+				g=((g>>2)+g0)<<2;
+
+				if (g>255) g=255;
+
+				b0=b&7;
+				if (b0>4) b0=4;
+				b0=dither[4-b0][x&1][y&1];
+				b=((b>>3)+b0)<<3;
+				if (b>255) b=255;
+			}
+			ptrtex[adr2+ 0]=r;
+			ptrtex[adr2+ 1]=g;
+			ptrtex[adr2+ 2]=b;
+			ptrtex[adr2+ 3]=a;
+			xx+=incxx;
+			adr2+=4;
+		}
+	}
+
+	
+
+	if (Alpha==0) { nn=0;  }
+	else { nn=2;  }
+
+	while ((nn<3)&&(FAILED(D3DDevice->CreateTexture(Tilex,Tiley,LEVELS,0,Formats[nn],D3DPOOL_MANAGED,&id)))) nn++;
+
+	if (nn<3)
+	{	
+		id->LockRect(0,&Locked,NULL,0);	// level 0
+		ptrdest=(WORD *) Locked.pBits;
+		pitch=Locked.Pitch>>1;
+		
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				switch (nn)
+				{
+				case 0:	//565
+					cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+					break;
+				case 1:	//555
+					cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);
+					break;
+				case 2:	//4444
+					cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+					break;
+				}
+				
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+		id->UnlockRect(0);
+
+		if (MipMap==1)
+		{
+			Ptr2=CreateMipMap(ptrtex,Tilex,Tiley,4);
+
+			for (lvl=1;lvl<LEVELS;lvl++)
+			{
+				id->LockRect(lvl,&Locked,NULL,0);
+				ptrdest=(WORD *) Locked.pBits;
+				pitch=Locked.Pitch>>1;
+				Tilex2=Tilex>>1;
+				Tiley2=Tiley>>1;
+
+				adr=0;
+				for (n2=0;n2<Tiley2;n2++)
+				{
+					adr0=n2*pitch;
+					for (n1=0;n1<Tilex2;n1++)
+					{
+						r=((unsigned char*)Ptr2)[adr+0];
+						g=((unsigned char*)Ptr2)[adr+1];
+						b=((unsigned char*)Ptr2)[adr+2];
+						a=((unsigned char*)Ptr2)[adr+3];
+
+						switch (nn)
+						{
+						case 0:	//565
+							cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+							break;
+						case 1:	//555
+							cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);
+							break;
+						case 2:	//4444
+							cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+							break;
+						};
+						
+						ptrdest[n1+adr0]=cc;
+						adr+=4;
+					}
+				}
+
+				id->UnlockRect(lvl);
+				Ptr3=CreateMipMap(Ptr2,Tilex>>1,Tiley>>1,4);
+				free(Ptr2);
+				Ptr2=Ptr3;
+				Tilex=Tilex>>1;
+				Tiley=Tiley>>1;
+			}
+			free(Ptr2);
+		}
+	}
+	free(ptrtex);
+
+	data.Format=nn;
+#endif
+
+
+#ifdef API3D_DIRECT3D9
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	D3DLOCKED_RECT Locked;
+	int lvl,nn;
+	unsigned int adr0,pitch;
+	WORD * ptrdest;
+	WORD cc;
+	int r,g,b,a;
+
+	D3DFORMAT Formats[3]={
+					    D3DFMT_R5G6B5,      
+						D3DFMT_X1R5G5B5,    
+						D3DFMT_A4R4G4B4
+						};
+	D3DFORMAT Formats2[6]={
+						D3DFMT_R8G8B8,    
+						D3DFMT_X8R8G8B8,
+					    D3DFMT_R5G6B5,      
+						D3DFMT_X1R5G5B5,    
+						D3DFMT_A8R8G8B8,    
+						D3DFMT_A4R4G4B4
+						};
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	int r0,g0,b0;
+	char * Ptr2;
+	char * Ptr3;
+	int Tilex2;
+	int Tiley2;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while (!((Tile>>LEVELS)&1)) LEVELS++;
+		LEVELS++;
+	}
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+
+				if (dith==1)
+				{
+					r0=r&7;
+					if (r0>4) r0=4;
+					r0=dither[4-r0][x&1][y&1];
+					r=((r>>3)+r0)<<3;
+
+					if (r>255) r=255;
+
+
+					g0=g&3;
+					g0=dither[4-g0][x&1][y&1];
+					g=((g>>2)+g0)<<2;
+
+					if (g>255) g=255;
+
+					b0=b&7;
+					if (b0>4) b0=4;
+					b0=dither[4-b0][x&1][y&1];
+					b=((b>>3)+b0)<<3;
+					if (b>255) b=255;
+				}
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	if (Alpha==0) { nn=0;  }
+	else { nn=2;  }
+
+	while ((nn<3)&&(FAILED(D3DDevice->CreateTexture(Tilex,Tiley,LEVELS-1,0,Formats[nn],D3DPOOL_MANAGED,&id,NULL)))) nn++;
+
+	if (nn<3)
+	{
+
+		id->LockRect(0,&Locked,NULL,0);	// level 0
+		ptrdest=(WORD *) Locked.pBits;
+		pitch=Locked.Pitch>>1;
+		
+		if (nn==0)
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+				
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+
+		if (nn==1)
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);				
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+
+		if (nn==2)
+		for (n2=0;n2<Tiley;n2++)
+		{
+			adr=n2*pitch;
+			adr0=n2*Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				r=((unsigned char*)ptrtex)[((n1+adr0)<<2)+0];
+				g=((unsigned char*)ptrtex)[((n1+adr0)<<2)+1];
+				b=((unsigned char*)ptrtex)[((n1+adr0)<<2)+2];
+				a=((unsigned char*)ptrtex)[((n1+adr0)<<2)+3];
+
+				cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+				ptrdest[n1+adr]=cc;
+			}
+		}
+
+
+
+		id->UnlockRect(0);
+
+		if (MipMap==1)
+		{
+			Ptr2=CreateMipMap(ptrtex,Tilex,Tiley,4);
+
+			for (lvl=1;lvl<LEVELS-1;lvl++)
+			{
+				id->LockRect(lvl,&Locked,NULL,0);
+				ptrdest=(WORD *) Locked.pBits;
+				pitch=Locked.Pitch>>1;
+				Tilex2=Tilex>>1;
+				Tiley2=Tiley>>1;
+
+				adr=0;
+				for (n2=0;n2<Tiley2;n2++)
+				{
+					adr0=n2*pitch;
+					for (n1=0;n1<Tilex2;n1++)
+					{
+						r=((unsigned char*)Ptr2)[adr+0];
+						g=((unsigned char*)Ptr2)[adr+1];
+						b=((unsigned char*)Ptr2)[adr+2];
+						a=((unsigned char*)Ptr2)[adr+3];
+
+						switch (nn)
+						{
+						case 0:	//565
+							cc=((r>>3)<<11) +((g>>2)<<5) + (b>>3);
+							break;
+						case 1:	//555
+							cc=((r>>3)<<10) +((g>>3)<<5) + (b>>3);
+							break;
+						case 2:	//4444
+							cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+							break;
+						};
+						
+						ptrdest[n1+adr0]=cc;
+						adr+=4;
+					}
+				}
+
+				id->UnlockRect(lvl);
+				Ptr3=CreateMipMap(Ptr2,Tilex>>1,Tiley>>1,4);
+				free(Ptr2);
+				Ptr2=Ptr3;
+				Tilex=Tilex>>1;
+				Tiley=Tiley>>1;
+			}
+			free(Ptr2);
+		}
+	}
+	free(ptrtex);
+
+	data.Format=nn;
+#endif
+
+#ifdef API3D_DIRECT3D10
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned int adr0,pitch;
+	WORD * ptrdest;
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	D3D10_TEXTURE2D_DESC desc;
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		data.Tilex = desc.Width = Tilex;
+		data.Tiley = desc.Height = Tiley;	
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT(115);
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D10_USAGE_DYNAMIC;
+		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+		device->CreateTexture2D( &desc, NULL, &idtex );
+
+		D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=0;
+
+		D3D10_MAPPED_TEXTURE2D mappedTex;
+
+		idtex->Map( D3D10CalcSubresource(0, 0, LEVELS), D3D10_MAP_WRITE_DISCARD, 0, &mappedTex );
+		ptrdest = (WORD*)mappedTex.pData;
+		pitch = mappedTex.RowPitch/2;
+
+		// TOTO16
+		int r0,g0,b0;
+
+		for (y=0;y<Tiley;y++)
+		{
+			adr=y*pitch;
+			adr0=y*Tilex;
+			unsigned int rgba,r,g,b,a;
+			unsigned short int cc;
+			for (x=0;x<Tilex;x++)
+			{
+				rgba=((unsigned int*)ptrtex)[adr0++];
+
+				r=rgba&0xFF;
+				g=(rgba>>8)&0xFF;
+				b=(rgba>>16)&0xFF;
+				a=(rgba>>24)&0xFF;
+
+				if ((Tilex>SIZE_MIN_DITHER_PACK444)&&(Tiley>SIZE_MIN_DITHER_PACK444))
+				{
+					r0=(r>>1)&7;
+					if (r0>4) r0=4;
+					r0=dither[4-r0][x&1][y&1];
+					r=((r>>4)+r0)<<4;
+					if (r>255) r=255;
+
+					g0=(g>>1)&7;
+					if (g0>4) g0=4;
+					g0=dither[4-g0][x&1][y&1];
+					g=((g>>4)+g0)<<4;
+					if (g>255) g=255;
+
+					b0=(b>>1)&7;
+					if (b0>4) b0=4;
+					b0=dither[4-b0][x&1][y&1];
+					b=((b>>4)+b0)<<4;
+					if (b>255) b=255;
+				}
+
+				cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+
+				ptrdest[adr++]=cc;
+			}
+		}
+
+		idtex->Unmap( D3D10CalcSubresource(0, 0, LEVELS) );
+
+		free(ptrtex);
+	}
+	else
+	{
+		data.LVL=LEVELS;
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		desc.Width = Tilex;
+		desc.Height = Tiley;	
+		desc.MipLevels = LEVELS;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT(115);
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D10_USAGE_DEFAULT;
+		desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
+		
+		static D3D10_SUBRESOURCE_DATA InitData[128];
+		static char * ptrs[128];
+		static char * ptrs16[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{
+				InitData[l].pSysMem=ptrtex;
+
+				ptrs[l]=(char*)InitData[l].pSysMem;
+				InitData[l].pSysMem=ConvertRGBAto16bits(ptrs[l],Tilex,Tiley,FMT_4444);
+
+				InitData[l].SysMemPitch=Tilex*2;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+				InitData[l].pSysMem=Ptr2;
+
+				ptrs[l]=(char*)InitData[l].pSysMem;
+				InitData[l].pSysMem=ConvertRGBAto16bits(ptrs[l],wx,wy,FMT_4444);
+
+				InitData[l].SysMemPitch=wx*2;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=Ptr2;
+			}
+
+			ptrs16[l]=(char*)InitData[l].pSysMem;
+		}
+
+		device->CreateTexture2D( &desc, InitData, &idtex );
+
+		D3D10_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrs16[l]);
+	}
+
+	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+#endif
+
+#ifdef API3D_DIRECT3D11
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned int adr0,pitch;
+	WORD * ptrdest;
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	D3D11_TEXTURE2D_DESC desc;
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		data.Tilex = desc.Width = Tilex;
+		data.Tiley = desc.Height = Tiley;	
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_B4G4R4A4_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		device->CreateTexture2D( &desc, NULL, &idtex );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=0;
+
+		D3D11_MAPPED_SUBRESOURCE mappedTex;
+		devicecontext->Map(idtex, D3D11CalcSubresource(0, 0, LEVELS), D3D11_MAP_WRITE_DISCARD, 0, &mappedTex );
+
+		ptrdest = (WORD*)mappedTex.pData;
+		pitch = mappedTex.RowPitch/2;
+
+		// TOTO16
+		int r0,g0,b0;
+
+		for (y=0;y<Tiley;y++)
+		{
+			adr=y*pitch;
+			adr0=y*Tilex;
+			unsigned int rgba,r,g,b,a;
+			unsigned short int cc;
+			for (x=0;x<Tilex;x++)
+			{
+				rgba=((unsigned int*)ptrtex)[adr0++];
+
+				r=rgba&0xFF;
+				g=(rgba>>8)&0xFF;
+				b=(rgba>>16)&0xFF;
+				a=(rgba>>24)&0xFF;
+
+				if ((Tilex>SIZE_MIN_DITHER_PACK444)&&(Tiley>SIZE_MIN_DITHER_PACK444))
+				{
+					r0=(r>>1)&7;
+					if (r0>4) r0=4;
+					r0=dither[4-r0][x&1][y&1];
+					r=((r>>4)+r0)<<4;
+					if (r>255) r=255;
+
+					g0=(g>>1)&7;
+					if (g0>4) g0=4;
+					g0=dither[4-g0][x&1][y&1];
+					g=((g>>4)+g0)<<4;
+					if (g>255) g=255;
+
+					b0=(b>>1)&7;
+					if (b0>4) b0=4;
+					b0=dither[4-b0][x&1][y&1];
+					b=((b>>4)+b0)<<4;
+					if (b>255) b=255;
+				}
+
+				cc=((a>>4)<<12) + ((r>>4)<<8) +((g>>4)<<4) + (b>>4);
+
+				ptrdest[adr++]=cc;
+			}
+		}
+
+		devicecontext->Unmap(idtex, D3D11CalcSubresource(0, 0, LEVELS) );
+
+		free(ptrtex);
+	}
+	else
+	{
+		data.LVL=LEVELS;
+
+		data.Tilex=Tilex;
+		data.Tiley=Tiley;
+#ifdef CLASSNED
+		data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+		memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+		data.MipMap=1;
+
+		ZeroMemory(&desc,sizeof(desc));
+		desc.Width = Tilex;
+		desc.Height = Tiley;	
+		desc.MipLevels = LEVELS;
+		desc.ArraySize = 1;	
+		desc.Format = DXGI_FORMAT_B4G4R4A4_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		
+		static D3D11_SUBRESOURCE_DATA InitData[128];
+		static char * ptrs[128];
+		static char * ptrs16[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{
+				InitData[l].pSysMem=ptrtex;
+
+				ptrs[l]=(char*)InitData[l].pSysMem;
+				InitData[l].pSysMem=ConvertRGBAto16bits(ptrs[l],Tilex,Tiley,FMT_4444);
+
+				InitData[l].SysMemPitch=Tilex*2;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+				InitData[l].pSysMem=Ptr2;
+
+				ptrs[l]=(char*)InitData[l].pSysMem;
+				InitData[l].pSysMem=ConvertRGBAto16bits(ptrs[l],wx,wy,FMT_4444);
+
+				InitData[l].SysMemPitch=wx*2;
+				InitData[l].SysMemSlicePitch=0;
+				Ptr3=Ptr2;
+			}
+
+			ptrs16[l]=(char*)InitData[l].pSysMem;
+		}
+
+		device->CreateTexture2D( &desc, InitData, &idtex );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		idtex->GetDesc( &desc );
+		
+		ZeroMemory(&srvDesc,sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = desc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.ArraySize = 0;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+
+		device->CreateShaderResourceView( idtex, &srvDesc, &id );
+
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrs16[l]);
+	}
+
+	data.Format=0;
+
+#ifdef CLASSNED
+	if (data.ptr_texture) free(data.ptr_texture);
+	data.ptr_texture=NULL;
+#endif
+
+#endif
+
+#ifdef API3D_DIRECT3D12
+//------------------------------------------------------------------------------------------------ DIRECT3D ----------
+	int LEVELS;
+	int Tile;	
+	unsigned char r,g,b,a;
+	int BASE_TILEx;
+	int Tilex;
+	int BASE_TILEy;
+	int Tiley;
+	char * ptrtex;
+	int x,y,n1,n2,adr,adr2;
+	int xx,incxx;
+	char * Ptr2;
+	char * Ptr3;
+
+	if (Sizex>Sizey) Tile=Sizey;
+	else Tile=Sizex;
+
+	BASE_TILEx=Sizeptrx;
+	Tilex=Sizex;
+	BASE_TILEy=Sizeptry;
+	Tiley=Sizey;
+
+	if (MipMap==0) LEVELS=1;
+	else
+	{
+		LEVELS=1;
+		while ((Tile>>LEVELS)>1) LEVELS++;
+	}
+
+	data.LVL=LEVELS;
+
+	ptrtex=(char*) malloc(Tilex*Tiley*4);
+
+	if ((BASE_TILEx==Tilex)&&(BASE_TILEy==Tiley))
+	{
+		memcpy(ptrtex,ptrRGBA,Tilex*Tiley*4);
+	}
+	else
+	{
+		adr2=0;
+		for (n2=0;n2<Tiley;n2++)
+		{
+			y=(BASE_TILEy*n2)/Tiley;
+			adr=y*BASE_TILEx;
+			xx=0;
+			incxx=(BASE_TILEx*256)/Tilex;
+			for (n1=0;n1<Tilex;n1++)
+			{
+				x=(xx>>8);
+				r=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 0];
+				g=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 1];
+				b=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 2];
+				a=((unsigned char*)ptrRGBA)[((x+adr)<<2) + 3];
+				ptrtex[adr2+ 0]=r;
+				ptrtex[adr2+ 1]=g;
+				ptrtex[adr2+ 2]=b;
+				ptrtex[adr2+ 3]=a;
+				xx+=incxx;
+				adr2+=4;
+			}
+		}
+	}
+
+	((C3DAPIBASE*)dhhc->render)->CloseOpenedCommandList();
+
+	cmdalloc=((C3DAPIBASE*)dhhc->render)->commandAllocators[((C3DAPIBASE*)dhhc->render)->frameIndex];
+
+	ID3D12GraphicsCommandList* cmd;
+	dhhc->d3ddevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdalloc, nullptr, IID_PPV_ARGS(&cmd));
+
+	D3D12_RESOURCE_DESC textureDesc = {};
+
+	data.Tilex=Tilex;
+	data.Tiley=Tiley;
+#ifdef CLASSNED
+	data.ptr_texture=(unsigned char*) malloc(Tilex*Tiley*4);
+	memcpy(data.ptr_texture,ptrtex,Tilex*Tiley*4);
+#endif
+
+	D3D12_RESOURCE_BARRIER barrierDesc = {};
+
+	if (MipMap==0)
+	{
+		data.LVL=1;
+		data.MipMap=0;        
+
+        textureDesc.MipLevels = 1;
+        textureDesc.Format = DXGI_FORMAT_B4G4R4A4_UNORM;
+		textureDesc.Width = data.Tilex = Tilex;
+		textureDesc.Height = data.Tiley = Tiley;	
+        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),D3D12_HEAP_FLAG_NONE,&textureDesc,
+										D3D12_RESOURCE_STATE_COMMON,nullptr,IID_PPV_ARGS(&texture));
+	
+        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture, 0, 1);
+
+        // Create the GPU upload buffer.
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),D3D12_HEAP_FLAG_NONE,&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+										D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&textureUpload));
+
+
+
+		D3D12_SUBRESOURCE_DATA textureData = {};
+        //textureData.pData = (void*)ptrtex;
+
+		textureData.pData = (void*)ConvertRGBAto16bits(ptrtex,Tilex,Tiley,FMT_4444);
+
+        textureData.RowPitch = Tilex * 2;
+        textureData.SlicePitch = textureData.RowPitch * Tiley;
+
+		barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrierDesc.Transition.pResource = texture;
+		barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		cmd->ResourceBarrier(1, &barrierDesc);
+
+        UpdateSubresources(cmd, texture, textureUpload, 0, 0, 1, &textureData);
+
+		free((char*)textureData.pData);
+	}
+	else
+	{
+		data.LVL=LEVELS;
+		data.MipMap=1;
+
+        textureDesc.MipLevels = LEVELS;
+        textureDesc.Format = DXGI_FORMAT_B4G4R4A4_UNORM;
+		textureDesc.Width = data.Tilex = Tilex;
+		textureDesc.Height = data.Tiley = Tiley;	
+        textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        textureDesc.DepthOrArraySize = 1;
+        textureDesc.SampleDesc.Count = 1;
+        textureDesc.SampleDesc.Quality = 0;
+        textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),D3D12_HEAP_FLAG_NONE,&textureDesc,
+										D3D12_RESOURCE_STATE_COMMON,nullptr,IID_PPV_ARGS(&texture));
+
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture, 0, LEVELS);
+		
+        // Create the GPU upload buffer.
+        dhhc->d3ddevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),D3D12_HEAP_FLAG_NONE,&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+										D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&textureUpload));
+
+		D3D12_SUBRESOURCE_DATA textureData[128];
+		static char * ptrs[128];
+		static char * ptrs16[128];
+
+		int wx=Tilex;
+		int wy=Tiley;
+
+		for (int l=0;l<LEVELS;l++)
+		{
+			if (l==0)
+			{
+				textureData[l].pData=ptrtex;
+
+				ptrs[l]=(char*)textureData[l].pData;
+				textureData[l].pData=ConvertRGBAto16bits((char*)textureData[l].pData,Tilex,Tiley,FMT_4444);
+
+				textureData[l].RowPitch=Tilex*2;
+				textureData[l].SlicePitch=Tilex*Tiley*2;
+				Ptr3=ptrtex;
+			}
+			else
+			{
+				Ptr2=CreateMipMap(Ptr3,wx,wy,4);
+				wx=wx>>1;
+				wy=wy>>1;
+				textureData[l].pData=Ptr2;
+
+				ptrs[l]=(char*)textureData[l].pData;
+				textureData[l].pData=ConvertRGBAto16bits((char*)textureData[l].pData,wx,wy,FMT_4444);
+
+				textureData[l].RowPitch=wx*2;
+				textureData[l].SlicePitch=wx*wy*2;
+				Ptr3=Ptr2;
+			}
+
+			ptrs16[l]=(char*)textureData[l].pData;
+		}
+		
+		barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrierDesc.Transition.pResource = texture;
+		barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		barrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		cmd->ResourceBarrier(1, &barrierDesc);
+
+        UpdateSubresources(cmd, texture, textureUpload, 0, 0, LEVELS, textureData);
+		for (int l=0;l<LEVELS;l++) free(ptrs[l]);
+		for (int l=0;l<LEVELS;l++) free(ptrs16[l]);
 	}
 
 	barrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;

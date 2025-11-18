@@ -51,6 +51,7 @@ class API3D_STUB CRGBA
 {
 public:
     float r,g,b,a;
+
 	void Init(float R,float G,float B);
 	void Init(float R,float G,float B,float A);
 
@@ -376,6 +377,7 @@ public:
 	CVector NormCalc;					
 	CVector2 Map;											// mapping coordinate
     
+#ifdef LEVELEDIT_PLAYER
     union
     {
         struct {
@@ -402,6 +404,24 @@ public:
             unsigned short int Index[4];
         };
     };
+#else
+	CRGBA Diffuse;                                  // diffuse
+	float Weight[4];
+
+    union
+    {
+        struct {
+            UCVector2 Map2;
+        };
+
+		struct {
+            unsigned int rgba;
+			unsigned int misc;
+        };
+    };
+
+	unsigned short int Index[4];
+#endif
 
 	int tag,tag2;											// integers, floats
 	short int temp;
@@ -779,6 +799,7 @@ public:
     short int precalc;
 	short int after;
 	short int nozbuf;
+	short int underwater;
     
 // edges
 	EdgeListD * edges;
@@ -921,6 +942,8 @@ public:
 	CObject3D() 
 	{
         int n;
+
+		underwater=0;
 
 		lightingdesactivated=0;
 
@@ -1183,6 +1206,8 @@ public:
 		CObject3D ApplyBevel(float R);
 		//! returns an object with sharpen edges
 		CObject3D * ApplyBevel2(float R);
+		//! returns an object with sharpen edges
+		CObject3D * ApplyBevel2(float R,int proc);
 		//! returns an object with double faces
 		CObject3D Dedouble();
 		//! returns an object due to specification
@@ -1686,7 +1711,12 @@ public:
         void Add(CObject3D *obj);
         //! add obj
         void AddFirst(CObject3D *obj);
-    
+
+		//! add obj
+        void AddAsKey(CObject3D *obj);
+		//! add obj
+        void AddCalcAsKey(CObject3D *obj);
+
         //! add face
         void AddTri(int a,int b,int c);
     
@@ -2191,6 +2221,75 @@ public:
 				if (p.z-z>0.95f)
 					if (z<nbz-1) grid[x+nbx*(y+nby*(z+1))].Add(n);
 			}
+        }
+    }
+
+    void AffectFacesCalc(CObject3D *obj,int opt)
+    {
+        int n;
+        int nb=GRID3DDEFOBJ;
+        int x,y,z;
+        CVector p;
+		float R=obj->CalculateRadius();
+    
+        mini.Init(100000,100000,100000);
+        maxi.Init(-100000,-100000,-100000);
+
+        for (n=0;n<obj->nVertices;n++)
+        {
+            p=obj->Vertices[n].Calc;
+            if (p.x>maxi.x) maxi.x=p.x;
+            if (p.y>maxi.y) maxi.y=p.y;
+            if (p.z>maxi.z) maxi.z=p.z;
+            if (p.x<mini.x) mini.x=p.x;
+            if (p.y<mini.y) mini.y=p.y;
+            if (p.z<mini.z) mini.z=p.z;
+        }
+        
+		mini.x-=R/32;
+		mini.y-=R/32;
+		mini.z-=R/32;
+
+		maxi.x+=R/32;
+		maxi.y+=R/32;
+		maxi.z+=R/32;
+
+        bound=maxi-mini;
+        
+		if ((obj->nFaces>0)&&(opt!=666)) nb=opt;
+		else nb=GRID3DDEFOBJ;
+        
+        if ((bound.x>bound.y)&&(bound.x>bound.z))
+        {
+            nbx=nb;
+            nby=(int)(nbx*bound.y/bound.x);
+            nbz=(int)(nbx*bound.z/bound.x);
+        }
+
+        if ((bound.y>bound.x)&&(bound.y>bound.z))
+        {
+            nby=nb;
+            nbx=(int)(nby*bound.x/bound.y);
+            nbz=(int)(nby*bound.z/bound.y);
+        }
+
+        if ((bound.z>bound.x)&&(bound.z>bound.y))
+        {
+            nbz=nb;
+            nbx=(int)(nbz*bound.x/bound.z);
+            nby=(int)(nbz*bound.y/bound.z);
+        }
+
+        for (n=0;n<obj->nFaces;n++)
+        {
+            p=(obj->Faces[n].v[0]->Calc+obj->Faces[n].v[1]->Calc+obj->Faces[n].v[2]->Calc)/3;
+            p.x=((nbx-1)*(p.x-mini.x))/bound.x;
+            p.y=((nby-1)*(p.y-mini.y))/bound.y;
+            p.z=((nbz-1)*(p.z-mini.z))/bound.z;
+            
+            x=(int)p.x; y=(int)p.y; z=(int)p.z;
+                        
+            grid[x+nbx*(y+nby*z)].Add(n);
         }
     }
 

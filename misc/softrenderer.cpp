@@ -192,7 +192,7 @@ void CSoftwareRenderer::Fill(int line,int xd0,int xf0,int c,float z)
 	Fill(line,xd0,xf0,c,c,z,z,1.0f,1.0f,uv,uv,uv,uv,uv,uv,0);
 }
 
-void CSoftwareRenderer::Fill(int line,int xd0,int xf0,int cd,int cf,float zd,float zf,float izd,float izf,CVector2 &t0d,CVector2 &t0f,CVector2 &t1d,CVector2 &t1f,CVector2 &t2d,CVector2 &t2f,int flags)
+void CSoftwareRenderer::FillZ(int line,int xd0,int xf0,int cd,int cf,float zd,float zf,float izd,float izf,CVector2 &t0d,CVector2 &t0f,CVector2 &t1d,CVector2 &t1f,CVector2 &t2d,CVector2 &t2f,int flags)
 {
 	int n;
 	int xd=xd0;
@@ -372,6 +372,341 @@ void CSoftwareRenderer::Fill(int line,int xd0,int xf0,int cd,int cf,float zd,flo
 			if (flags&CSR_FILL_TEX2)
 			{
 				tex2= u2 / iz;
+				u2= u2 + inc2;
+			}
+
+            if (z>0)
+            {
+                if (flags&CSR_FILL_DZ)
+                {
+                    if ((z>=Zmin)&&(z<=Zmax))
+			        if (((z<surface[adr+n].z)&&(zfunc==CSR_NORMAL))||((z>surface[adr+n].z)&&(zfunc==CSR_INVERSE))||(zfunc==CSR_DISABLED))
+			        {
+                        if (flags&CSR_FILL_GOURAUD)
+                        {
+                            tmp.r=c.a*c.r + (1.0f-c.a)*bkc.r;
+                            tmp.g=c.a*c.g + (1.0f-c.a)*bkc.g;
+                            tmp.b=c.a*c.b + (1.0f-c.a)*bkc.b;
+                            tmp.a=1.0f;
+                            unsigned int al=(unsigned int)(tmp.a*255);
+
+                            surface[adr+n].value=(al<<24) + SR_COLOR((unsigned int)(tmp.r*255),(unsigned int)(tmp.g*255),(unsigned int)(tmp.b*255));
+                            surface[adr+n].z=z;
+                        }
+                        else
+                        {
+                            if ((surfacemap)&&(tex_ptr1))
+                            {
+                                surfacemap[adr+n].x=tex0.x;
+                                surfacemap[adr+n].y=tex0.y;
+                                surface[adr+n].z=z;
+                            }
+                            else
+                            {
+                                if (flags&CSR_FILL_ALPHA)
+                                {
+                                    if (c.a>SMALLF2)
+                                    {
+                                        bkc.Init(SR_GET_R(surface[adr+n].value),SR_GET_G(surface[adr+n].value),SR_GET_B(surface[adr+n].value));
+                                        tmp.r=c.a*c.r + (1.0f-c.a)*bkc.r;
+                                        tmp.g=c.a*c.g + (1.0f-c.a)*bkc.g;
+                                        tmp.b=c.a*c.b + (1.0f-c.a)*bkc.b;
+                                        tmp.a=1.0f;
+                                        surface[adr+n].value=SR_COLOR((unsigned int)(tmp.r*255),(unsigned int)(tmp.g*255),(unsigned int)(tmp.b*255));
+                                        surface[adr+n].z=z;
+                                    }
+                                }
+                                else
+                                {
+                                    if (tex_ptr1)
+                                    {
+                                        bkc.Init(SR_GET_R(surface[adr+n].value),SR_GET_G(surface[adr+n].value),SR_GET_B(surface[adr+n].value));
+                            
+                                        if (flags&CSR_FILL_BLEND)
+                                        {
+                                            if ((surface[adr+n].value>>24)==0)
+                                            {
+                                                tmp.r=c.r;
+                                                tmp.g=c.g;
+                                                tmp.b=c.b;
+                                            }
+                                            else
+                                            {
+                                                tmp.r=0.5f*c.r + 0.5f*bkc.r;
+                                                tmp.g=0.5f*c.g + 0.5f*bkc.g;
+                                                tmp.b=0.5f*c.b + 0.5f*bkc.b;
+                                            }
+                                            tmp.a=c.a;
+                                        }
+                                        else
+                                        {
+                                            tmp.r=c.a*c.r + (1.0f-c.a)*bkc.r;
+                                            tmp.g=c.a*c.g + (1.0f-c.a)*bkc.g;
+                                            tmp.b=c.a*c.b + (1.0f-c.a)*bkc.b;
+                                            tmp.a=1.0f;
+                                        }
+                            
+                                        unsigned int al=(unsigned int)(tmp.a*255);
+                                        surface[adr+n].value=(al<<24) + SR_COLOR((unsigned int)(tmp.r*255),(unsigned int)(tmp.g*255),(unsigned int)(tmp.b*255));
+                                    }
+                                    else surface[adr+n].value=cd;
+                        
+                                    surface[adr+n].z=z;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+			    if (((z<surface[adr+n].z)&&(zfunc==CSR_NORMAL))||((z>surface[adr+n].z)&&(zfunc==CSR_INVERSE))||(zfunc==CSR_DISABLED))
+			    {
+                    if ((surfacemap)&&(tex_ptr1))
+                    {
+                        surfacemap[adr+n].x=tex0.x;
+                        surfacemap[adr+n].y=tex0.y;
+                        surface[adr+n].z=z;
+                    }
+                    else
+                    {
+                        if (flags&CSR_FILL_ALPHA)
+                        {
+                            if (c.a>SMALLF2)
+                            {
+                                bkc.Init(SR_GET_R(surface[adr+n].value),SR_GET_G(surface[adr+n].value),SR_GET_B(surface[adr+n].value));
+                                tmp.r=c.a*c.r + (1.0f-c.a)*bkc.r;
+                                tmp.g=c.a*c.g + (1.0f-c.a)*bkc.g;
+                                tmp.b=c.a*c.b + (1.0f-c.a)*bkc.b;
+                                tmp.a=1.0f;
+                                surface[adr+n].value=SR_COLOR((unsigned int)(tmp.r*255),(unsigned int)(tmp.g*255),(unsigned int)(tmp.b*255));
+                                surface[adr+n].z=z;
+                            }
+                        }
+                        else
+                        {
+                            if (tex_ptr1)
+                            {
+                                bkc.Init(SR_GET_R(surface[adr+n].value),SR_GET_G(surface[adr+n].value),SR_GET_B(surface[adr+n].value));
+                            
+                                if (flags&CSR_FILL_BLEND)
+                                {
+                                    if ((surface[adr+n].value>>24)==0)
+                                    {
+                                        tmp.r=c.r;
+                                        tmp.g=c.g;
+                                        tmp.b=c.b;
+                                    }
+                                    else
+                                    {
+                                        tmp.r=0.5f*c.r + 0.5f*bkc.r;
+                                        tmp.g=0.5f*c.g + 0.5f*bkc.g;
+                                        tmp.b=0.5f*c.b + 0.5f*bkc.b;
+                                    }
+                                    tmp.a=c.a;
+                                }
+                                else
+                                {
+                                    tmp.r=c.a*c.r + (1.0f-c.a)*bkc.r;
+                                    tmp.g=c.a*c.g + (1.0f-c.a)*bkc.g;
+                                    tmp.b=c.a*c.b + (1.0f-c.a)*bkc.b;
+                                    tmp.a=1.0f;
+                                }
+                            
+                                unsigned int al=(unsigned int)(tmp.a*255);
+                                surface[adr+n].value=(al<<24) + SR_COLOR((unsigned int)(tmp.r*255),(unsigned int)(tmp.g*255),(unsigned int)(tmp.b*255));
+                            }
+                            else surface[adr+n].value=cd;
+                        
+                            surface[adr+n].z=z;
+                        }
+                    }
+                }
+			}
+
+			iz+=inc_iz;
+		}
+	}
+}
+
+void CSoftwareRenderer::Fill(int line,int xd0,int xf0,int cd,int cf,float zd,float zf,float izd,float izf,CVector2 &t0d,CVector2 &t0f,CVector2 &t1d,CVector2 &t1f,CVector2 &t2d,CVector2 &t2f,int flags)
+{
+	int n;
+	int xd=xd0;
+	int xf=xf0;
+	int len;
+	unsigned int adr;
+	CVector2 inc0,inc1,inc2;
+	CVector2 u0,u1,u2;
+	CVector2 tex0,tex1,tex2;
+	CVector2 u0d,u0f;
+	CVector2 u1d,u1f;
+	CVector2 u2d,u2f;
+	float zzd,zzf;
+	CRGBA c,colord,colorf,color,inccolor,bkc,tmp;
+	float z,zz,iz,inc_iz,inc_zz;
+	int x,y;
+
+	if ((line<0)||(line>=wy)) return;
+
+	if (flags&CSR_FILL_COLOR)
+	{
+		colord.Init(SR_GET_R(cd),SR_GET_G(cd),SR_GET_B(cd));
+		colorf.Init(SR_GET_R(cf),SR_GET_G(cf),SR_GET_B(cf));
+		colord.r*=izd; colord.g*=izd; colord.b*=izd;
+		colorf.r*=izf; colorf.g*=izf; colorf.b*=izf;
+	}
+
+	if (flags&CSR_FILL_TEX0)
+	{
+		u0d=t0d;
+		u0f=t0f;
+	}
+
+	if (flags&CSR_FILL_TEX1)
+	{
+		u1d=t1d;
+		u1f=t1f;
+	}
+
+	if (flags&CSR_FILL_TEX2)
+	{
+		u2d=t2d;
+		u2f=t2f;
+	}
+
+	if (flags&CSR_FILL_Z)
+	{
+		zzd=zd*izd;
+		zzf=zf*izf;
+	}
+
+	if ((xd<wx)&&(xf>0))
+	{
+		if (xd<0) xd=0;
+		if (xf>wx) xf=wx;
+		len=xf-xd;
+		float flen=(float) len;
+		adr=line*wx+xd;
+
+		iz=izd;
+		zz=zzd;
+
+		inc_iz=(izf-izd)/len;
+
+		if (flags&CSR_FILL_COLOR) { inccolor=(colorf-colord)/flen; color=colord; }
+		if (flags&CSR_FILL_TEX0) inc0=(u0f-u0d)/flen;
+		if (flags&CSR_FILL_TEX1) inc1=(u1f-u1d)/flen;
+		if (flags&CSR_FILL_TEX2) inc2=(u2f-u2d)/flen;
+		if (flags&CSR_FILL_Z) inc_zz=(zzf-zzd)/flen; else z=zd;
+
+		if (flags&CSR_FILL_TEX0) u0=u0d; 
+		if (flags&CSR_FILL_TEX1) u1=u1d; 
+		if (flags&CSR_FILL_TEX2) u2=u2d;
+
+		if (flags&CSR_FILL_COLOR) c=color;
+		if (flags&CSR_FILL_TEX0) tex0=u0;
+		if (flags&CSR_FILL_TEX1) tex1=u1;
+		if (flags&CSR_FILL_TEX2) tex2=u2;
+
+		bkc.Init(0,0,0,0);
+        
+		for (n=0;n<len;n++)
+		{
+			c.a=1.0f;
+
+			if (flags&CSR_FILL_Z) 
+			{
+				z=zz/iz;
+				zz+=inc_zz;
+			}
+
+			if ((flags&CSR_FILL_Z)&&(flags&CSR_FILL_COLOR)) 
+			{
+				c=color;
+				color=color + inccolor;
+			}
+
+			if (flags&CSR_FILL_TEX0)
+			{
+				tex0= u0;
+				u0= u0 + inc0;
+                
+                if ((flags&CSR_FILL_ALPHA)&&(tex_ptr1))
+                {
+                    x=((int) (tex0.x*szx1));
+                    x=x%szx1;
+                    y=((int) (tex0.y*szy1));
+                    y=y%szy1;
+                    if (x<0) x=szx1+x;
+                    if (y<0) y=szy1+y;
+                    c.a=((float) tex_ptr1[(x%szx1)+(y%szy1)*szx1])/255.0f;
+                    c.r=1.0f;
+                    c.g=1.0f;
+                    c.b=1.0f;
+                }
+                
+                if (((flags&CSR_FILL_ALPHA)==0)&&(tex_ptr1))
+                {
+                    x=((int) (tex0.x*szx1));
+                    float tx=tex0.x*szx1-x;
+                    x=x%szx1;
+                    y=((int) (tex0.y*szy1));
+                    float ty=tex0.y*szy1-y;
+                    y=y%szy1;
+                    if (x<0) x=szx1+x;
+                    if (y<0) y=szy1+y;
+                    c.a=1.0f;
+                    
+                    int r00=((int) tex_ptr1[4*(((x+0)%szx1)+((y+0)%szy1)*szx1)+0]);
+                    int g00=((int) tex_ptr1[4*(((x+0)%szx1)+((y+0)%szy1)*szx1)+1]);
+                    int b00=((int) tex_ptr1[4*(((x+0)%szx1)+((y+0)%szy1)*szx1)+2]);
+                    int a00=((int) tex_ptr1[4*(((x+0)%szx1)+((y+0)%szy1)*szx1)+3]);
+
+                    int r01=((int) tex_ptr1[4*(((x+1)%szx1)+((y+0)%szy1)*szx1)+0]);
+                    int g01=((int) tex_ptr1[4*(((x+1)%szx1)+((y+0)%szy1)*szx1)+1]);
+                    int b01=((int) tex_ptr1[4*(((x+1)%szx1)+((y+0)%szy1)*szx1)+2]);
+                    int a01=((int) tex_ptr1[4*(((x+1)%szx1)+((y+0)%szy1)*szx1)+3]);
+
+                    int r10=((int) tex_ptr1[4*(((x+0)%szx1)+((y+1)%szy1)*szx1)+0]);
+                    int g10=((int) tex_ptr1[4*(((x+0)%szx1)+((y+1)%szy1)*szx1)+1]);
+                    int b10=((int) tex_ptr1[4*(((x+0)%szx1)+((y+1)%szy1)*szx1)+2]);
+                    int a10=((int) tex_ptr1[4*(((x+0)%szx1)+((y+1)%szy1)*szx1)+3]);
+
+                    int r11=((int) tex_ptr1[4*(((x+1)%szx1)+((y+1)%szy1)*szx1)+0]);
+                    int g11=((int) tex_ptr1[4*(((x+1)%szx1)+((y+1)%szy1)*szx1)+1]);
+                    int b11=((int) tex_ptr1[4*(((x+1)%szx1)+((y+1)%szy1)*szx1)+2]);
+                    int a11=((int) tex_ptr1[4*(((x+1)%szx1)+((y+1)%szy1)*szx1)+3]);
+                    
+                    int ra=(int)(r00+tx*(r01-r00));
+                    int ga=(int)(g00+tx*(g01-g00));
+                    int ba=(int)(b00+tx*(b01-b00));
+                    int aa=(int)(a00+tx*(a01-a00));
+
+                    int rb=(int)(r10+tx*(r11-r10));
+                    int gb=(int)(g10+tx*(g11-g10));
+                    int bb=(int)(b10+tx*(b11-b10));
+                    int ab=(int)(a10+tx*(a11-a10));
+
+                    int r=(int)(ra+ty*(rb-ra));
+                    int g=(int)(ga+ty*(gb-ga));
+                    int b=(int)(ba+ty*(bb-ba));
+                    int a=(int)(aa+ty*(ab-aa));
+
+                    c.r=((float) r)/255.0f;
+                    c.g=((float) g)/255.0f;
+                    c.b=((float) b)/255.0f;
+                    c.a=((float) a)/255.0f;
+                }
+			}
+
+			if (flags&CSR_FILL_TEX1)
+			{
+				tex1= u1;
+				u1= u1 + inc1;
+			}
+
+			if (flags&CSR_FILL_TEX2)
+			{
+				tex2= u2;
 				u2= u2 + inc2;
 			}
 

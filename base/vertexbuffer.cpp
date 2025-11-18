@@ -1087,7 +1087,6 @@ void CVertexBuffer::Init(int nv,int ni)
 	Init(nv,ni,0);
 }
 
-
 /* ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   function:
@@ -1106,9 +1105,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 	if (!capi) capi=TheClass3DAPI;
 
 	init=true;
-
-	dirty=0;
-    
+	dirty=0;    
     partial=0;
 
 	api3d_number_vertexbuffers++;
@@ -1124,9 +1121,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 #if defined(API3D_METAL)
 //------------------------------------------------------------------------------------------------ METAL -----------
 	int n;
-
 	nstreams=ns;
-
 	VertexBufferContainer.New(this);
 
 	nVertices=nv;
@@ -1150,8 +1145,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 	TypeVB=0;
 	Grouped=false;
     
-    VB=-1;
-    IB=-1;
+    VB=-1; IB=-1;
 
 	if ((Type&API3D_COLORDATAS)||(Type&API3D_COLORDATAS4)) TypeVB+=2;
 	if (Type&API3D_TEXCOODATAS) TypeVB+=1;
@@ -1249,9 +1243,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 #if defined(API3D_OPENGL) || defined(API3D_OPENGL20)
 //------------------------------------------------------------------------------------------------ OPEN GL -----------
 	int n;
-
 	nstreams=ns;
-
 	VertexBufferContainer.New(this);
 
 	nVertices=nv;
@@ -1269,6 +1261,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 	Vertex2_Array=NULL;
 	Indices_Array=NULL;
 	Weights_Array=NULL;
+
 #ifdef OPENGL_GLSL
 	WeightsIndices_Array=NULL;
 #endif
@@ -1327,6 +1320,9 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 #ifdef RASPPI
     vbo=false;
 #endif
+
+	// NEW
+	//if ((Type&API3D_MORPH)&&(Type&API3D_BLENDING)) vbo=false;
     
 	TypeVB=0;
 	Grouped=false;
@@ -1463,9 +1459,23 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 		// VB
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB,VB);
 
-		if (Type&API3D_MORPH)
+		if (Type&API3D_MORPH)	// type 5 ou 5+32
 		{
-			if (TypeVB==5)
+			if (Type&API3D_BLENDING)
+			{
+				glBufferDataARB(GL_ARRAY_BUFFER_ARB,nVertices*(2*4+3*4+3*4+4*4+nstreams*(2*4*3)),NULL,GL_STATIC_DRAW);
+				Vertex_Array=OFS(0);
+				WeightsIndices_Array=OFS(3*4*nVertices);
+				Normal_Array=OFS((4*4+3*4)*nVertices);
+				TexCoo_Array=OFS((4*4+3*4+3*4)*nVertices);
+				unsigned int base=(4*4+2*4+3*4+3*4)*nVertices;
+				for (n=0;n<nstreams;n++)
+				{
+					streams[n]=OFS(base+n*(2*4*3)*nVertices);
+					streams_norms[n]=OFS(base+n*(2*4*3)*nVertices+3*4*nVertices);
+				}
+			}
+			else
 			{
 				glBufferDataARB(GL_ARRAY_BUFFER_ARB,nVertices*(2*4+3*4+3*4+nstreams*(2*4*3)),NULL,GL_STATIC_DRAW);
 				Vertex_Array=OFS(0);
@@ -1478,11 +1488,9 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 					streams_norms[n]=OFS(base+n*(2*4*3)*nVertices+3*4*nVertices);
 				}
 			}
-			else vbo=false;
 		}
 		else
 		{
-
 			if (Type&API3D_BLENDING)
 			{
 				if (TypeVB==5)
@@ -1590,8 +1598,8 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 		for (n=0;n<nVertices;n++) SetColor(n,1,1,1,1);
 		UnlockVertices();
 	}
-
 #endif
+
 #ifdef API3D_DIRECT3D
 //------------------------------------------------------------------------------------------------ DIRECT3D ----------
 	int n;
@@ -1609,7 +1617,6 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 
 	TypeVB=0;
 	Grouped=false;
-
 
 	if (D3DDevice==NULL) D3DDevice=D3DDevicePrincipal;
 
@@ -1830,6 +1837,26 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 			}
 
 			UnlockVertices();
+
+			for (int s=0;s<ns;s++)
+			{
+				memset(VerticesStream[s],0,_sizeVB*nv);
+
+				LockStream(s);
+				for (n=0;n<nv;n++)
+				{
+					InitMatrixIndex(n,0);
+					InitMatrixIndex(n,1);
+					InitMatrixIndex(n,2);
+					InitMatrixIndex(n,3);
+
+					InitWeights(n,0);
+					InitWeights(n,1);
+					InitWeights(n,2);
+					InitWeights(n,3);
+				}
+				UnlockStream();
+			}
 		}
 		else
 		if ((TypeVB!=5)&&(TypeVB<32))
@@ -1839,9 +1866,7 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 			UnlockVertices();
 		}
 	}
-
 #endif
-
 
 #ifdef API3D_DIRECT3D10
 //------------------------------------------------------------------------------------------------ DIRECT3D9 ----------
@@ -1948,6 +1973,27 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 			}
 
 			UnlockVertices();
+
+			for (int s=0;s<ns;s++)
+			{
+				memset(VerticesStream[s],0,_sizeVB*nv);
+
+				LockStream(s);
+				for (n=0;n<nv;n++)
+				{
+					InitMatrixIndex(n,0);
+					InitMatrixIndex(n,1);
+					InitMatrixIndex(n,2);
+					InitMatrixIndex(n,3);
+
+					InitWeights(n,0);
+					InitWeights(n,1);
+					InitWeights(n,2);
+					InitWeights(n,3);
+				}
+				UnlockStream();
+			}
+
 		}
 		else
 		if ((TypeVB!=5)&&(TypeVB<32))
@@ -1959,7 +2005,6 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 	}
 
 #endif
-
 
 #ifdef API3D_DIRECT3D11
 //------------------------------------------------------------------------------------------------ DIRECT3D9 ----------
@@ -2063,6 +2108,28 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 			}
 
 			UnlockVertices();
+
+			for (int s=0;s<ns;s++)
+			{
+				memset(VerticesStream[s],0,_sizeVB*nv);
+
+				LockStream(s);
+				for (n=0;n<nv;n++)
+				{
+					InitMatrixIndex(n,0);
+					InitMatrixIndex(n,1);
+					InitMatrixIndex(n,2);
+					InitMatrixIndex(n,3);
+
+					InitWeights(n,0);
+					InitWeights(n,1);
+					InitWeights(n,2);
+					InitWeights(n,3);
+				}
+				UnlockStream();
+			}
+
+			
 		}
 		else
 		if ((TypeVB!=5)&&(TypeVB<32))
@@ -2205,7 +2272,6 @@ void CVertexBuffer::Init(int nv,int ni,int ns)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-
 void CVertexBuffer::LockVertices()
 {
 	stream_locked=-1;
@@ -2268,7 +2334,6 @@ void CVertexBuffer::LockVertices()
 #endif
 }
 
-
 /* ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   function:
@@ -2278,8 +2343,6 @@ void CVertexBuffer::LockVertices()
 		to be called after modifying vertex buffer
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
-
-
 
 void CVertexBuffer::UnlockVertices()
 {
@@ -2295,24 +2358,20 @@ void CVertexBuffer::UnlockVertices()
 
 		if (Type&API3D_MORPH)
 		{
-			if (TypeVB==5)
+			glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)Vertex_Array,nVertices*3*4,BVertex_Array);
+			if (Type&API3D_BLENDING) glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)WeightsIndices_Array,nVertices*4*4,BWeightsIndices_Array);
+			glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)Normal_Array,nVertices*3*4,BNormal_Array);
+			glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)TexCoo_Array,nVertices*2*4,BTexCoo_Array);
+			/*
+			for (n=0;n<nstreams;n++)
 			{
-				glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)Vertex_Array,nVertices*3*4,BVertex_Array);
-				glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)Normal_Array,nVertices*3*4,BNormal_Array);
-				glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)TexCoo_Array,nVertices*2*4,BTexCoo_Array);
-				/*
-				for (n=0;n<nstreams;n++)
-				{
-					streams[n]=OFS(base+n*(2*4*3)*nVertices);
-					streams_norms[n]=OFS(base+n*(2*4*3)*nVertices+3*4*nVertices);
-				}
-				/**/
+				streams[n]=OFS(base+n*(2*4*3)*nVertices);
+				streams_norms[n]=OFS(base+n*(2*4*3)*nVertices+3*4*nVertices);
 			}
-			else vbo=false;
+			/**/
 		}
 		else
 		{
-
 			if (Type&API3D_BLENDING)
 			{
 				if (TypeVB==5)
@@ -2395,7 +2454,6 @@ void CVertexBuffer::UnlockVertices()
 	}
 #endif
 
-
 #ifdef API3D_DIRECT3D
 //------------------------------------------------------------------------------------------------ DIRECT3D ----------
 	D3D8VB->Unlock();
@@ -2422,7 +2480,7 @@ void CVertexBuffer::UnlockVertices()
 
 #ifdef API3D_DIRECT3D12
 //------------------------------------------------------------------------------------------------ DIRECT3D ----------
-	
+
 	if ((Type&API3D_DYNAMIC))
 	{
 		C3DAPIBASE *api=((C3DAPIBASE*)capi);
@@ -2552,7 +2610,6 @@ void CVertexBuffer::UnlockVertices()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-
 void CVertexBuffer::LockStream(int n)
 {
     
@@ -2560,7 +2617,6 @@ void CVertexBuffer::LockStream(int n)
     stream_locked=n;
 #endif
   
-    
 #if defined(API3D_OPENGL) || defined(API3D_OPENGL20)
 	stream_locked=n;
 #endif
@@ -2629,8 +2685,6 @@ void CVertexBuffer::LockStream(int n)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-
-
 void CVertexBuffer::UnlockStream()
 {
 #ifdef API3D_METAL
@@ -2643,11 +2697,8 @@ void CVertexBuffer::UnlockStream()
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB,VB);
 		if (Type&API3D_MORPH)
 		{
-			if (TypeVB==5)
-			{
-				glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)streams[stream_locked],nVertices*3*4,Bstreams[stream_locked]);
-				glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)streams_norms[stream_locked],nVertices*3*4,Bstreams_norms[stream_locked]);
-			}
+			glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)streams[stream_locked],nVertices*3*4,Bstreams[stream_locked]);
+			glBufferSubDataARB(GL_ARRAY_BUFFER_ARB,(GLintptrARB)streams_norms[stream_locked],nVertices*3*4,Bstreams_norms[stream_locked]);
 		}
 		glBindBufferARB(GL_ARRAY_BUFFER_ARB,0);
 	}
@@ -3398,7 +3449,6 @@ void FNCALLCONVVB CVertexBuffer::SetNormal(int n,CVector &v)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-
 void FNCALLCONVVB CVertexBuffer::SetWeights(int n,int w,float value)
 {
 #if defined(API3D_METAL)
@@ -3439,6 +3489,8 @@ void FNCALLCONVVB CVertexBuffer::SetWeights(int n,int w,float value)
 	DWORD size=_sizeVB;
 	memcopy4((pVertices+size*n+3*4+w*4),&value)
 	if (Vertices) memcopy4((Vertices+size*n+3*4+w*4),&value)
+
+	if (stream_locked>=0) memcopy4((VerticesStream[stream_locked]+size*n+3*4+w*4),&value)
 #endif
 #endif
 }
@@ -3500,6 +3552,9 @@ void FNCALLCONVVB CVertexBuffer::SetMatrixIndex(int n,int w,int index)
 
 	memcopy1((pVertices+size*n+3*4+4*4+w),&c)
 	if (Vertices) memcopy1((Vertices+size*n+3*4+4*4+w),&c)
+
+	if (stream_locked>=0) memcopy1((VerticesStream[stream_locked]+size*n+3*4+4*4+w),&c)
+
 #endif
 #endif
 }
@@ -6610,7 +6665,7 @@ bool ProgramStringIsNative(GLenum target, GLenum format,GLsizei len, GLvoid *str
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// */
 
-char str_vb_TemporaryString[1024];
+char str_vb_TemporaryString[65536];
 
 char * str_vb_parse(char * script, int *pos)
 {
@@ -6637,10 +6692,10 @@ char * str_vb_parse(char * script, int *pos)
 char * addlineinfo(char * text, int tag)
 {
 	int line = 1;
-	char num[5];
+	char num[16];
 	int size = 0;
 	int p = 0;
-	static char buf[32768*4];
+	char *buf=(char*)malloc(strlen(text)*2);
 	char *str = str_vb_parse(text, &p);
 	while (str)
 	{
@@ -6670,9 +6725,12 @@ char * addlineinfo(char * text, int tag)
 		str = str_vb_parse(text, &p);
 	}
 
-	char * res = (char*)malloc(size + 1);
+	char * res = (char*)malloc(size + 8192);
 	memcpy(res, buf, size);
 	res[size] = '\0';
+
+	free(buf);
+
 	return res;
 }
 
@@ -7209,6 +7267,8 @@ char* CVertexBuffer::SetVertexProgram(char * script)
     return SetVertexProgram(script,-1);
 }
 
+int _sprintf(char *s, const char *format, ...);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 {
@@ -7417,20 +7477,21 @@ char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 			0,	// FX Flags
 			D3DDevice, &effect, &errors)))
 #else
+		ID3DBlob* errors=NULL;
 		str=vp->get_string_vsh(0);
 		len=strlen(str);
-		ID3DBlob* errors=NULL;
 
 		if (D3DX11CompileEffectFromVP(vp,NULL,NULL,NULL,
 			D3DCOMPILE_PREFER_FLOW_CONTROL*vp->flow|LIB3D_V2_MAIN_NOT_OPTIM*D3DCOMPILE_SKIP_OPTIMIZATION|D3DCOMPILE_PARTIAL_PRECISION*0,	// HLSL Flags
 			0,	// FX Flags
 			D3DDevice, &effect, &errors)!=S_OK)
 #endif
-		{
+		{		
 			debug = (char*)malloc(errors->GetBufferSize() + 1);
 			memcpy(debug, (char*)errors->GetBufferPointer(), errors->GetBufferSize());
 			debug[errors->GetBufferSize()] = '\0';
 
+			
 			if (str_match(debug,"subscript"))
 			{
 				char * err=str_apostrophes(debug);
@@ -7447,21 +7508,25 @@ char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 			char *tmp1;
 			char *tmp2;
 
-			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1="";
-			if (str) tmp2 = addlineinfo(str, 1); else tmp2="";
+			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1=NULL;
+			if (str) tmp2 = addlineinfo(str, 1); else tmp2=NULL;
 
 			free(debug);
 
-			debug = (char*)malloc(strlen(tmp1) + strlen(tmp2) + 128);
+			int size=1024;
+			if (tmp1) size+=strlen(tmp1)*2;
+			if (tmp2) size+=strlen(tmp2)*2;
+
+			debug=(char*)malloc(size);
 			sprintf(debug,"Error in line (owner script) : %d\n",vp->linedebug);
-			sprintf(debug,"%s%s\n", debug,tmp1);
-			sprintf(debug,"%s%s\n",debug,tmp2);
+			if (tmp1) _sprintf(debug,"%s%s",debug,tmp1);
+			if (tmp2) _sprintf(debug,"%s%s",debug,tmp2);
 
 			LOG(debug);
 
-			if (debug) free(tmp1);
-			if (str) free(tmp2);
-
+			if (tmp1) free(tmp1);
+			if (tmp2) free(tmp2);
+			
 			return debug;
 		}
 
@@ -7588,20 +7653,25 @@ char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 			char *tmp1;
 			char *tmp2;
 
-			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1="";
-			if (str) tmp2 = addlineinfo(str, 1); else tmp2="";
+			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1=NULL;
+			if (str) tmp2 = addlineinfo(str, 1); else tmp2=NULL;
 
 			free(debug);
 
-			debug = (char*)malloc(strlen(tmp1) + strlen(tmp2) + 128);
+			int size=1024;
+			if (tmp1) size+=strlen(tmp1)*2;
+			if (tmp2) size+=strlen(tmp2)*2;
+
+			debug=(char*)malloc(size);
 			sprintf(debug,"Error in line (owner script) : %d\n",vp->linedebug);
-			sprintf(debug,"%s%s\n", debug,tmp1);
-			sprintf(debug,"%s%s\n",debug,tmp2);
+			if (tmp1) _sprintf(debug,"%s%s",debug,tmp1);
+			if (tmp2) _sprintf(debug,"%s%s",debug,tmp2);
 
 			LOG(debug);
 
-			if (debug) free(tmp1);
-			if (str) free(tmp2);
+			if (tmp1) free(tmp1);
+			if (tmp2) free(tmp2);
+
 
 			return debug;
 		}
@@ -7729,20 +7799,25 @@ char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 			char *tmp1;
 			char *tmp2;
 
-			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1="";
-			if (str) tmp2 = addlineinfo(str, 1); else tmp2="";
+			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1=NULL;
+			if (str) tmp2 = addlineinfo(str, 1); else tmp2=NULL;
 
 			free(debug);
 
-			debug = (char*)malloc(strlen(tmp1) + strlen(tmp2) + 128);
+			int size=1024;
+			if (tmp1) size+=strlen(tmp1)*2;
+			if (tmp2) size+=strlen(tmp2)*2;
+
+			debug=(char*)malloc(size);
 			sprintf(debug,"Error in line (owner script) : %d\n",vp->linedebug);
-			sprintf(debug,"%s%s\n", debug,tmp1);
-			sprintf(debug,"%s%s\n",debug,tmp2);
+			if (tmp1) _sprintf(debug,"%s%s",debug,tmp1);
+			if (tmp2) _sprintf(debug,"%s%s",debug,tmp2);
 
 			LOG(debug);
 
-			if (debug) free(tmp1);
-			if (str) free(tmp2);
+			if (tmp1) free(tmp1);
+			if (tmp2) free(tmp2);
+
 
 			return debug;
 		}
@@ -7822,20 +7897,25 @@ char* CVertexBuffer::SetVertexProgram(char * script,int ext)
 			char *tmp1;
 			char *tmp2;
 
-			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1="";
-			if (str) tmp2 = addlineinfo(str, 1); else tmp2="";
+			if (debug) tmp1 = addlineinfo(debug, 0); else tmp1=NULL;
+			if (str) tmp2 = addlineinfo(str, 1); else tmp2=NULL;
 
 			free(debug);
 
-			debug = (char*)malloc(strlen(tmp1) + strlen(tmp2) + 128);
+			int size=1024;
+			if (tmp1) size+=strlen(tmp1)*2;
+			if (tmp2) size+=strlen(tmp2)*2;
+
+			debug=(char*)malloc(size);
 			sprintf(debug,"Error in line (owner script) : %d\n",vp->linedebug);
-			sprintf(debug,"%s%s\n", debug,tmp1);
-			sprintf(debug,"%s%s\n",debug,tmp2);
+			if (tmp1) _sprintf(debug,"%s%s",debug,tmp1);
+			if (tmp2) _sprintf(debug,"%s%s",debug,tmp2);
 
 			LOG(debug);
 
-			if (debug) free(tmp1);
-			if (str) free(tmp2);
+			if (tmp1) free(tmp1);
+			if (tmp2) free(tmp2);
+
 
 			return debug;
 		}

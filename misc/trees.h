@@ -221,6 +221,7 @@ public:
     int sane;
     int flags[4096];
 	CVector Gs[MAX_NUMBER_OF_KEYS_NODE];
+	CVector NZs[MAX_NUMBER_OF_KEYS_NODE];
 	bool applyalteration;
 	int nbentries;
 

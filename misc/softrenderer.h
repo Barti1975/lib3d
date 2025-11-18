@@ -103,6 +103,7 @@ public:
 	void SetValue(int x,int y,unsigned int c);
 	void Fill(int line,int xd0,int xf0,int c,float z);
 	void Fill(int line,int xd0,int xf0,int cd,int cf,float zd,float zf,float izd,float izf,CVector2 &t0d,CVector2 &t0f,CVector2 &t1d,CVector2 &t1f,CVector2 &t2d,CVector2 &t2f,int flag);
+	void FillZ(int line,int xd0,int xf0,int cd,int cf,float zd,float zf,float izd,float izf,CVector2 &t0d,CVector2 &t0f,CVector2 &t1d,CVector2 &t1f,CVector2 &t2d,CVector2 &t2f,int flag);
 
 	void borders();
 

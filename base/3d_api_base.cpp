@@ -93,6 +93,7 @@ comments,adds:
 #define API3D_SWAP_FLAGS D3DSWAPEFFECT_FLIP
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+extern int FORCE_LIB3D_TEXTURES_MODE_CREATE;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int TILE_LIGHTMAPS				=	128;
@@ -4207,8 +4208,6 @@ void C3DAPIBASE::Misc()
 		n++;
 	}
 
-	
-
 	// QUADS
 	vbquads.SetAPI(this);
 	vbquads.Grouped=false;
@@ -8289,6 +8288,660 @@ int C3DAPIBASE::InitVideo(int Sx,int Sy,int Flag)
 {
 #if defined(API3D_DIRECT3D10) || defined(API3D_DIRECT3D11) || defined(API3D_DIRECT3D12) || defined(API3D_METAL)
 
+#ifdef API3D_DIRECT3D11
+
+	if (!TheClass3DAPI) TheClass3DAPI=(C3DAPIBASE*) this;
+
+	if (RESET==1)
+	{
+#ifndef WINDOWS_PHONE
+		if ((Sx!=swapChainDesc.BufferDesc.Width)||(Sy!=swapChainDesc.BufferDesc.Height))
+		{
+			renderTargetView->Release();
+			depthStencilBuffer->Release();
+			depthStencilView->Release();
+			backBufferPtr->Release();
+
+			swapChain->ResizeBuffers(2, Sx, Sy, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+
+			SCREEN_X=Sx;
+			SCREEN_Y=Sy;
+			swapChainDesc.BufferDesc.Width = Sx;
+			swapChainDesc.BufferDesc.Height = Sy;
+
+			if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr))) return -1;
+
+			if (FAILED(device->CreateRenderTargetView(backBufferPtr, NULL, &renderTargetView))) return -1;
+
+			ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+			depthBufferDesc.Width = Sx;
+			depthBufferDesc.Height = Sy;
+			depthBufferDesc.MipLevels = 1;
+			depthBufferDesc.ArraySize = 1;
+			depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			depthBufferDesc.SampleDesc.Count = 1;
+			depthBufferDesc.SampleDesc.Quality = 0;
+			depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+			depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+			depthBufferDesc.CPUAccessFlags = 0;
+			depthBufferDesc.MiscFlags = 0;
+
+			if (FAILED(device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer))) return -1;
+
+			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+			depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+			if (FAILED(device->CreateDepthStencilView(depthStencilBuffer, &depthStencilViewDesc, &depthStencilView))) return -1;
+
+			devicecontext->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+
+			Viewport.Width =(float) Sx;
+			Viewport.Height =(float) Sy;
+			Viewport.MinDepth = 0.0f;
+			Viewport.MaxDepth = 1.0f;
+			Viewport.TopLeftX = 0;
+			Viewport.TopLeftY = 0;
+
+			devicecontext->RSSetViewports(1, &Viewport);
+
+			VIEWPORT.Id();
+			VIEWPORT.a[0][0]=(float) (Viewport.Width/2);
+			VIEWPORT.a[3][0]=(float) (Viewport.TopLeftX+Viewport.Width/2);
+			VIEWPORT.a[1][1]=((float) (Viewport.Height/2));
+			VIEWPORT.a[3][1]=(float) (Viewport.TopLeftY+Viewport.Height/2);
+			VIEWPORT.a[2][2]=(float) (Viewport.MaxDepth-Viewport.MinDepth);
+			VIEWPORT.a[3][2]=(float) (Viewport.MinDepth);
+
+			render=renderTargetView;
+			depthstencil=depthStencilView;
+
+			MatrixOrthoLHS( &ProjOrtho, (float)SCREEN_X, (float)SCREEN_Y, 0.0f, 1.0f );
+
+			aBack=Back;
+			aFront=Front;
+		}
+#endif
+
+		return 1;
+	}
+
+	*states[TEXTURE_MAX_WIDTH]=8192;
+
+	SCREEN_X=Sx;
+	SCREEN_Y=Sy;
+
+#ifndef WINDOWS_PHONE
+    ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
+    swapChainDesc.BufferCount = 1;
+    swapChainDesc.BufferDesc.Width = Sx;
+    swapChainDesc.BufferDesc.Height = Sy;
+    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+
+	//if (states(VERTICAL_RETRACE)!=0)
+	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
+    swapChainDesc.OutputWindow = hWindow;
+
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+
+	swapChainDesc.Windowed = false;
+
+	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+	swapChainDesc.Flags = 0;
+
+	D3D_FEATURE_LEVEL fls;
+	D3D_FEATURE_LEVEL flr = D3D_FEATURE_LEVEL_11_0;
+
+	if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &flr,1, D3D11_SDK_VERSION, &swapChainDesc, &swapChain, &device,&fls,&devicecontext))) return -1;
+
+	SetDEVICE(device,devicecontext);
+
+	if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr))) return -1;
+
+	if (FAILED(device->CreateRenderTargetView(backBufferPtr, NULL, &renderTargetView))) return -1;
+	
+	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+	depthBufferDesc.Width = Sx;
+	depthBufferDesc.Height = Sy;
+	depthBufferDesc.MipLevels = 1;
+	depthBufferDesc.ArraySize = 1;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.SampleDesc.Count = 1;
+	depthBufferDesc.SampleDesc.Quality = 0;
+	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthBufferDesc.CPUAccessFlags = 0;
+	depthBufferDesc.MiscFlags = 0;
+
+	if (FAILED(device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer))) return -1;
+
+	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+	if (FAILED(device->CreateDepthStencilView(depthStencilBuffer, &depthStencilViewDesc, &depthStencilView))) return -1;
+
+	devicecontext->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+#else
+
+	SetDEVICE(device,devicecontext);
+	devicecontext->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+#endif
+
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
+	devicecontext->OMSetDepthStencilState(depthStencilState, 1);
+
+	ZeroMemory(&rasterDesc, sizeof(rasterDesc));
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_BACK;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+    rasterDesc.ScissorEnable = true;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+
+	device->CreateRasterizerState(&rasterDesc, &rasterState);
+	devicecontext->RSSetState(rasterState);
+
+	ZeroMemory(&blendStateDesc, sizeof(blendStateDesc));
+
+	blendStateDesc.AlphaToCoverageEnable=false;
+	blendStateDesc.IndependentBlendEnable=false;
+
+	for (int n=0;n<8;n++)
+	{
+		blendStateDesc.RenderTarget[n].BlendEnable=false;
+		blendStateDesc.RenderTarget[n].SrcBlend=D3D11_BLEND_ONE;
+		blendStateDesc.RenderTarget[n].DestBlend=D3D11_BLEND_ZERO;
+		blendStateDesc.RenderTarget[n].BlendOp=D3D11_BLEND_OP_ADD;
+		blendStateDesc.RenderTarget[n].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+		blendStateDesc.RenderTarget[n].SrcBlendAlpha=D3D11_BLEND_ONE;
+		blendStateDesc.RenderTarget[n].DestBlendAlpha=D3D11_BLEND_ZERO;
+		blendStateDesc.RenderTarget[n].RenderTargetWriteMask=D3D11_COLOR_WRITE_ENABLE_ALL;
+	}
+
+	device->CreateBlendState(&blendStateDesc,&blendStateOFF);
+	device->CreateBlendState(&blendStateDesc,&blendStateTMP);
+	
+	factors[0]=factors[1]=factors[2]=factors[3]=factors[4]=factors[5]=factors[6]=factors[7]=1.0f;
+
+	devicecontext->OMSetBlendState(blendStateOFF,factors,0xFFFFFFFF);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateON);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_ZERO;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_ZERO;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateDISCARD);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_DEST_COLOR;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_ZERO;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_DEST_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ZERO;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateCOLOR);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateINVERSE);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_SRC_ALPHA;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateGOURAUD);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=true;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateADD);
+
+	blendStateDesc.RenderTarget[0].BlendEnable=false;
+	blendStateDesc.RenderTarget[0].SrcBlend=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].DestBlend=D3D11_BLEND_ZERO;
+	blendStateDesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_ONE;
+	blendStateDesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ZERO;
+
+	if (SecondarySurface)
+	{
+		for (int n=0;n<nSecondaries;n++)
+			if (!setupRenderTexture(n,tile_secondarysurfacesW[n],tile_secondarysurfacesH[n])) return -1;
+	}
+
+    Viewport.Width =(float) Sx;
+    Viewport.Height =(float) Sy;
+    Viewport.MinDepth = 0.0f;
+    Viewport.MaxDepth = 1.0f;
+    Viewport.TopLeftX = 0;
+    Viewport.TopLeftY = 0;
+
+    devicecontext->RSSetViewports(1, &Viewport);
+
+	VIEWPORT.Id();
+	VIEWPORT.a[0][0]=(float) (Viewport.Width/2);
+	VIEWPORT.a[3][0]=(float) (Viewport.TopLeftX+Viewport.Width/2);
+	VIEWPORT.a[1][1]=((float) (Viewport.Height/2));
+	VIEWPORT.a[3][1]=(float) (Viewport.TopLeftY+Viewport.Height/2);
+	VIEWPORT.a[2][2]=(float) (Viewport.MaxDepth-Viewport.MinDepth);
+	VIEWPORT.a[3][2]=(float) (Viewport.MinDepth);
+
+	render=renderTargetView;
+	depthstencil=depthStencilView;
+
+	*states[TEXTURES_32BITS]=1;
+
+	RESET=1;
+
+#ifdef _DEFINES_API_CODE_TEXTURE_MANAGER_
+	TextureContainer->clean();
+#endif
+
+	G_Multitexture=true;
+	*states[PIXELSHADER2]=1;
+
+	SelectedRenderTarget=PRIMARY;
+
+	Misc();
+
+	aBack=Back;
+	aFront=Front;
+
+	return 1;
+
+#endif
+
+
+#ifdef API3D_DIRECT3D10
+
+	if (RESET==1)
+	{
+		if ((Sx!=swapChainDesc.BufferDesc.Width)||(Sy!=swapChainDesc.BufferDesc.Height))
+		{
+			renderTargetView->Release();
+			depthStencilBuffer->Release();
+			depthStencilView->Release();
+			backBufferPtr->Release();
+
+			swapChain->ResizeBuffers(2, Sx, Sy, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+
+			SCREEN_X=Sx;
+			SCREEN_Y=Sy;
+			swapChainDesc.BufferDesc.Width = Sx;
+			swapChainDesc.BufferDesc.Height = Sy;
+
+			if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D10Texture2D), (LPVOID*)&backBufferPtr))) return -1;
+
+			if (FAILED(device->CreateRenderTargetView(backBufferPtr, NULL, &renderTargetView))) return -1;
+
+			ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+			depthBufferDesc.Width = Sx;
+			depthBufferDesc.Height = Sy;
+			depthBufferDesc.MipLevels = 1;
+			depthBufferDesc.ArraySize = 1;
+			depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			depthBufferDesc.SampleDesc.Count = 1;
+			depthBufferDesc.SampleDesc.Quality = 0;
+			depthBufferDesc.Usage = D3D10_USAGE_DEFAULT;
+			depthBufferDesc.BindFlags = D3D10_BIND_DEPTH_STENCIL;
+			depthBufferDesc.CPUAccessFlags = 0;
+			depthBufferDesc.MiscFlags = 0;
+
+			if (FAILED(device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer))) return -1;
+
+			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			depthStencilViewDesc.ViewDimension = D3D10_DSV_DIMENSION_TEXTURE2D;
+			depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+			if (FAILED(device->CreateDepthStencilView(depthStencilBuffer, &depthStencilViewDesc, &depthStencilView))) return -1;
+
+			device->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+
+			Viewport.Width = Sx;
+			Viewport.Height = Sy;
+			Viewport.MinDepth = 0.0f;
+			Viewport.MaxDepth = 1.0f;
+			Viewport.TopLeftX = 0;
+			Viewport.TopLeftY = 0;
+
+			device->RSSetViewports(1, &Viewport);
+
+			VIEWPORT.Id();
+			VIEWPORT.a[0][0]=(float) (Viewport.Width/2);
+			VIEWPORT.a[3][0]=(float) (Viewport.TopLeftX+Viewport.Width/2);
+			VIEWPORT.a[1][1]=((float) (Viewport.Height/2));
+			VIEWPORT.a[3][1]=(float) (Viewport.TopLeftY+Viewport.Height/2);
+			VIEWPORT.a[2][2]=(float) (Viewport.MaxDepth-Viewport.MinDepth);
+			VIEWPORT.a[3][2]=(float) (Viewport.MinDepth);
+
+			render=renderTargetView;
+			depthstencil=depthStencilView;
+
+			D3DXMATRIX proj;
+			D3DXMatrixOrthoLH( &proj, (float)SCREEN_X, (float)SCREEN_Y, 0.0f, 1.0f );
+
+			ProjOrtho.a[0][0]=proj._11;	ProjOrtho.a[1][0]=proj._21;	ProjOrtho.a[2][0]=proj._31;	ProjOrtho.a[3][0]=proj._41;
+			ProjOrtho.a[0][1]=-proj._12; ProjOrtho.a[1][1]=-proj._22; ProjOrtho.a[2][1]=-proj._32; ProjOrtho.a[3][1]=-proj._42;
+			ProjOrtho.a[0][2]=proj._13;	ProjOrtho.a[1][2]=proj._23;	ProjOrtho.a[2][2]=proj._33;	ProjOrtho.a[3][2]=proj._43;
+			ProjOrtho.a[0][3]=proj._14;	ProjOrtho.a[1][3]=proj._24;	ProjOrtho.a[2][3]=proj._34;	ProjOrtho.a[3][3]=proj._44;
+
+			aBack=Back;
+			aFront=Front;
+		}
+
+		return 1;
+	}
+
+	*states[TEXTURE_MAX_WIDTH]=8192;
+
+	SCREEN_X=Sx;
+	SCREEN_Y=Sy;
+
+    ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
+    swapChainDesc.BufferCount = 1;
+    swapChainDesc.BufferDesc.Width = Sx;
+    swapChainDesc.BufferDesc.Height = Sy;
+    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	//if (states(VERTICAL_RETRACE)!=0)
+	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
+    swapChainDesc.OutputWindow = hWindow;
+
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+
+	swapChainDesc.Windowed = false;
+
+	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+	swapChainDesc.Flags = 0;
+#ifdef API3D_VERSION_DX10_1
+	if (FAILED(D3D10CreateDeviceAndSwapChain1(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, 0,D3D10_FEATURE_LEVEL_10_1, D3D10_1_SDK_VERSION,  &swapChainDesc, &swapChain, &device))) return -1;
+#else
+	if (FAILED(D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, 0, D3D10_SDK_VERSION,  &swapChainDesc, &swapChain, &device))) return -1;
+#endif
+
+	SetDEVICE(device);
+
+	if (FAILED(swapChain->GetBuffer(0, __uuidof(ID3D10Texture2D), (LPVOID*)&backBufferPtr))) return -1;
+
+	if (FAILED(device->CreateRenderTargetView(backBufferPtr, NULL, &renderTargetView))) return -1;
+	
+	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+	depthBufferDesc.Width = Sx;
+	depthBufferDesc.Height = Sy;
+	depthBufferDesc.MipLevels = 1;
+	depthBufferDesc.ArraySize = 1;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.SampleDesc.Count = 1;
+	depthBufferDesc.SampleDesc.Quality = 0;
+	depthBufferDesc.Usage = D3D10_USAGE_DEFAULT;
+	depthBufferDesc.BindFlags = D3D10_BIND_DEPTH_STENCIL;
+	depthBufferDesc.CPUAccessFlags = 0;
+	depthBufferDesc.MiscFlags = 0;
+
+	if (FAILED(device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer))) return -1;
+
+	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.ViewDimension = D3D10_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+	if (FAILED(device->CreateDepthStencilView(depthStencilBuffer, &depthStencilViewDesc, &depthStencilView))) return -1;
+
+	device->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D10_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D10_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	depthStencilDesc.FrontFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
+
+	depthStencilDesc.BackFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilPassOp = D3D10_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
+
+	device->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
+	device->OMSetDepthStencilState(depthStencilState, 1);
+
+	ZeroMemory(&rasterDesc, sizeof(rasterDesc));
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D10_CULL_BACK;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D10_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = true;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+
+	device->CreateRasterizerState(&rasterDesc, &rasterState);
+	device->RSSetState(rasterState);
+
+	ZeroMemory(&blendStateDesc, sizeof(blendStateDesc));
+	blendStateDesc.BlendEnable[0]=false;
+	blendStateDesc.BlendEnable[1]=false;
+	blendStateDesc.BlendEnable[2]=false;
+	blendStateDesc.BlendEnable[3]=false;
+	blendStateDesc.BlendEnable[4]=false;
+	blendStateDesc.BlendEnable[5]=false;
+	blendStateDesc.BlendEnable[6]=false;
+	blendStateDesc.BlendEnable[7]=false;
+	blendStateDesc.SrcBlend=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlend=D3D10_BLEND_ZERO;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ZERO;
+	blendStateDesc.RenderTargetWriteMask[0]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[1]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[2]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[3]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[4]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[5]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[6]=D3D10_COLOR_WRITE_ENABLE_ALL;
+	blendStateDesc.RenderTargetWriteMask[7]=D3D10_COLOR_WRITE_ENABLE_ALL;
+
+	device->CreateBlendState(&blendStateDesc,&blendStateOFF);
+	device->CreateBlendState(&blendStateDesc,&blendStateTMP);
+	
+	factors[0]=factors[1]=factors[2]=factors[3]=factors[4]=factors[5]=factors[6]=factors[7]=1.0f;
+
+	device->OMSetBlendState(blendStateOFF,factors,0xFFFFFFFF);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.DestBlend=D3D10_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateON);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_ZERO;
+	blendStateDesc.DestBlend=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_ZERO;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateDISCARD);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_DEST_COLOR;
+	blendStateDesc.DestBlend=D3D10_BLEND_ZERO;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_DEST_ALPHA;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ZERO;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateCOLOR);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.DestBlend=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_INV_SRC_ALPHA;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateINVERSE);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.DestBlend=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_SRC_ALPHA;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateGOURAUD);
+
+	blendStateDesc.BlendEnable[0]=true;
+	blendStateDesc.SrcBlend=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlend=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOp=D3D10_BLEND_OP_ADD;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.BlendOpAlpha=D3D10_BLEND_OP_ADD;
+	device->CreateBlendState(&blendStateDesc,&blendStateADD);
+
+	blendStateDesc.BlendEnable[0]=false;
+	blendStateDesc.SrcBlend=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlend=D3D10_BLEND_ZERO;
+	blendStateDesc.SrcBlendAlpha=D3D10_BLEND_ONE;
+	blendStateDesc.DestBlendAlpha=D3D10_BLEND_ZERO;
+
+	if (SecondarySurface)
+	{
+		for (int n=0;n<nSecondaries;n++)
+			if (!setupRenderTexture(n,tile_secondarysurfacesW[n],tile_secondarysurfacesH[n])) return -1;
+	}
+
+    Viewport.Width = Sx;
+    Viewport.Height = Sy;
+    Viewport.MinDepth = 0.0f;
+    Viewport.MaxDepth = 1.0f;
+    Viewport.TopLeftX = 0;
+    Viewport.TopLeftY = 0;
+
+    device->RSSetViewports(1, &Viewport);
+
+	VIEWPORT.Id();
+	VIEWPORT.a[0][0]=(float) (Viewport.Width/2);
+	VIEWPORT.a[3][0]=(float) (Viewport.TopLeftX+Viewport.Width/2);
+	VIEWPORT.a[1][1]=((float) (Viewport.Height/2));
+	VIEWPORT.a[3][1]=(float) (Viewport.TopLeftY+Viewport.Height/2);
+	VIEWPORT.a[2][2]=(float) (Viewport.MaxDepth-Viewport.MinDepth);
+	VIEWPORT.a[3][2]=(float) (Viewport.MinDepth);
+
+	render=renderTargetView;
+	depthstencil=depthStencilView;
+
+	*states[TEXTURES_32BITS]=1;
+
+	RESET=1;
+
+#ifdef _DEFINES_API_CODE_TEXTURE_MANAGER_
+	TextureContainer->clean();
+#endif
+
+	G_Multitexture=true;
+	*states[PIXELSHADER2]=1;
+
+	SelectedRenderTarget=PRIMARY;
+
+	Misc();
+
+	aBack=Back;
+	aFront=Front;
+
+	return 1;
+
+#endif
+
+
 	return -1;
 #else
 
@@ -8442,7 +9095,8 @@ int C3DAPIBASE::InitVideo(int Sx,int Sy,int Flag)
 
 	SCREEN_X=Sx;
 	SCREEN_Y=Sy;
-    
+
+#if !defined(API3D_VR)
 #if defined(GLES20)
 	MultiTexture=true;
 	dot3=true;
@@ -8457,6 +9111,7 @@ int C3DAPIBASE::InitVideo(int Sx,int Sy,int Flag)
 	if (openglstuff()!=0) return -1;
 #endif
 
+#endif
 #endif
 
 #if defined(API3D_VR)
@@ -13393,10 +14048,15 @@ void C3DAPIBASE::SetParams(int Quoi,int Comment)
     if (!vbdraw_line) UpdateLines();
 #endif
 
+	if (Quoi==API3D_CREATETEXTURE)
+	{
+		if (Comment==TEXTURE16BITS) FORCE_LIB3D_TEXTURES_MODE_CREATE=1;
+		if (Comment==TEXTURE32BITS) FORCE_LIB3D_TEXTURES_MODE_CREATE=0;
+		if (Comment==TEXTUREBC3) FORCE_LIB3D_TEXTURES_MODE_CREATE=2;
+	}
 
 #if defined(API3D_METAL)
 //------------------------------------------------------------------------------------------------ METAL -------------
- 
 	switch (Quoi)
 	{
 
@@ -16576,8 +17236,8 @@ void C3DAPIBASE::SetParams(int Quoi,int Comment)
 			}
 #else
 #ifdef API3D_DIRECT3D9
-			if (Comment==0) slope=0.0f;
-			else slope=(float) -0.2f*Comment; 
+			if (Comment==0) depth=0.0f;
+			else depth=(float) -SMALLF3*SMALLF*Comment; 
 
 			if (Comment!=ZBiasComment)
 			{
@@ -25781,7 +26441,6 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D10_INPUT_ELEMENT_DESC *layout)
 		}
 		else
 		{
-		
 			if (vb->Type&API3D_EDGESDG)
 			{
 				layout[0].SemanticName = "POSITION";
@@ -26126,40 +26785,110 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D10_INPUT_ELEMENT_DESC *layout)
 		break;
 	case 32+5:
 		// TNL
-		layout[0].SemanticName = "POSITION";
-		layout[0].SemanticIndex = 0;
-		layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[0].InputSlot = 0;
-		layout[0].AlignedByteOffset = 0;
-		layout[0].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
-		layout[0].InstanceDataStepRate = 0;
+		if (vb->Type&API3D_MORPH)
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
 
-		layout[1].SemanticName = "BLENDWEIGHT";
-		layout[1].SemanticIndex = 0;
-		layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		layout[1].InputSlot = 0;
-		layout[1].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
-		layout[1].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
-		layout[1].InstanceDataStepRate = 0;
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
 
-		layout[2].SemanticName = "NORMAL";
-		layout[2].SemanticIndex = 0;
-		layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[2].InputSlot = 0;
-		layout[2].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
-		layout[2].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
-		layout[2].InstanceDataStepRate = 0;
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
 
-		layout[3].SemanticName = "TEXCOORD";
-		layout[3].SemanticIndex = 0;
-		layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
-		layout[3].InputSlot = 0;
-		layout[3].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
-		layout[3].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
-		layout[3].InstanceDataStepRate = 0;
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
 
-		nb=4;
+			layout[4].SemanticName = "POSITION";
+			layout[4].SemanticIndex = 1;
+			layout[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[4].InputSlot = 1;
+			layout[4].AlignedByteOffset = 0;
+			layout[4].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[4].InstanceDataStepRate = 0;
 
+			layout[5].SemanticName = "BLENDWEIGHT";
+			layout[5].SemanticIndex = 1;
+			layout[5].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[5].InputSlot = 1;
+			layout[5].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[5].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[5].InstanceDataStepRate = 0;
+
+			layout[6].SemanticName = "NORMAL";
+			layout[6].SemanticIndex = 1;
+			layout[6].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[6].InputSlot = 1;
+			layout[6].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[6].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[6].InstanceDataStepRate = 0;
+
+			layout[7].SemanticName = "TEXCOORD";
+			layout[7].SemanticIndex = 1;
+			layout[7].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[7].InputSlot = 1;
+			layout[7].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[7].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[7].InstanceDataStepRate = 0;
+
+			nb=8;
+		}
+		else
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
+
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
+
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
+
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D10_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D10_INPUT_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
+
+			nb=4;
+		}
 		break;
 	case 32+6:
 		// lightmap
@@ -26636,8 +27365,7 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D11_INPUT_ELEMENT_DESC *layout)
 			nb=6;
 		}
 		else
-		{
-		
+		{		
 			if (vb->Type&API3D_EDGESDG)
 			{
 				layout[0].SemanticName = "POSITION";
@@ -26983,39 +27711,110 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D11_INPUT_ELEMENT_DESC *layout)
 		break;
 	case 32+5:
 		// TNL
-		layout[0].SemanticName = "POSITION";
-		layout[0].SemanticIndex = 0;
-		layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[0].InputSlot = 0;
-		layout[0].AlignedByteOffset = 0;
-		layout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		layout[0].InstanceDataStepRate = 0;
+		if (vb->Type&API3D_MORPH)
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
 
-		layout[1].SemanticName = "BLENDWEIGHT";
-		layout[1].SemanticIndex = 0;
-		layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		layout[1].InputSlot = 0;
-		layout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		layout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		layout[1].InstanceDataStepRate = 0;
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
 
-		layout[2].SemanticName = "NORMAL";
-		layout[2].SemanticIndex = 0;
-		layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[2].InputSlot = 0;
-		layout[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		layout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		layout[2].InstanceDataStepRate = 0;
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
 
-		layout[3].SemanticName = "TEXCOORD";
-		layout[3].SemanticIndex = 0;
-		layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
-		layout[3].InputSlot = 0;
-		layout[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		layout[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		layout[3].InstanceDataStepRate = 0;
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
 
-		nb=4;
+			layout[4].SemanticName = "POSITION";
+			layout[4].SemanticIndex = 1;
+			layout[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[4].InputSlot = 1;
+			layout[4].AlignedByteOffset = 0;
+			layout[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[4].InstanceDataStepRate = 0;
+
+			layout[5].SemanticName = "BLENDWEIGHT";
+			layout[5].SemanticIndex = 1;
+			layout[5].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[5].InputSlot = 1;
+			layout[5].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[5].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[5].InstanceDataStepRate = 0;
+
+			layout[6].SemanticName = "NORMAL";
+			layout[6].SemanticIndex = 1;
+			layout[6].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[6].InputSlot = 1;
+			layout[6].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[6].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[6].InstanceDataStepRate = 0;
+
+			layout[7].SemanticName = "TEXCOORD";
+			layout[7].SemanticIndex = 1;
+			layout[7].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[7].InputSlot = 1;
+			layout[7].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[7].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[7].InstanceDataStepRate = 0;
+
+			nb=8;
+		}
+		else
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
+
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
+
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
+
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
+
+			nb=4;
+		}
 
 		break;
 	case 32+6:
@@ -27492,7 +28291,6 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D12_INPUT_ELEMENT_DESC *layout)
 		}
 		else
 		{
-		
 			if (vb->Type&API3D_EDGESDG)
 			{
 				layout[0].SemanticName = "POSITION";
@@ -27837,40 +28635,110 @@ int C3DAPIBASE::SetLayouts(CVertexBuffer * vb,D3D12_INPUT_ELEMENT_DESC *layout)
 		break;
 	case 32+5:
 		// TNL
-		layout[0].SemanticName = "POSITION";
-		layout[0].SemanticIndex = 0;
-		layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[0].InputSlot = 0;
-		layout[0].AlignedByteOffset = 0;
-		layout[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		layout[0].InstanceDataStepRate = 0;
+		if (vb->Type&API3D_MORPH)
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
 
-		layout[1].SemanticName = "BLENDWEIGHT";
-		layout[1].SemanticIndex = 0;
-		layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		layout[1].InputSlot = 0;
-		layout[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		layout[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		layout[1].InstanceDataStepRate = 0;
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
 
-		layout[2].SemanticName = "NORMAL";
-		layout[2].SemanticIndex = 0;
-		layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		layout[2].InputSlot = 0;
-		layout[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		layout[2].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		layout[2].InstanceDataStepRate = 0;
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
 
-		layout[3].SemanticName = "TEXCOORD";
-		layout[3].SemanticIndex = 0;
-		layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
-		layout[3].InputSlot = 0;
-		layout[3].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-		layout[3].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		layout[3].InstanceDataStepRate = 0;
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
 
-		nb=4;
+			layout[4].SemanticName = "POSITION";
+			layout[4].SemanticIndex = 1;
+			layout[4].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[4].InputSlot = 1;
+			layout[4].AlignedByteOffset = 0;
+			layout[4].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[4].InstanceDataStepRate = 0;
 
+			layout[5].SemanticName = "BLENDWEIGHT";
+			layout[5].SemanticIndex = 1;
+			layout[5].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[5].InputSlot = 1;
+			layout[5].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[5].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[5].InstanceDataStepRate = 0;
+
+			layout[6].SemanticName = "NORMAL";
+			layout[6].SemanticIndex = 1;
+			layout[6].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[6].InputSlot = 1;
+			layout[6].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[6].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[6].InstanceDataStepRate = 0;
+
+			layout[7].SemanticName = "TEXCOORD";
+			layout[7].SemanticIndex = 1;
+			layout[7].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[7].InputSlot = 1;
+			layout[7].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[7].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[7].InstanceDataStepRate = 0;
+
+			nb=8;
+		}
+		else
+		{
+			layout[0].SemanticName = "POSITION";
+			layout[0].SemanticIndex = 0;
+			layout[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[0].InputSlot = 0;
+			layout[0].AlignedByteOffset = 0;
+			layout[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[0].InstanceDataStepRate = 0;
+
+			layout[1].SemanticName = "BLENDWEIGHT";
+			layout[1].SemanticIndex = 0;
+			layout[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			layout[1].InputSlot = 0;
+			layout[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[1].InstanceDataStepRate = 0;
+
+			layout[2].SemanticName = "NORMAL";
+			layout[2].SemanticIndex = 0;
+			layout[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			layout[2].InputSlot = 0;
+			layout[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[2].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[2].InstanceDataStepRate = 0;
+
+			layout[3].SemanticName = "TEXCOORD";
+			layout[3].SemanticIndex = 0;
+			layout[3].Format = DXGI_FORMAT_R32G32_FLOAT;
+			layout[3].InputSlot = 0;
+			layout[3].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+			layout[3].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			layout[3].InstanceDataStepRate = 0;
+
+			nb=4;
+		}
 		break;
 	case 32+6:
 		// lightmap
@@ -28373,6 +29241,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 					tag=1;
 				}
 
+			if(eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO])
+				if(strcmp(eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],texturename)==0)
+				{
+					x=cTexture[nfo->nT+Decal_nt+2]->data.Tilex;
+					y=cTexture[nfo->nT+Decal_nt+2]->data.Tiley;
+					tag=1;
+				}
+
 			if(eff->AssignedTexture[TEXTURE_FROM_NT2])
 				if(strcmp(eff->AssignedTexture[TEXTURE_FROM_NT2],texturename)==0)
 				{
@@ -28394,6 +29270,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 				{
 					x=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tilex;
 					y=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tiley;
+					tag=1;
+				}
+
+			if(eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO])
+				if(strcmp(eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],texturename)==0)
+				{
+					x=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tilex;
+					y=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tiley;
 					tag=1;
 				}
 
@@ -28427,6 +29311,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 				tag=1;
 			}
 
+			if (eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO])
+			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],texturename)==0)
+			{
+				x=cTexture[nfo->nT+Decal_nt+2]->data.Tilex;
+				y=cTexture[nfo->nT+Decal_nt+2]->data.Tiley;
+				tag=1;
+			}
+
 			if (eff->AssignedTexture[TEXTURE_FROM_NT2])
 			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_NT2],texturename)==0)
 			{
@@ -28448,6 +29340,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 			{
 				x=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tilex;
 				y=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tiley;
+				tag=1;
+			}
+
+			if (eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO])
+			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],texturename)==0)
+			{
+				x=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tilex;
+				y=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tiley;
 				tag=1;
 			}
 
@@ -28481,6 +29381,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 				tag=1;
 			}
 
+			if (eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO])
+			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],texturename)==0)
+			{
+				x=cTexture[nfo->nT+Decal_nt+2]->data.Tilex;
+				y=cTexture[nfo->nT+Decal_nt+2]->data.Tiley;
+				tag=1;
+			}
+
 			if (eff->AssignedTexture[TEXTURE_FROM_NT2])
 			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_NT2],texturename)==0)
 			{
@@ -28502,6 +29410,14 @@ void C3DAPIBASE::DrawVertexBufferSetupSizeDest(CVertexBuffer *eff,CIndicesSE * n
 			{
 				x=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tilex;
 				y=cTexture[nfo->nT+1+bumpmap_settexture]->data.Tiley;
+				tag=1;
+			}
+
+			if (eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO])
+			if (strcmp(eff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],texturename)==0)
+			{
+				x=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tilex;
+				y=cTexture[nfo->nT+2+bumpmap_settexture]->data.Tiley;
 				tag=1;
 			}
 
@@ -29279,9 +30195,11 @@ void C3DAPIBASE::DrawVertexBuffer()
                                             
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NT]) vbeff->res[TEXTURE_FROM_NT]->tex=Texture[nfo->nT+Decal_nt];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeff->res[TEXTURE_FROM_NTPLUSONE]->tex=Texture[nfo->nT+Decal_nt+1];
+											if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeff->res[TEXTURE_FROM_NTPLUSTWO]->tex=Texture[nfo->nT+Decal_nt+2];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NT2]) vbeff->res[TEXTURE_FROM_NT2]->tex=Texture[nfo->nT2];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_BUMP]) vbeff->res[TEXTURE_FROM_BUMP]->tex=Texture[nfo->nT+bumpmap_settexture];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeff->res[TEXTURE_FROM_BUMPPLUSONE]->tex=Texture[nfo->nT+1+bumpmap_settexture];
+											if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeff->res[TEXTURE_FROM_BUMPPLUSTWO]->tex=Texture[nfo->nT+2+bumpmap_settexture];
 
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeff->res[TEXTURE_FROM_DISPLACE]->tex=Texture[nfo->nT+bump_displace];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeff->res[TEXTURE_FROM_HORIZON]->tex=Texture[nfo->nT+bump_horizon];
@@ -31199,9 +32117,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NT]) vbeff->res[TEXTURE_FROM_NT]->tex=Texture[nfo->nT+Decal_nt];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeff->res[TEXTURE_FROM_NTPLUSONE]->tex=Texture[nfo->nT+Decal_nt+1];
+											if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeff->res[TEXTURE_FROM_NTPLUSTWO]->tex=Texture[nfo->nT+Decal_nt+2];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_NT2]) vbeff->res[TEXTURE_FROM_NT2]->tex=Texture[nfo->nT2];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_BUMP]) vbeff->res[TEXTURE_FROM_BUMP]->tex=Texture[nfo->nT+bumpmap_settexture];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeff->res[TEXTURE_FROM_BUMPPLUSONE]->tex=Texture[nfo->nT+1+bumpmap_settexture];
+											if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeff->res[TEXTURE_FROM_BUMPPLUSTWO]->tex=Texture[nfo->nT+2+bumpmap_settexture];
 
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeff->res[TEXTURE_FROM_DISPLACE]->tex=Texture[nfo->nT+bump_displace];
                                             if (vbeff->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeff->res[TEXTURE_FROM_HORIZON]->tex=Texture[nfo->nT+bump_horizon];
@@ -32281,9 +33201,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_NT]) vbeffect->res[TEXTURE_FROM_NT]->SetResource(Texture[nfo->nT+Decal_nt]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeffect->res[TEXTURE_FROM_NTPLUSONE]->SetResource(Texture[nfo->nT+Decal_nt+1]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeffect->res[TEXTURE_FROM_NTPLUSTWO]->SetResource(Texture[nfo->nT+Decal_nt+2]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_NT2]) vbeffect->res[TEXTURE_FROM_NT2]->SetResource(Texture[nfo->nT2]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMP]) vbeffect->res[TEXTURE_FROM_BUMP]->SetResource(Texture[nfo->nT+bumpmap_settexture]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeffect->res[TEXTURE_FROM_BUMPPLUSONE]->SetResource(Texture[nfo->nT+1+bumpmap_settexture]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeffect->res[TEXTURE_FROM_BUMPPLUSTWO]->SetResource(Texture[nfo->nT+2+bumpmap_settexture]);
 
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeffect->res[TEXTURE_FROM_DISPLACE]->SetResource(Texture[nfo->nT+bump_displace]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeffect->res[TEXTURE_FROM_HORIZON]->SetResource(Texture[nfo->nT+bump_horizon]);
@@ -33277,9 +34199,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_NT]) vbeffect->res[TEXTURE_FROM_NT]->SetResource(Texture[nfo->nT+Decal_nt]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeffect->res[TEXTURE_FROM_NTPLUSONE]->SetResource(Texture[nfo->nT+Decal_nt+1]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeffect->res[TEXTURE_FROM_NTPLUSTWO]->SetResource(Texture[nfo->nT+Decal_nt+2]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_NT2]) vbeffect->res[TEXTURE_FROM_NT2]->SetResource(Texture[nfo->nT2]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMP]) vbeffect->res[TEXTURE_FROM_BUMP]->SetResource(Texture[nfo->nT+bumpmap_settexture]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeffect->res[TEXTURE_FROM_BUMPPLUSONE]->SetResource(Texture[nfo->nT+1+bumpmap_settexture]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeffect->res[TEXTURE_FROM_BUMPPLUSTWO]->SetResource(Texture[nfo->nT+2+bumpmap_settexture]);
 
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeffect->res[TEXTURE_FROM_DISPLACE]->SetResource(Texture[nfo->nT+bump_displace]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeffect->res[TEXTURE_FROM_HORIZON]->SetResource(Texture[nfo->nT+bump_horizon]);
@@ -34199,9 +35123,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_NT]) vbeffect->res[TEXTURE_FROM_NT]->SetResource(Texture[nfo->nT+Decal_nt]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeffect->res[TEXTURE_FROM_NTPLUSONE]->SetResource(Texture[nfo->nT+1+Decal_nt]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeffect->res[TEXTURE_FROM_NTPLUSTWO]->SetResource(Texture[nfo->nT+2+Decal_nt]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_NT2]) vbeffect->res[TEXTURE_FROM_NT2]->SetResource(Texture[nfo->nT2]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMP]) vbeffect->res[TEXTURE_FROM_BUMP]->SetResource(Texture[nfo->nT+bumpmap_settexture]);
                                     if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeffect->res[TEXTURE_FROM_BUMPPLUSONE]->SetResource(Texture[nfo->nT+1+bumpmap_settexture]);
+									if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeffect->res[TEXTURE_FROM_BUMPPLUSTWO]->SetResource(Texture[nfo->nT+2+bumpmap_settexture]);
 
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeffect->res[TEXTURE_FROM_DISPLACE]->SetResource(Texture[nfo->nT+bump_displace]);
 									if (vbeffect->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeffect->res[TEXTURE_FROM_HORIZON]->SetResource(Texture[nfo->nT+bump_horizon]);
@@ -36606,11 +37532,13 @@ void C3DAPIBASE::DrawVertexBuffer()
 
                                         if (vbeff->AssignedTexture[TEXTURE_FROM_NT]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT],nfo->nT+Decal_nt);
                                         if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE],nfo->nT+1+Decal_nt);
+										if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],nfo->nT+2+Decal_nt);
 										if (vbeff->AssignedTexture[TEXTURE_FROM_NT2]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT2],nfo->nT2);
 										if (vbeff->AssignedTexture[TEXTURE_FROM_NL]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NL],nfo->nL);
 										if (vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS],nfo->nLV);
 										if (vbeff->AssignedTexture[TEXTURE_FROM_BUMP]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMP],nfo->nT+bumpmap_settexture);
                                         if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE],nfo->nT+1+bumpmap_settexture);
+										if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],nfo->nT+2+bumpmap_settexture);
 										
 										if (vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE],nfo->nT+bump_displace);
 										if (vbeff->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_HORIZON],nfo->nT+bump_horizon);
@@ -36769,11 +37697,13 @@ void C3DAPIBASE::DrawVertexBuffer()
 
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NT]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT],nfo->nT+Decal_nt);
                                 if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE],nfo->nT+1+Decal_nt);
+								if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],nfo->nT+2+Decal_nt);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NT2]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT2],nfo->nT2);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NL]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NL],nfo->nL);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS],nfo->nLV);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_BUMP]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMP],nfo->nT+bumpmap_settexture);
                                 if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE],nfo->nT+1+bumpmap_settexture);
+								if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],nfo->nT+2+bumpmap_settexture);
 
 								if (vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE],nfo->nT+bump_displace);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_HORIZON],nfo->nT+bump_horizon);
@@ -36996,11 +37926,13 @@ void C3DAPIBASE::DrawVertexBuffer()
 
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NT]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT],nfo->nT+Decal_nt);
                                 if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSONE],nfo->nT+1+Decal_nt);
+								if (vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],nfo->nT+2+Decal_nt);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NT2]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_NT2],nfo->nT2);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NL]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NL],nfo->nL);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS]) vbeff->setLightmap(vbeff->AssignedTexture[TEXTURE_FROM_NLVECTORS],nfo->nLV);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_BUMP]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMP],nfo->nT+bumpmap_settexture);
                                 if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE],nfo->nT+1+bumpmap_settexture);
+								if (vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],nfo->nT+2+bumpmap_settexture);
 
 								if (vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_DISPLACE],nfo->nT+bump_displace);
 								if (vbeff->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeff->setTexture(vbeff->AssignedTexture[TEXTURE_FROM_HORIZON],nfo->nT+bump_horizon);
@@ -38099,6 +39031,23 @@ void C3DAPIBASE::DrawVertexBuffer()
 		{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
 		D3DDECL_END()
 	};
+
+
+	D3DVERTEXELEMENT9 decltweeningtree[] =
+	{
+		{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+		{ 0, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 0}, 
+		{ 0, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 0}, 
+		{ 0, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+		{ 0, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+		{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+		{ 1, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 1}, 
+		{ 1, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 1}, 
+		{ 1, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+		{ 1, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+		D3DDECL_END()
+	};
+
 #endif
 
 	Flush();
@@ -38195,13 +39144,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 		else
 		{
 #ifdef API3D_DIRECT3D9
-		
-			D3DDevice->SetFVF( D3DFVF_XYZNORMALTEX );
 			
 			if (ActualVertexBuffer->Type&API3D_MORPH)
 			{
+				D3DDevice->SetFVF( D3DFVF_XYZNORMALTEX );
 				if (TNL_VD==NULL) D3DDevice->CreateVertexDeclaration( decltweening, &TNL_VD );
-
 				D3DDevice->SetVertexDeclaration(TNL_VD);
 
 				D3DDevice->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_TWEENING );
@@ -38222,7 +39169,9 @@ void C3DAPIBASE::DrawVertexBuffer()
 			}
 			else
 			{
-				 D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+  				D3DDevice->SetFVF( D3DFVF_XYZNORMALTEX );
+
+				D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
 			}
 #else
 			D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D8VB, sizeof(XYZNORMALTEX));
@@ -38436,14 +39385,59 @@ void C3DAPIBASE::DrawVertexBuffer()
 		break;
 	case 32+5:
 		// TNL
+
+		if (ActualVertexBuffer->Type&API3D_MORPH)
+		{
+			if (ActualVertexBuffer->Type&API3D_BLENDING)
+			{
+				D3DDevice->SetFVF( D3DFVF_BLENDXYZNORMALTEX );
+				if (TNL_VD2==NULL) D3DDevice->CreateVertexDeclaration( decltweeningtree, &TNL_VD2 );
+				D3DDevice->SetVertexDeclaration(TNL_VD2);
+			}
+			else
+			{
+				D3DDevice->SetFVF( D3DFVF_XYZNORMALTEX );
+				if (TNL_VD==NULL) D3DDevice->CreateVertexDeclaration( decltweening, &TNL_VD );
+				D3DDevice->SetVertexDeclaration(TNL_VD);
+			}
+
+			D3DDevice->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_TWEENING );
+			D3DDevice->SetRenderState( D3DRS_TWEENFACTOR, *(DWORD*) &ActualVertexBuffer->stream_interpolant );
+
+			if (ActualVertexBuffer->Type&API3D_STREAMS)
+			{
+				if (ActualVertexBuffer->Type&API3D_BLENDING)
+				{
+					if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(BLENDXYZNORMALTEX));
+					else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+					if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(BLENDXYZNORMALTEX));
+					else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+				}
+				else
+				{
+					if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
+					else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+					if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
+					else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+				}
+			}
+			else
+			{
+				D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+				D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[0],0, sizeof(XYZNORMALTEX));
+			}
+		}
+		else
+		{
 		
 #ifdef API3D_DIRECT3D9
-		D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
-		D3DDevice->SetFVF( D3DFVF_BLENDXYZNORMALTEX );
+			D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+			D3DDevice->SetFVF( D3DFVF_BLENDXYZNORMALTEX );
 #else
-		D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D8VB, sizeof(BLENDXYZNORMALTEX));
-		D3DDevice->SetVertexShader(D3DFVF_BLENDXYZNORMALTEX);
+			D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D8VB, sizeof(BLENDXYZNORMALTEX));
+			D3DDevice->SetVertexShader(D3DFVF_BLENDXYZNORMALTEX);
 #endif
+		}
 		temp=0;
 
 		if (aT>=0)
@@ -38591,33 +39585,65 @@ void C3DAPIBASE::DrawVertexBuffer()
 				D3DDevice->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
 
 #ifdef API3D_DIRECT3D9
-
 				if (ActualVertexBuffer->Type&API3D_MORPH)
 				{
-					D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
-
-					D3DVERTEXELEMENT9 declShdMorph[] =
+					if (ActualVertexBuffer->Type&API3D_BLENDING)
 					{
-						{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
-						{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
-						{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
-						{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
-						{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
-						{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
-						D3DDECL_END()
-					};
+						D3DDevice->SetFVF(D3DFVF_BLENDXYZNORMALTEX);
 
+						D3DVERTEXELEMENT9 declShdMorph2[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 0}, 
+							{ 0, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 0}, 
+							{ 0, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 1}, 
+							{ 1, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 1}, 
+							{ 1, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
 
-					if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
+						if (CR_VD2==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph2, &CR_VD2 );
+						D3DDevice->SetVertexDeclaration(CR_VD2);
+					}
+					else
+					{
+						D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
 
-					D3DDevice->SetVertexDeclaration(CR_VD);
+						D3DVERTEXELEMENT9 declShdMorph[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
+
+						if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
+						D3DDevice->SetVertexDeclaration(CR_VD);
+					}
 
 					if (ActualVertexBuffer->Type&API3D_STREAMS)
 					{
-						if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
-						if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						if (ActualVertexBuffer->Type&API3D_BLENDING)
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+						}
+						else
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						}
 					}
 					else
 					{
@@ -38893,30 +39919,64 @@ void C3DAPIBASE::DrawVertexBuffer()
 				{
 
 #ifdef API3D_DIRECT3D9
-					D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
-
-					D3DVERTEXELEMENT9 declShdMorph[] =
+					if (ActualVertexBuffer->Type&API3D_BLENDING)
 					{
-						{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
-						{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
-						{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
-						{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
-						{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
-						{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
-						D3DDECL_END()
-					};
+						D3DDevice->SetFVF(D3DFVF_BLENDXYZNORMALTEX);
+
+						D3DVERTEXELEMENT9 declShdMorph2[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 0}, 
+							{ 0, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 0}, 
+							{ 0, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 1}, 
+							{ 1, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 1}, 
+							{ 1, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
+
+						if (CR_VD2==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph2, &CR_VD2 );
+						D3DDevice->SetVertexDeclaration(CR_VD2);
+					}
+					else
+					{
+						D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
+
+						D3DVERTEXELEMENT9 declShdMorph[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
 
 
-					if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
-
-					D3DDevice->SetVertexDeclaration(CR_VD);
+						if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
+						D3DDevice->SetVertexDeclaration(CR_VD);
+					}
 
 					if (ActualVertexBuffer->Type&API3D_STREAMS)
 					{
-						if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
-						if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						if (ActualVertexBuffer->Type&API3D_BLENDING)
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+						}
+						else
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						}
 					}
 					else
 					{
@@ -39177,29 +40237,63 @@ void C3DAPIBASE::DrawVertexBuffer()
 					SHDVOLUMEm->SetMatrix( "matView", &matView );
 
 #ifdef API3D_DIRECT3D9
-					D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
-
-					D3DVERTEXELEMENT9 declShdMorph[] =
+					if (ActualVertexBuffer->Type&API3D_BLENDING)
 					{
-						{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
-						{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
-						{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
-						{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
-						{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
-						{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
-						D3DDECL_END()
-					};
+						D3DDevice->SetFVF(D3DFVF_BLENDXYZNORMALTEX);
 
-					if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
+						D3DVERTEXELEMENT9 declShdMorph2[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 0}, 
+							{ 0, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 0}, 
+							{ 0, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDWEIGHT, 1}, 
+							{ 1, 28, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_BLENDINDICES, 1}, 
+							{ 1, 32, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 44, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
 
-					D3DDevice->SetVertexDeclaration(CR_VD);
+						if (CR_VD2==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph2, &CR_VD2 );
+						D3DDevice->SetVertexDeclaration(CR_VD2);
+					}
+					else
+					{
+						D3DDevice->SetFVF(D3DFVF_XYZNORMALTEX);
+
+						D3DVERTEXELEMENT9 declShdMorph[] =
+						{
+							{ 0,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 0}, 
+							{ 0, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   0}, 
+							{ 0, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 0}, 
+							{ 1,  0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_POSITION, 1}, 
+							{ 1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_NORMAL,   1}, 
+							{ 1, 24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT,  D3DDECLUSAGE_TEXCOORD, 1}, 
+							D3DDECL_END()
+						};
+
+						if (CR_VD==NULL) D3DDevice->CreateVertexDeclaration( declShdMorph, &CR_VD );
+						D3DDevice->SetVertexDeclaration(CR_VD);
+					}
 
 					if (ActualVertexBuffer->Type&API3D_STREAMS)
 					{
-						if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
-						if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
-						else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						if (ActualVertexBuffer->Type&API3D_BLENDING)
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(BLENDXYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(BLENDXYZNORMALTEX));
+						}
+						else
+						{
+							if (ActualVertexBuffer->stream1>=0) D3DDevice->SetStreamSource( 0, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream1],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 0, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+							if (ActualVertexBuffer->stream2>=0) D3DDevice->SetStreamSource( 1, ActualVertexBuffer->STREAMS[ActualVertexBuffer->stream2],0, sizeof(XYZNORMALTEX));
+							else D3DDevice->SetStreamSource( 1, ActualVertexBuffer->D3D9VB,0, sizeof(XYZNORMALTEX));
+						}
 					}
 					else
 					{
@@ -39707,9 +40801,11 @@ void C3DAPIBASE::DrawVertexBuffer()
 
 								if (vbeffect->AssignedTexture[TEXTURE_FROM_NT]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_NT],nfo->nT+Decal_nt);
                                 if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSONE]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSONE],nfo->nT+1+Decal_nt);
+								if (vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSTWO]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_NTPLUSTWO],nfo->nT+2+Decal_nt);
 								if (vbeffect->AssignedTexture[TEXTURE_FROM_NT2]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_NT2],nfo->nT2);
                                 if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMP]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_BUMP],nfo->nT+bumpmap_settexture);
                                 if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSONE],nfo->nT+1+bumpmap_settexture);
+								if (vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_BUMPPLUSTWO],nfo->nT+2+bumpmap_settexture);
 
 								if (vbeffect->AssignedTexture[TEXTURE_FROM_DISPLACE]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_DISPLACE],nfo->nT+bump_displace);
 								if (vbeffect->AssignedTexture[TEXTURE_FROM_HORIZON]) vbeffect->setTexture(vbeffect->AssignedTexture[TEXTURE_FROM_HORIZON],nfo->nT+bump_horizon);
@@ -42860,7 +43956,10 @@ void C3DAPIBASE::CreateTextureLightmap(int n)
 
 	ptrtex=(char*) malloc(Tile*Tile*4);
 	for (p=0;p<Tile*Tile*4;p++) ptrtex[p]=0;
+    int save=FORCE_LIB3D_TEXTURES_MODE_CREATE;
+    FORCE_LIB3D_TEXTURES_MODE_CREATE=0;
 	LightmapContainer->create(n,Tile,Tile,ptrtex,Tile,Tile,0);
+    FORCE_LIB3D_TEXTURES_MODE_CREATE=save;
 	free(ptrtex);
 
 #else
@@ -42957,7 +44056,10 @@ void C3DAPIBASE::CreateTextureLightmapCache(int n,float r,float g,float b)
 			ptrtex[4*(x+y*Tile)+2]=(int) (255*b);
 			ptrtex[4*(x+y*Tile)+3]=(char) 255;
 		}
+    int save=FORCE_LIB3D_TEXTURES_MODE_CREATE;
+    FORCE_LIB3D_TEXTURES_MODE_CREATE=0;
 	LightmapContainer->create(n,Tile,Tile,ptrtex,Tile,Tile,0);
+    FORCE_LIB3D_TEXTURES_MODE_CREATE=save;
 	free(ptrtex);
 #endif
 }
@@ -44860,6 +45962,19 @@ CVertexBuffer* C3DAPIBASE::CreateMultiGroupFrom(CObject3D * obj,unsigned int typ
 						vb->SetVertex(n,obj->VerticesKeys[k][n].Stok);
 
 #if !defined(API3D_OPENGL) && !defined(API3D_OPENGL20)
+#ifndef API3D_METAL
+						if (typ&API3D_BLENDING)
+						{
+							vb->SetWeights(n,0,obj->Vertices[n].Weight[0]);
+							vb->SetWeights(n,1,obj->Vertices[n].Weight[1]);
+							vb->SetWeights(n,2,obj->Vertices[n].Weight[2]);
+							vb->SetWeights(n,3,obj->Vertices[n].Weight[3]);
+							vb->SetMatrixIndex(n,0,obj->Vertices[n].Index[0]);
+							vb->SetMatrixIndex(n,1,obj->Vertices[n].Index[1]);
+							vb->SetMatrixIndex(n,2,obj->Vertices[n].Index[2]);
+							vb->SetMatrixIndex(n,3,obj->Vertices[n].Index[3]);
+						}
+#endif
 						vb->SetTexCoo(n,obj->Vertices[n].Map);
 #endif
 					}

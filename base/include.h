@@ -190,10 +190,12 @@
 				#include <EGL/egl.h>
 				#if defined(GOOGLEVR)&&!defined(ES2)
 					#include <GLES3/gl3.h>
+					#include <GLES2/gl2ext.h>
 					#include <GLES3/gl3ext.h>
 				#else
 				#ifdef API3D_VR
 					#include <GLES3/gl3.h>
+					#include <GLES2/gl2ext.h>
 					#include <GLES3/gl3ext.h>
 				#else
 					#include <GLES2/gl2.h>

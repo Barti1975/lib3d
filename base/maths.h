@@ -1249,6 +1249,23 @@ extern CVector ___tmp1,___tmp2;
 	u.w=1.0;																		\
 }																					\
 
+
+#define VECTOR4MATRIXINIT3(u,v,m)													\
+{																					\
+	float ___x=v.x;																	\
+	float ___y=v.y;																	\
+	float ___z=v.z;																	\
+    u.x=___x * m.a[0][0] + ___y * m.a[1][0] + ___z * m.a[2][0] + m.a[3][0];			\
+	u.y=___x * m.a[0][1] + ___y * m.a[1][1] + ___z * m.a[2][1] + m.a[3][1];			\
+	u.z=___x * m.a[0][2] + ___y * m.a[1][2] + ___z * m.a[2][2] + m.a[3][2];			\
+	u.w=___x * m.a[0][3] + ___y * m.a[1][3] + ___z * m.a[2][3] + m.a[3][3];			\
+	u.x/=u.w;																		\
+	u.y/=u.w;																		\
+	u.z/=u.w;																		\
+	u.w=1.0;																		\
+}																					\
+
+
 #define DOTPRODUCT(s,v1,v2)													\
 {																			\
 	s=v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;									\
